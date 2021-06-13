@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+    <Properties>
+        <Property name="basePath">${sys:user.dir}\\logs</Property>
+    </Properties>
+ 
+    <Appenders>
+        <RollingFile name="fileAppender" fileName="${basePath}/artretweeter.log" filePattern="${basePath}/logarchives/artretweeter.%d{yyyy-MM-dd}.log" 
+                     immediateFlush="true">
+            <PatternLayout>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss}: %C{1}: %M: %L: %-5p: %m%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10MB" />
+            </Policies>
+        </RollingFile>
+ 
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss}: %C{1}: %M: %L: %-5p: %m%n" />
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="antsstyle.artretweeter">
+            <AppenderRef ref="fileAppender" level="info"/>
+        </Logger>
+         <Root level="all">
+            <AppenderRef ref="console"/>
+         </Root>
+    </Loggers>
+</Configuration>
