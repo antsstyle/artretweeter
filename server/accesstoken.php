@@ -19,5 +19,8 @@ if ($request_method == "POST") {
     $params['oauth_token'] = $oauth_token;
     $connection = new TwitterOAuth($consumerkey, $consumersecret);
     $response = $connection->oauth("oauth/access_token", $params);
-    echo encodeResponseInformation($connection, $response);
+    if (isset($response['oauth_token'])) {
+        $dbop = updateAccessToken($response);
+    }
+    echo encodeResponseInformation($connection, $response, $dbop);
 }

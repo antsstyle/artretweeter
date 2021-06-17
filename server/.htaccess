@@ -1,0 +1,14 @@
+# Disable directory browsing 
+Options -Indexes
+
+<Files core.php>
+deny from all
+</Files>
+
+<Files error_log>
+deny from all
+</Files>
+
+<Files create_tables.php>
+deny from all
+</Files>

@@ -1,7 +1,5 @@
 <?php
 
-require "credentials/apikeys.php";
-require "credentials/db.php";
 require "core.php";
 require "twitteroauth/vendor/autoload.php";
 
