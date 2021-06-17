@@ -1,6 +1,9 @@
 # Compiled class file
 *.class
 
+# Properties file
+*.properties
+
 # Log file
 *.log
 
@@ -24,3 +27,5 @@ hs_err_pid*
 
 twitteroauth/
 nbproject/
+nbactions.xml
+tweetimages/
