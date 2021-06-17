@@ -22,5 +22,5 @@ if ($request_method == "POST") {
     if (isset($response['oauth_token'])) {
         $dbop = updateAccessToken($response);
     }
-    echo encodeResponseInformation($connection, $response, $dbop);
+    echo encodeTwitterResponseInformation($connection, $response, $dbop);
 }

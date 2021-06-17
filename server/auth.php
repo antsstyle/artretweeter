@@ -16,5 +16,5 @@ if ($request_method == "POST") {
     $oauth_token_array['oauth_token'] = $oauth_token;
     $connection = new TwitterOAuth($consumerkey, $consumersecret);
     $response = $connection->url("oauth/authorize", $oauth_token_array);
-    echo encodeResponseInformation($connection, $response);
+    echo encodeTwitterResponseInformation($connection, $response);
 }

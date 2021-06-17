@@ -36,7 +36,7 @@ $database_connection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
                 retweettime TIMESTAMP)");
 
 $database_connection->query("ALTER TABLE scheduledretweets ADD CONSTRAINT 
-        uniquescheduledtweet UNIQUE KEY(retweetinguserid,tweetid,retweettime)");
+        uniquescheduledtweet UNIQUE KEY(retweetinguserid,tweetid)");
 
 $database_connection->query("CREATE TABLE IF NOT EXISTS failedretweets (
                 id INT AUTO_INCREMENT PRIMARY KEY,

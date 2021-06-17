@@ -71,11 +71,36 @@ function postScheduledRetweets() {
     }
 }
 
+function queueRetweet($userauthtwitterid, $tweetid, $retweettime) {
+    $timeString = date("Y-m-d H:m:s", $retweettime);
+    $stmt = $GLOBALS['database_connection']->prepare("INSERT INTO scheduledretweets (retweetinguserid,tweetid,retweettime) "
+            . "VALUES (?,?,?) ON DUPLICATE KEY UPDATE retweetinguserid=?, tweetid=?, retweettime=?");
+    $success = $stmt->execute([$userauthtwitterid, $tweetid, $timeString,
+        $userauthtwitterid, $tweetid, $timeString]);
+    echo encodeDBResponseInformation($success);
+}
+
+function unqueueRetweet($userauthtwitterid, $tweetid) {
+    $success = $GLOBALS['database_connection']->prepare("DELETE FROM scheduledretweets WHERE retweetinguserid=? AND tweetid=?")
+            ->execute([$userauthtwitterid, $tweetid]);
+    echo encodeDBResponseInformation($success);
+}
+
+function validateAccessToken($userauthtwitterid, $accesstoken, $accesstokensecret) {
+    $stmt = $GLOBALS['database_connection']->prepare("SELECT * FROM users WHERE userid=?");
+    $results = $stmt->execute([$userauthtwitterid])->fetch();
+    if (!$results) {
+        return false;
+    } else {
+        return ($results[0]['accesstoken'] == $accesstoken && $results[0]['accesstokensecret'] == $accesstokensecret);
+    }
+}
+
 function updateAccessToken($response) {
     $stmt = $GLOBALS['database_connection']->prepare("INSERT INTO users (twitterid,accesstoken,accesstokensecret) "
             . "VALUES (?,?,?) ON DUPLICATE KEY UPDATE twitterid=?, accesstoken=?, accesstokensecret=?");
     return $stmt->execute([$response['user_id'], $response['oauth_token'], $response['oauth_token_secret'],
-        $response['user_id'], $response['oauth_token'], $response['oauth_token_secret']]);
+                $response['user_id'], $response['oauth_token'], $response['oauth_token_secret']]);
 }
 
 function checkRetweetRecordsInDB($usertwitterid, $echo = true) {
@@ -118,7 +143,12 @@ function updateRetweetRecordsInDB($usertwitterid, $tweetid, $retweettime) {
     return $success;
 }
 
-function encodeResponseInformation($connection, $response, $dbOpSuccessful = null) {
+function encodeDBResponseInformation($dbResult) {
+    $results['dbresult'] = $dbResult;
+    return json_encode($results);
+}
+
+function encodeTwitterResponseInformation($connection, $response, $dbOpSuccessful = null) {
     $results['response'] = $response;
     $results['headers'] = $connection->getLastXHeaders();
     $results['httpcode'] = $connection->getLastHttpCode();
@@ -187,7 +217,7 @@ function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params,
     }
     updateUserRateLimitInDB($userauthtwitterid, $endpoint, $connection->getLastXHeaders());
     if ($echo) {
-        echo encodeResponseInformation($connection, $result);
+        echo encodeTwitterResponseInformation($connection, $result);
     } else {
         return $result;
     }
