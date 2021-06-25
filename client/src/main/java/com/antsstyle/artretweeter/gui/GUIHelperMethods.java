@@ -471,7 +471,7 @@ public class GUIHelperMethods {
             LOGGER.error(msg);
             return false;
         }
-        ChooseDatePanel2 datePanel = new ChooseDatePanel2();
+        ChooseDatePanel datePanel = new ChooseDatePanel();
         int selectionResult = JOptionPane.showConfirmDialog(GUI.getInstance(), datePanel, "Select Retweet Date", JOptionPane.OK_CANCEL_OPTION);
         if (selectionResult != JOptionPane.OK_OPTION) {
             return false;

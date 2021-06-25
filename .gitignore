@@ -1,5 +1,6 @@
 # Compiled class file
 *.class
+*.form
 
 # Properties file
 *.properties
@@ -30,3 +31,4 @@ server/nbproject/
 client/nbactions.xml
 client/tweetimages/
 /client/target/
+*.form

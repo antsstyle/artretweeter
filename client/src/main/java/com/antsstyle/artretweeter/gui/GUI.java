@@ -69,9 +69,11 @@ public class GUI extends javax.swing.JFrame {
         ALL_CONTAINERS.add(COLLECTIONS_PANEL);
         ALL_CONTAINERS.add(PRIMARY_DISPLAY_PANEL);
         ALL_CONTAINERS.add(QUEUING_PANEL);
+        ALL_CONTAINERS.add(FAILED_RETWEETS_PANEL);
         ACCOUNTS_PANEL.initialise();
         COLLECTIONS_PANEL.initialise();
         QUEUING_PANEL.initialise();
+        FAILED_RETWEETS_PANEL.initialise();
         getInstance()
                 .setGUISize(getAccountsPanel());
         getInstance()
