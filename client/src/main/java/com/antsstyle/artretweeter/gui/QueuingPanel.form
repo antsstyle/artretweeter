@@ -20,29 +20,30 @@
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="0" attributes="0">
-                      <Group type="103" groupAlignment="0" attributes="0">
+                      <Group type="103" groupAlignment="0" max="-2" attributes="0">
                           <Group type="102" alignment="0" attributes="0">
                               <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
                               <EmptySpace type="unrelated" max="-2" attributes="0"/>
                               <Component id="jLabel2" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="selectAccountComboBox" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace min="-2" pref="558" max="-2" attributes="0"/>
+                              <EmptySpace max="32767" attributes="0"/>
                               <Component id="jLabel3" min="-2" pref="598" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="8" max="-2" attributes="0"/>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
-                              <Component id="retweetApprovalScrollPane1" min="-2" max="-2" attributes="0"/>
+                              <Component id="tweetImageScrollPane1" min="-2" max="-2" attributes="0"/>
                               <EmptySpace min="-2" pref="2" max="-2" attributes="0"/>
-                              <Component id="retweetApprovalScrollPane2" min="-2" max="-2" attributes="0"/>
+                              <Component id="tweetImageScrollPane2" min="-2" max="-2" attributes="0"/>
                               <EmptySpace min="-2" pref="2" max="-2" attributes="0"/>
-                              <Component id="retweetApprovalScrollPane3" min="-2" max="-2" attributes="0"/>
+                              <Component id="tweetImageScrollPane3" min="-2" max="-2" attributes="0"/>
                               <EmptySpace min="-2" pref="4" max="-2" attributes="0"/>
-                              <Component id="retweetApprovalScrollPane4" min="-2" max="-2" attributes="0"/>
+                              <Component id="tweetImageScrollPane4" min="-2" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                       <EmptySpace max="32767" attributes="0"/>
                   </Group>
-                  <Group type="102" attributes="0">
+                  <Group type="102" alignment="1" attributes="0">
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Component id="queueRetweetButton" alignment="0" min="-2" max="-2" attributes="0"/>
                           <Component id="jScrollPane26" alignment="0" min="-2" pref="598" max="-2" attributes="0"/>
@@ -92,10 +93,10 @@
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="retweetApprovalScrollPane2" alignment="0" max="-2" attributes="0"/>
-                  <Component id="retweetApprovalScrollPane3" alignment="0" max="-2" attributes="0"/>
-                  <Component id="retweetApprovalScrollPane1" alignment="0" max="-2" attributes="0"/>
-                  <Component id="retweetApprovalScrollPane4" alignment="1" min="-2" max="-2" attributes="0"/>
+                  <Component id="tweetImageScrollPane2" alignment="0" max="-2" attributes="0"/>
+                  <Component id="tweetImageScrollPane3" alignment="0" max="-2" attributes="0"/>
+                  <Component id="tweetImageScrollPane1" alignment="0" max="-2" attributes="0"/>
+                  <Component id="tweetImageScrollPane4" alignment="1" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace min="-2" pref="8" max="-2" attributes="0"/>
           </Group>
@@ -133,10 +134,12 @@
           <Properties>
             <Property name="autoCreateRowSorter" type="boolean" value="true"/>
             <Property name="model" type="javax.swing.table.TableModel" editor="org.netbeans.modules.form.editors2.TableModelEditor">
-              <Table columnCount="3" rowCount="0">
+              <Table columnCount="5" rowCount="0">
                 <Column editable="false" title="ID" type="java.lang.Long"/>
                 <Column editable="false" title="Tweet Text" type="java.lang.String"/>
-                <Column editable="false" title="Retweet Time" type="java.lang.String"/>
+                <Column editable="false" title="Date Posted" type="java.lang.String"/>
+                <Column editable="false" title="Retweets" type="java.lang.Integer"/>
+                <Column editable="false" title="Likes" type="java.lang.Integer"/>
               </Table>
             </Property>
             <Property name="columnModel" type="javax.swing.table.TableColumnModel" editor="org.netbeans.modules.form.editors2.TableColumnModelEditor">
@@ -152,6 +155,16 @@
                   <Renderer/>
                 </Column>
                 <Column maxWidth="120" minWidth="120" prefWidth="120" resizable="true">
+                  <Title/>
+                  <Editor/>
+                  <Renderer/>
+                </Column>
+                <Column maxWidth="70" minWidth="70" prefWidth="70" resizable="true">
+                  <Title/>
+                  <Editor/>
+                  <Renderer/>
+                </Column>
+                <Column maxWidth="70" minWidth="70" prefWidth="70" resizable="true">
                   <Title/>
                   <Editor/>
                   <Renderer/>
@@ -205,7 +218,7 @@
         <Property name="text" type="java.lang.String" value="Select account: "/>
       </Properties>
     </Component>
-    <Container class="javax.swing.JScrollPane" name="retweetApprovalScrollPane1">
+    <Container class="javax.swing.JScrollPane" name="tweetImageScrollPane1">
       <Properties>
         <Property name="horizontalScrollBarPolicy" type="int" value="31"/>
         <Property name="verticalScrollBarPolicy" type="int" value="21"/>
@@ -234,7 +247,7 @@
         </Component>
       </SubComponents>
     </Container>
-    <Container class="javax.swing.JScrollPane" name="retweetApprovalScrollPane2">
+    <Container class="javax.swing.JScrollPane" name="tweetImageScrollPane2">
       <Properties>
         <Property name="horizontalScrollBarPolicy" type="int" value="31"/>
         <Property name="verticalScrollBarPolicy" type="int" value="21"/>
@@ -263,7 +276,7 @@
         </Component>
       </SubComponents>
     </Container>
-    <Container class="javax.swing.JScrollPane" name="retweetApprovalScrollPane3">
+    <Container class="javax.swing.JScrollPane" name="tweetImageScrollPane3">
       <Properties>
         <Property name="horizontalScrollBarPolicy" type="int" value="31"/>
         <Property name="verticalScrollBarPolicy" type="int" value="21"/>
@@ -292,7 +305,7 @@
         </Component>
       </SubComponents>
     </Container>
-    <Container class="javax.swing.JScrollPane" name="retweetApprovalScrollPane4">
+    <Container class="javax.swing.JScrollPane" name="tweetImageScrollPane4">
       <Properties>
         <Property name="horizontalScrollBarPolicy" type="int" value="31"/>
         <Property name="verticalScrollBarPolicy" type="int" value="21"/>
@@ -428,52 +441,22 @@
         <DimensionLayout dim="0">
           <Group type="103" groupAlignment="0" attributes="0">
               <Group type="102" attributes="0">
-                  <EmptySpace max="-2" attributes="0"/>
-                  <Component id="jLabel4" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace max="-2" attributes="0"/>
+                  <EmptySpace min="-2" pref="169" max="-2" attributes="0"/>
                   <Component id="retweetQueueStatusLabel" max="32767" attributes="0"/>
-                  <EmptySpace max="-2" attributes="0"/>
-                  <Component id="setRetweetQueueStatusButton" min="-2" pref="98" max="-2" attributes="0"/>
-                  <EmptySpace min="-2" pref="77" max="-2" attributes="0"/>
+                  <EmptySpace min="-2" pref="181" max="-2" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
         <DimensionLayout dim="1">
           <Group type="103" groupAlignment="0" attributes="0">
               <Group type="102" attributes="0">
-                  <Group type="103" groupAlignment="1" attributes="0">
-                      <Component id="retweetQueueStatusLabel" alignment="0" max="32767" attributes="0"/>
-                      <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="jLabel4" alignment="3" min="-2" pref="32" max="-2" attributes="0"/>
-                          <Component id="setRetweetQueueStatusButton" alignment="3" max="32767" attributes="0"/>
-                      </Group>
-                  </Group>
+                  <Component id="retweetQueueStatusLabel" pref="33" max="32767" attributes="0"/>
                   <EmptySpace min="-2" pref="217" max="-2" attributes="0"/>
               </Group>
           </Group>
         </DimensionLayout>
       </Layout>
       <SubComponents>
-        <Component class="javax.swing.JButton" name="setRetweetQueueStatusButton">
-          <Properties>
-            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
-              <Font name="Tahoma" size="14" style="1"/>
-            </Property>
-            <Property name="text" type="java.lang.String" value="Start"/>
-            <Property name="toolTipText" type="java.lang.String" value=""/>
-          </Properties>
-          <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="setRetweetQueueStatusButtonActionPerformed"/>
-          </Events>
-        </Component>
-        <Component class="javax.swing.JLabel" name="jLabel4">
-          <Properties>
-            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
-              <Font name="Tahoma" size="14" style="1"/>
-            </Property>
-            <Property name="text" type="java.lang.String" value="Retweet queue status:"/>
-          </Properties>
-        </Component>
         <Component class="javax.swing.JLabel" name="retweetQueueStatusLabel">
           <Properties>
             <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">

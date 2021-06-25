@@ -6,18 +6,20 @@
 package com.antsstyle.artretweeter.twitter;
 
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.CollectionOrdering;
-import com.antsstyle.artretweeter.datastructures.OrderedByLikesStatusHolder;
-import com.antsstyle.artretweeter.datastructures.OrderedByRetweetsStatusHolder;
-import com.antsstyle.artretweeter.datastructures.OrderedStatusHolder;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
+import com.antsstyle.artretweeter.datastructures.TwitterResponse;
 import com.antsstyle.artretweeter.datastructures.RequestToken;
+import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
+import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.main.ArtRetweeterMain;
+import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -30,7 +32,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpEntity;
@@ -79,10 +80,10 @@ public class RESTAPI {
      */
     public static Pair<OperationResult, JsonObject> processResponse(String endpoint,
             Long userTwitterID, CloseableHttpResponse response) {
+        OperationResult res = new OperationResult();
         if (response.getStatusLine().getStatusCode() != 200) {
-            OperationResult res = new OperationResult()
-                    .setArtRetweeterStatusCode(OperationResult.ARTRETWEETER_SERVER_ERROR)
-                    .setArtRetweeterStatusMessage("Failed to communicate with ArtRetweeter server!");
+            res.setServerResponse(new ServerResponse(StatusCode.ARTRETWEETER_SERVER_ERROR));
+            res.getServerResponse().setExtraStatusMessage("Failed to communicate with ArtRetweeter server!");
             return Pair.of(res, null);
         }
         HttpEntity entity = response.getEntity();
@@ -101,26 +102,27 @@ public class RESTAPI {
                     LOGGER.error("Unable to process headers - empty array returned.", e1);
                 }
             }
-            OperationResult result = processArtRetweeterServerErrorResponse(responseJSON);
+            ServerResponse result = ServerAPI.processArtRetweeterServerErrorResponse(responseJSON);
             EntityUtils.consume(entity);
             if (result != null) {
-                return Pair.of(result, responseJSON);
+                res.setServerResponse(result);
+                return Pair.of(res, responseJSON);
             }
-            result = processTwitterAPIErrorResponse(responseJSON);
+            TwitterResponse twResult = processTwitterAPIErrorResponse(responseJSON);
             if (result != null) {
-                return Pair.of(result, responseJSON);
+                res.setTwitterResponse(twResult);
+                return Pair.of(res, responseJSON);
             }
             return Pair.of(null, responseJSON);
         } catch (Exception e) {
             LOGGER.error("Unable to read response entity!", e);
-            OperationResult res = new OperationResult()
-                    .setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR)
-                    .setArtRetweeterStatusMessage("Unable to read response entity!");
+            ClientResponse clientRes = new ClientResponse(StatusCode.JSON_PARSE_ERROR);
+            res.setClientResponse(clientRes);
             return Pair.of(res, null);
         }
     }
 
-    public static OperationResult processTwitterAPIErrorResponse(JsonObject responseJSON) {
+    public static TwitterResponse processTwitterAPIErrorResponse(JsonObject responseJSON) {
         Set<String> keys = responseJSON.keySet();
         if (!keys.contains("response")) {
             return null;
@@ -136,41 +138,11 @@ public class RESTAPI {
 
         JsonArray errorObj = responseJSON.get("errors").getAsJsonArray();
         // Use first error only
-        OperationResult result = new OperationResult()
-                .setTwitterErrorCode(errorObj.get(0).getAsJsonObject().get("code").getAsInt())
-                .setTwitterStatusMessage(errorObj.get(0).getAsJsonObject().get("message").getAsString())
-                .setArtRetweeterStatusCode(OperationResult.TWITTER_API_ERROR)
-                .setHttpStatusCode(responseJSON.get("httpcode").getAsInt());
+        TwitterResponse result = new TwitterResponse(StatusCode.TWITTER_API_ERROR);
+        result.setTwitterErrorCode(errorObj.get(0).getAsJsonObject().get("code").getAsInt());
+        result.setTwitterErrorMessage(errorObj.get(0).getAsJsonObject().get("message").getAsString());
+        result.setHttpStatusCode(responseJSON.get("httpcode").getAsInt());
         return result;
-    }
-
-    public static OperationResult processArtRetweeterServerErrorResponse(JsonObject responseJSON) {
-        if (responseJSON.keySet().size() >= 1 && responseJSON.get("artretweetererrors") != null) {
-            String message = responseJSON.get("artretweetererrors").getAsString();
-            OperationResult result = new OperationResult();
-            if (message.equals("Rate limit reached.")) {
-                result.setArtRetweeterStatusCode(OperationResult.RATE_LIMIT_EXCEEDED_ERROR);
-                int timeToResetSeconds = responseJSON.get("timetoresetseconds").getAsInt();
-                int minutes = timeToResetSeconds / 60;
-                int seconds = timeToResetSeconds % 60;
-                String timeMessage;
-                if (minutes == 0) {
-                    timeMessage = String.valueOf(seconds).concat(" seconds.");
-                } else if (minutes == 1) {
-                    timeMessage = String.valueOf(minutes).concat(" minute, ").concat(String.valueOf(seconds)).concat(" seconds.");
-                } else {
-                    timeMessage = String.valueOf(minutes).concat(" minutes, ").concat(String.valueOf(seconds)).concat(" seconds.");
-                }
-                result.setArtRetweeterStatusMessage("You can try this request again in ".concat(timeMessage));
-                result.setReturnedObject(responseJSON.get("timetoresetseconds").getAsInt());
-            } else {
-                result.setArtRetweeterStatusCode(OperationResult.ARTRETWEETER_SERVER_ERROR);
-                result.setArtRetweeterStatusMessage(message);
-            }
-            return result;
-        } else {
-            return null;
-        }
     }
 
     public static void processHeaders(JsonObject headerJSON, String endpoint, Long userTwitterID) {
@@ -198,11 +170,11 @@ public class RESTAPI {
         }
     }
 
-    public static OperationResult apiCall(List<NameValuePair> nameValuePairs, Endpoint endpoint,
+    public static OperationResult apiCall(List<NameValuePair> nameValuePairs, TwitterEndpoint endpoint,
             Account account) {
         OperationResult opResult = new OperationResult();
         if (account == null && endpoint.getRequiresUserAuth()) {
-            opResult.setArtRetweeterStatusCode(OperationResult.MISSING_CREDENTIALS_ERROR);
+            opResult.setClientResponse(new ClientResponse(StatusCode.MISSING_CREDENTIALS_ERROR));
             return opResult;
         }
         Long userTwitterID = null;
@@ -210,9 +182,12 @@ public class RESTAPI {
             userTwitterID = account.getTwitterID();
             nameValuePairs.add(new BasicNameValuePair("access_token", account.getToken()));
             nameValuePairs.add(new BasicNameValuePair("access_token_secret", account.getTokenSecret()));
+            // nameValuePairs.add(new BasicNameValuePair("access_token", "test"));
+            // nameValuePairs.add(new BasicNameValuePair("access_token_secret", "alsotest"));
             nameValuePairs.add(new BasicNameValuePair("user_auth_twitter_id", String.valueOf(account.getTwitterID())));
+            nameValuePairs.add(new BasicNameValuePair("twitter_endpoint", endpoint.getEndpointName()));
         }
-        String url = ArtRetweeterMain.prop.getProperty(endpoint.getPropertyName());
+        String url = ArtRetweeterMain.prop.getProperty("serverurl");
         try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
@@ -224,79 +199,85 @@ public class RESTAPI {
                     int httpCode = response.getStatusLine().getStatusCode();
                     if (httpCode != 200 || checkResult.getLeft() != null) {
                         if (httpCode != 200) {
+                            LOGGER.error("HTTP code: " + httpCode);
                             artRetweeterServerErrors++;
                         } else {
                             twitterAPIErrors++;
                         }
-                        if (twitterAPIErrors == 3 || (checkResult.getLeft() != null
-                                && (checkResult.getLeft().getTwitterErrorCode() < 500
-                                || checkResult.getLeft().getTwitterErrorCode() > 599))) {
-                            if (checkResult.getLeft() != null) {
-                                return checkResult.getLeft();
+
+                        if (twitterAPIErrors == 3) {
+                            OperationResult sResp = checkResult.getLeft();
+                            if (sResp != null) {
+                                if (sResp.getTwitterResponse() != null && (sResp.getTwitterResponse().getTwitterErrorCode() < 500
+                                        || sResp.getTwitterResponse().getTwitterErrorCode() > 599)) {
+                                    twitterAPIErrors++;
+                                } else {
+                                    return sResp;
+                                }
                             } else {
-                                opResult.setArtRetweeterStatusCode(OperationResult.TWITTER_API_ERROR);
-                                return opResult;
+                                return checkResult.getLeft();
                             }
                         }
                         if (artRetweeterServerErrors == 3) {
+                            LOGGER.error("Max server errors reached for API request to endpoint: " + endpoint.getEndpointName());
                             if (checkResult.getLeft() != null) {
                                 return checkResult.getLeft();
                             } else {
-                                opResult.setArtRetweeterStatusCode(OperationResult.ARTRETWEETER_SERVER_ERROR);
+                                opResult.setServerResponse(new ServerResponse(StatusCode.ARTRETWEETER_SERVER_ERROR));
                                 return opResult;
                             }
                         }
                         try {
-                            Thread.sleep(artRetweeterServerErrors * 1000);
+                            Thread.sleep((artRetweeterServerErrors + twitterAPIErrors) * 1000);
                         } catch (Exception e) {
                             LOGGER.error("Interrupted while waiting to retry API request", e);
-                            opResult.setArtRetweeterStatusCode(OperationResult.INTERRUPTED_ERROR);
+                            opResult.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
                             return opResult;
                         }
                         continue;
                     }
                     JsonObject responseJSON = checkResult.getRight();
-                    opResult.setHeaderJSON(responseJSON.get("headers").getAsJsonObject());
+                    opResult.setTwitterResponse(new TwitterResponse(StatusCode.SUCCESS));
+                    opResult.getTwitterResponse().setHeaderJSON(responseJSON.get("headers").getAsJsonObject());
                     if (responseJSON.get("response").isJsonObject()) {
-                        opResult.setResponseJSONObject(responseJSON.get("response").getAsJsonObject());
+                        opResult.getTwitterResponse().setResponseJSONObject(responseJSON.get("response").getAsJsonObject());
                     } else if (responseJSON.get("response").isJsonArray()) {
-                        opResult.setResponseJSONArray(responseJSON.get("response").getAsJsonArray());
+                        opResult.getTwitterResponse().setResponseJSONArray(responseJSON.get("response").getAsJsonArray());
                     }
-                    opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-                    break;
+                    opResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+                    return opResult;
                 } catch (Exception e) {
                     LOGGER.error("Failed to get HTTP response!", e);
-                    opResult.setArtRetweeterStatusCode(OperationResult.MISC_ERROR);
+                    opResult.setServerResponse(new ServerResponse(StatusCode.CONNECTION_ERROR));
                     return opResult;
                 }
             }
         } catch (Exception e) {
             LOGGER.error("Failed to create HTTP client!", e);
-            opResult.setArtRetweeterStatusCode(OperationResult.MISC_ERROR);
+            opResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
             return opResult;
         }
-
         return opResult;
     }
 
     public static OperationResult statusesRetweet(Long tweetID, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.STATUSES_RETWEET, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_RETWEET, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         Gson gson = new Gson();
         StatusJSON retweetedStatus = gson.fromJson(responseJSON.get("retweeted_status").getAsJsonObject(), StatusJSON.class);
-        apiCallResult.setReturnedObject(retweetedStatus);
+        apiCallResult.getTwitterResponse().setReturnedObject(retweetedStatus);
         return apiCallResult;
     }
 
     public static OperationResult statusesUnretweet(Long retweetID, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(retweetID)));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.STATUSES_UNRETWEET, account);
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_UNRETWEET, account);
         return apiCallResult;
     }
 
@@ -308,21 +289,19 @@ public class RESTAPI {
         }
         sb.setLength(sb.length() - 1);
         nvps.add(new BasicNameValuePair("id", sb.toString()));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.STATUSES_LOOKUP, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_LOOKUP, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        OperationResult opResult = new OperationResult();
         Gson gson = new Gson();
-        JsonArray responseJSON = apiCallResult.getResponseJSONArray();
+        JsonArray responseJSON = apiCallResult.getTwitterResponse().getResponseJSONArray();
         StatusJSON[] receivedStatuses;
         try {
             receivedStatuses = gson.fromJson(responseJSON, StatusJSON[].class);
         } catch (Exception e1) {
             LOGGER.error("Failed to parse returned statuses JSON!", e1);
-            opResult.setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR);
-            opResult.setArtRetweeterStatusMessage("Failed to parse returned statuses JSON!");
-            return opResult;
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            return apiCallResult;
         }
         ArrayList<Object[]> params = new ArrayList<>();
         ArrayList<StatusJSON> statuses = new ArrayList<>();
@@ -344,88 +323,116 @@ public class RESTAPI {
                 continue;
             }
             OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);
-            if (tweetParamsResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                params.add((Object[]) tweetParamsResult.getReturnedObject());
+            if (tweetParamsResult.wasSuccessful()) {
+                params.add((Object[]) tweetParamsResult.getClientResponse().getReturnedObject());
             } else {
                 return tweetParamsResult;
             }
-
             statuses.add(status);
         }
         if (!params.isEmpty()) {
             if (!CoreDB.parameterisedTweetMergeBatch(params)) {
-                opResult.setArtRetweeterStatusCode(OperationResult.DB_ERROR);
-                opResult.setArtRetweeterStatusMessage("Failed to update database with tweet batch!");
-                return opResult;
+                apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+                apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
+                return apiCallResult;
             }
         }
-        opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        opResult.setReturnedObject(statuses);
-        return opResult;
+        apiCallResult.getTwitterResponse().setReturnedObject(statuses);
+        return apiCallResult;
     }
 
     public static OperationResult getTweetByID(Long tweetID, Account account, Path tweetFolderPath, boolean downloadAndStore) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.STATUSES_SHOW, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_SHOW, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        OperationResult opResult = new OperationResult();
         Gson gson = new Gson();
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         StatusJSON status = gson.fromJson(responseJSON, StatusJSON.class);
-
+        apiCallResult.getTwitterResponse().setReturnedObject(status);
         if (downloadAndStore) {
             OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);
-            if (tweetParamsResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                Object[] tweetParams = (Object[]) tweetParamsResult.getReturnedObject();
+            if (tweetParamsResult.wasSuccessful()) {
+                Object[] tweetParams = (Object[]) tweetParamsResult.getClientResponse().getReturnedObject();
                 CoreDB.insertTweet(tweetParams);
-                opResult.setReturnedObject(status);
-                opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
             }
-            return opResult;
-        } else {
-            apiCallResult.setReturnedObject(status);
-            return apiCallResult;
         }
-
+        return apiCallResult;
     }
 
-    public static OperationResult collectionDestroy(String collectionID, Account account) {
+    public static OperationResult collectionsEntriesAdd(String collectionID, Long tweetID, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", collectionID));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_DESTROY, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        nvps.add(new BasicNameValuePair("tweet_id", String.valueOf(tweetID)));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_ENTRIES_ADD, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        OperationResult opResult = new OperationResult();
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
-        String destroyed = responseJSON.get("destroyed").getAsString();
-        if (destroyed.toLowerCase().equals("true")) {
-            opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        } else {
-            opResult.setArtRetweeterStatusCode(OperationResult.TWITTER_API_ERROR);
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
+        JsonObject response = responseJSON.get("response").getAsJsonObject();
+        if (response.keySet().size() == 1 && response.keySet().contains("errors")) {
+            JsonArray errors = response.get("errors").getAsJsonArray();
+            if (errors.size() != 0) {
+                apiCallResult.getTwitterResponse().setErrorJSON(errors.get(0).getAsJsonObject());
+                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+            }
         }
-        return opResult;
-
+        return apiCallResult;
     }
 
-    public static OperationResult collectionCreate(String name, String description, CollectionOrdering ordering, Account account) {
+    public static OperationResult collectionsEntriesRemove(String collectionID, Long tweetID, Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("id", collectionID));
+        nvps.add(new BasicNameValuePair("tweet_id", String.valueOf(tweetID)));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_ENTRIES_REMOVE, account);
+        if (!apiCallResult.wasSuccessful()) {
+            return apiCallResult;
+        }
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
+        JsonObject response = responseJSON.get("response").getAsJsonObject();
+        if (response.keySet().size() == 1 && response.keySet().contains("errors")) {
+            JsonArray errors = response.get("errors").getAsJsonArray();
+            if (errors.size() != 0) {
+                apiCallResult.getTwitterResponse().setErrorJSON(errors.get(0).getAsJsonObject());
+                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+            }
+        }
+        return apiCallResult;
+    }
+
+    public static OperationResult collectionsDestroy(String collectionID, Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("id", collectionID));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_DESTROY, account);
+        if (!apiCallResult.wasSuccessful()) {
+            return apiCallResult;
+        }
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
+        String destroyed = responseJSON.get("destroyed").getAsString();
+        if (destroyed.toLowerCase().equals("true")) {
+            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+        } else {
+            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+        }
+        return apiCallResult;
+    }
+
+    public static OperationResult collectionsCreate(String name, String description, CollectionOrdering ordering, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("name", name));
         nvps.add(new BasicNameValuePair("description", description));
         nvps.add(new BasicNameValuePair("timeline_order", ordering.getParameterName()));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_CREATE, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_CREATE, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        OperationResult opResult;
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         TwitterCollectionHolder holder;
         String id = responseJSON.get("response").getAsJsonObject().get("timeline_id").getAsString();
-        opResult = collectionShow(id, account);
-        if (!opResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        apiCallResult = collectionsShow(id, account);
+        if (!apiCallResult.wasSuccessful()) {
             LOGGER.info("Failed to show collection - manually creating collection object.");
             String collectionURL = "https://twitter.com/".concat(account.getScreenName()).concat("/timelines/")
                     .concat(id.substring(id.indexOf("-") + 1));
@@ -435,70 +442,49 @@ public class RESTAPI {
                     .setCollectionURL(collectionURL)
                     .setDescription(description)
                     .setOrdering(CollectionOrdering.CURATION_REVERSE_CHRON);
-            opResult.setReturnedObject(holder);
+            apiCallResult.getTwitterResponse().setReturnedObject(holder);
         }
-        opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        return opResult;
+        apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+        return apiCallResult;
     }
 
-    public static OperationResult collectionCurate(String jsonData, Account account) {
+    public static OperationResult collectionsEntriesCurate(String jsonData, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("json_data", jsonData));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_CURATE, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-            return apiCallResult;
-        }
-        OperationResult opResult = new OperationResult();
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
-        JsonObject innerResponseJSON = responseJSON.get("response").getAsJsonObject();
-        if (innerResponseJSON.keySet().contains("errors")) {
-            JsonArray errors = innerResponseJSON.get("errors").getAsJsonArray();
-            if (errors.size() == 0) {
-                opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-            } else {
-                opResult.setArtRetweeterStatusCode(OperationResult.TWITTER_API_ERROR);
-            }
-        }
-
-        return opResult;
-
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_ENTRIES_CURATE, account);
+        return apiCallResult;
     }
 
-    public static OperationResult requestRequestToken() {
+    public static OperationResult oauthRequestToken() {
         List<NameValuePair> nvps = new ArrayList<>();
         String requestParameters = "['oauth_callback' => 'oob']";
-        nvps.add(new BasicNameValuePair("requestendpoint", "oauth/request_token"));
+        nvps.add(new BasicNameValuePair("twitter_endpoint", "oauth/request_token"));
         nvps.add(new BasicNameValuePair("requestparameters", requestParameters));
-        LOGGER.debug("API Call");
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.REQUEST_TOKEN, null);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.REQUEST_TOKEN, null);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        LOGGER.debug("Finished API Call.");
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
-        OperationResult result = new OperationResult();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         RequestToken requestToken;
 
         String token = responseJSON.get("oauth_token").getAsString();
         String tokenSecret = responseJSON.get("oauth_token_secret").getAsString();
         Boolean callbackConfirmed = responseJSON.get("oauth_callback_confirmed").getAsBoolean();
         requestToken = new RequestToken(token, tokenSecret, callbackConfirmed);
-        result.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        result.setReturnedObject(requestToken);
-        return result;
-
+        apiCallResult.getTwitterResponse().setReturnedObject(requestToken);
+        return apiCallResult;
     }
 
-    public static OperationResult requestAccessToken(String pin, RequestToken token) {
+    public static OperationResult oauthAccessToken(String pin, RequestToken token) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("oauth_token", token.getToken()));
         nvps.add(new BasicNameValuePair("oauth_verifier", pin));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.ACCESS_TOKEN, null);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        nvps.add(new BasicNameValuePair("twitter_endpoint", "oauth/access_token"));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.ACCESS_TOKEN, null);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
-        OperationResult res = new OperationResult();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         Account account;
 
         String accessTokenString = responseJSON.get("oauth_token").getAsString();
@@ -510,21 +496,18 @@ public class RESTAPI {
                 .setTwitterID(userTwitterID)
                 .setToken(accessTokenString)
                 .setTokenSecret(accessTokenSecret);
-
-        res.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        res.setReturnedObject(account);
-        return res;
+        apiCallResult.getTwitterResponse().setReturnedObject(account);
+        return apiCallResult;
     }
 
     public static OperationResult getCollectionsByUserID(Long userID, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("user_id", String.valueOf(userID)));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_LIST, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_LIST, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
-        OperationResult opResult = new OperationResult();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         ArrayList<TwitterCollectionHolder> collections = new ArrayList<>();
         Set<String> keys = responseJSON.keySet();
         if (keys.contains("objects")) {
@@ -552,27 +535,24 @@ public class RESTAPI {
                 }
             }
         } else {
-            opResult.setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR);
-            opResult.setArtRetweeterStatusMessage("Unable to parse JSON!");
-            return opResult;
-        }
-
-        opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        opResult.setReturnedObject(collections);
-        return opResult;
-    }
-
-    public static OperationResult collectionShow(String collectionID, Account account) {
-        List<NameValuePair> nvps = new ArrayList<>();
-        nvps.add(new BasicNameValuePair("id", collectionID));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_SHOW, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-            LOGGER.error("Failed to show collection with ID: " + collectionID);
-            LOGGER.error("Operation result was: " + apiCallResult.getReadableStatusCode());
+            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.JSON_PARSE_ERROR);
+            apiCallResult.getTwitterResponse().setExtraStatusMessage("Unable to parse JSON!");
             return apiCallResult;
         }
-        OperationResult opResult = new OperationResult();
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
+
+        apiCallResult.getTwitterResponse().setReturnedObject(collections);
+        return apiCallResult;
+    }
+
+    public static OperationResult collectionsShow(String collectionID, Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("id", collectionID));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_SHOW, account);
+        if (!apiCallResult.wasSuccessful()) {
+            LOGGER.error("Failed to show collection with ID: " + collectionID);
+            return apiCallResult;
+        }
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         try {
             JsonObject obj = responseJSON.get("objects").getAsJsonObject().get("timelines").getAsJsonObject();
             String[] keys = obj.keySet().toArray(new String[obj.keySet().size()]);
@@ -588,20 +568,19 @@ public class RESTAPI {
                         .setName(name)
                         .setCollectionURL(collectionURL)
                         .setOrdering(ordering);
-                opResult.setReturnedObject(holder);
+                apiCallResult.getTwitterResponse().setReturnedObject(holder);
             } else {
                 LOGGER.error("Collection not found in response JSON!");
-                opResult.setArtRetweeterStatusCode(OperationResult.MISC_ERROR);
-                return opResult;
+                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.MISC_ERROR);
+                return apiCallResult;
             }
         } catch (Exception e) {
             LOGGER.error("Failed to parse JSON response", e);
-            opResult.setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR);
-            return opResult;
+            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.JSON_PARSE_ERROR);
+            return apiCallResult;
         }
-        opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        return opResult;
-
+        apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+        return apiCallResult;
     }
 
     /**
@@ -612,29 +591,29 @@ public class RESTAPI {
      * @return
      */
     public static OperationResult getFullyHydratedCollectionByID(String collectionID, Account account) {
-        OperationResult opResult = new OperationResult();
+        OperationResult apiCallResult = new OperationResult();
         Path tweetFolderPath = CoreDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
-            opResult.setArtRetweeterStatusCode(OperationResult.DB_ERROR);
-            opResult.setArtRetweeterStatusMessage("Unable to retrieve tweet folder path from DB!");
-            return opResult;
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+            apiCallResult.getClientResponse().setExtraStatusMessage("Unable to retrieve tweet folder path from DB!");
+            return apiCallResult;
         }
         DBResponse collectionCheckResp = CoreDB.selectFromTable(DBTable.COLLECTIONS,
                 new String[]{"collectionid"},
                 new Object[]{collectionID});
         if (!collectionCheckResp.wasSuccessful() || collectionCheckResp.getReturnedRows().isEmpty()) {
-            opResult.setArtRetweeterStatusCode(OperationResult.DB_ERROR);
-            opResult.setArtRetweeterStatusMessage("Unable to retrieve collection information from DB!");
-            return opResult;
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+            apiCallResult.getClientResponse().setExtraStatusMessage("Unable to retrieve collection information from DB!");
+            return apiCallResult;
         }
 
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", collectionID));
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.COLLECTIONS_ENTRIES, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_ENTRIES, account);
+        if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        JsonObject responseJSON = apiCallResult.getResponseJSONObject();
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         Set<String> keys = responseJSON.keySet();
         if (keys.contains("objects")) {
             JsonObject objects = responseJSON.get("objects").getAsJsonObject();
@@ -646,16 +625,16 @@ public class RESTAPI {
                     tweetIDsList.add(Long.valueOf(tweetID));
                 }
                 OperationResult statusesResult = RESTAPI.getTweetsByIDs(tweetIDsList, account, tweetFolderPath);
-                if (!statusesResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+                if (!statusesResult.wasSuccessful()) {
                     return statusesResult;
                 }
-                ArrayList<StatusJSON> statuses = (ArrayList<StatusJSON>) statusesResult.getReturnedObject();
+                ArrayList<StatusJSON> statuses = (ArrayList<StatusJSON>) statusesResult.getTwitterResponse().getReturnedObject();
                 ArrayList<Object[]> tweetMergeParams = new ArrayList<>();
                 ArrayList<Object[]> collectionTweetsMergeParams = new ArrayList<>();
                 for (StatusJSON status : statuses) {
                     OperationResult res = status.downloadAndGetDBParams(tweetFolderPath);
-                    if (res.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                        Object[] params = (Object[]) res.getReturnedObject();
+                    if (res.wasSuccessful()) {
+                        Object[] params = (Object[]) res.getClientResponse().getReturnedObject();
                         tweetMergeParams.add(params);
                         collectionTweetsMergeParams.add(new Object[]{status.getId(), collectionID});
                     }
@@ -667,13 +646,12 @@ public class RESTAPI {
                 CoreDB.parameterisedCollectionTweetsMergeBatch(collectionTweetsMergeParams);
             }
         } else {
-            opResult.setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR);
-            opResult.setArtRetweeterStatusMessage("Unable to parse JSON!");
-            return opResult;
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            apiCallResult.getClientResponse().setExtraStatusMessage("Unable to parse JSON!");
+            return apiCallResult;
         }
 
-        opResult.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        return opResult;
+        return apiCallResult;
     }
 
     public static Pair<OperationResult, ArrayList<StatusJSON>> getAllUnrecordedUserTweetsByDate(CloseableHttpClient httpclient,
@@ -685,12 +663,11 @@ public class RESTAPI {
         } else if (latestMaxID != null && !latestMaxID.equals(Long.MAX_VALUE)) {
             nvps.add(new BasicNameValuePair("max_id", String.valueOf(latestMaxID)));
         }
-        OperationResult apiCallResult = apiCall(nvps, Endpoint.USER_TIMELINE, account);
-        if (!apiCallResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.USER_TIMELINE, account);
+        if (!apiCallResult.wasSuccessful()) {
             return Pair.of(apiCallResult, null);
         }
-        JsonArray responseJSON = apiCallResult.getResponseJSONArray();
-        OperationResult result = new OperationResult();
+        JsonArray responseJSON = apiCallResult.getTwitterResponse().getResponseJSONArray();
         ArrayList<Object[]> params = new ArrayList<>();
         Gson gson = new Gson();
         ArrayList<StatusJSON> statuses = new ArrayList<>();
@@ -701,16 +678,16 @@ public class RESTAPI {
             receivedStatuses = gson.fromJson(responseJSON, StatusJSON[].class);
         } catch (Exception e1) {
             LOGGER.error("Failed to parse returned statuses JSON!", e1);
-            result.setArtRetweeterStatusCode(OperationResult.JSON_PARSE_ERROR);
-            result.setArtRetweeterStatusMessage("Failed to parse returned statuses JSON!");
-            return Pair.of(result, null);
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            apiCallResult.getClientResponse().setExtraStatusMessage("Failed to parse returned statuses JSON!");
+            return Pair.of(apiCallResult, null);
         }
         LOGGER.debug("Number of statuses received: " + receivedStatuses.length);
         for (StatusJSON status : receivedStatuses) {
-            if (historicalMaxID > status.getId()) {
+            if (historicalMaxID > status.getId() && !historicalMaxID.equals(0L)) {
                 historicalMaxID = status.getId();
             }
-            if (highestID < status.getId()) {
+            if (highestID < status.getId() && historicalMaxID.equals(0L)) {
                 highestID = status.getId();
             }
             if (latestMaxID != null && status.getId() <= highestIDInDB) {
@@ -733,10 +710,11 @@ public class RESTAPI {
                 continue;
             }
             OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);
-            if (tweetParamsResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                params.add((Object[]) tweetParamsResult.getReturnedObject());
+            if (tweetParamsResult.wasSuccessful()) {
+                params.add((Object[]) tweetParamsResult.getClientResponse().getReturnedObject());
             } else {
-                return Pair.of(tweetParamsResult, statuses);
+                apiCallResult.setTwitterResponse(tweetParamsResult.getTwitterResponse());
+                return Pair.of(apiCallResult, statuses);
             }
 
             statuses.add(status);
@@ -745,39 +723,15 @@ public class RESTAPI {
         highestID++;
         if (!params.isEmpty()) {
             if (!CoreDB.parameterisedTweetMergeBatch(params)) {
-                result.setArtRetweeterStatusCode(OperationResult.DB_ERROR);
-                result.setArtRetweeterStatusMessage("Failed to update database with tweet batch!");
-                return Pair.of(result, statuses);
+                apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+                apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
+                return Pair.of(apiCallResult, statuses);
             }
         }
-        result.setReturnedObject(Pair.of(historicalMaxID, highestID));
-        result.setReceivedTweetCount(receivedStatuses.length);
-        result.setStoredTweetCount(statuses.size());
-
-        result.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        return Pair.of(result, statuses);
-    }
-
-    public static TreeSet<OrderedStatusHolder> sortStatusResultsByMetrics(ArrayList<StatusJSON> results, String metricToSortBy) {
-        TreeSet<OrderedStatusHolder> set = new TreeSet<>();
-        switch (metricToSortBy) {
-            case "Likes":
-                for (StatusJSON status : results) {
-                    OrderedStatusHolder holder
-                            = new OrderedByLikesStatusHolder(status.getFavorite_count(), status.getRetweet_count(), status);
-                    set.add(holder);
-                }
-                return set;
-            case "Retweets":
-                for (StatusJSON status : results) {
-                    OrderedStatusHolder holder
-                            = new OrderedByRetweetsStatusHolder(status.getFavorite_count(), status.getRetweet_count(), status);
-                    set.add(holder);
-                }
-                return set;
-            default:
-                return null;
-        }
+        apiCallResult.getTwitterResponse().setReturnedObject(Pair.of(historicalMaxID, highestID));
+        apiCallResult.getTwitterResponse().setReceivedTweetCount(receivedStatuses.length);
+        apiCallResult.getTwitterResponse().setStoredTweetCount(statuses.size());
+        return Pair.of(apiCallResult, statuses);
     }
 
 }

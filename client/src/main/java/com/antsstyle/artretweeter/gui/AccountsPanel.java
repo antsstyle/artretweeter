@@ -6,16 +6,18 @@
 package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.datastructures.Account;
-import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
+import com.antsstyle.artretweeter.datastructures.TwitterResponse;
 import com.antsstyle.artretweeter.datastructures.RequestToken;
+import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
-import com.antsstyle.artretweeter.tools.PathTools;
+import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.tools.SwingTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import static com.antsstyle.artretweeter.twitter.RESTAPI.CURRENTLY_PROCESSING;
@@ -24,15 +26,11 @@ import java.awt.Font;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import javax.swing.JEditorPane;
 import javax.swing.JOptionPane;
-import javax.swing.JTextArea;
-import javax.swing.ProgressMonitor;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
@@ -297,41 +295,48 @@ public class AccountsPanel extends javax.swing.JPanel {
             enableAllAccountButtons();
             return;
         }
-        String msg = "<html>Retrieving collections might take a while, if you have large collections. <br/>Press OK to proceed.</html>";
+        String msg = "<html>Retrieving collections might take a few minutes, if you have large collections. <br/>Press OK to proceed.</html>";
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             tweetDownloadProgressLabel.setText("Retrieving... ");
             tweetDownloadProgressBar.setVisible(true);
             tweetDownloadProgressBar.setIndeterminate(false);
+            ArrayList<OperationResult> errorResults = new ArrayList<>();
             SwingWorker worker = new SwingWorker<Object, Pair<Integer, Integer>>() {
 
                 @Override
                 protected Object doInBackground() {
                     OperationResult res;
                     CURRENTLY_PROCESSING = true;
-                    int consecutiveErrors = 0;
-                    Boolean errors = false;
+                    boolean fatalError = false;
+                    int errorCount = 0;
+                    int successCount = 0;
                     res = RESTAPI.getCollectionsByUserID(account.getTwitterID(), account);
 
-                    if (!res.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                        errors = true;
-                        return errors;
+                    if (!res.wasSuccessful()) {
+                        fatalError = true;
+                        errorResults.add(res);
+                        return new Object[]{fatalError, errorCount, successCount};
                     }
-                    ArrayList<TwitterCollectionHolder> collections = (ArrayList<TwitterCollectionHolder>) res.getReturnedObject();
+                    ArrayList<TwitterCollectionHolder> collections
+                            = (ArrayList<TwitterCollectionHolder>) res.getTwitterResponse().getReturnedObject();
                     int count = 1;
                     int total = 1 + collections.size();
                     publish(Pair.of(count, total));
                     for (TwitterCollectionHolder collection : collections) {
                         OperationResult hydrationResult = RESTAPI.getFullyHydratedCollectionByID(collection.getTwitterID(), account);
-                        if (!hydrationResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                            errors = true;
+                        if (!hydrationResult.wasSuccessful()) {
+                            errorCount++;
+                            errorResults.add(hydrationResult);
+                        } else {
+                            successCount++;
                         }
                         count++;
                         publish(Pair.of(count, total));
                     }
                     setProgress(100);
                     CURRENTLY_PROCESSING = false;
-                    return errors;
+                    return new Object[]{fatalError, errorCount, successCount};
 
                 }
 
@@ -346,9 +351,9 @@ public class AccountsPanel extends javax.swing.JPanel {
 
                 @Override
                 public void done() {
-                    Boolean errors;
+                    Object[] results;
                     try {
-                        errors = (Boolean) get();
+                        results = (Object[]) get();
                     } catch (Exception e) {
                         LOGGER.error("Failed to acquire results!", e);
                         tweetDownloadProgressBar.setVisible(false);
@@ -358,17 +363,26 @@ public class AccountsPanel extends javax.swing.JPanel {
                         return;
                     }
 
-                    if (!errors) {
+                    boolean fatalError = (boolean) results[0];
+                    int errorCount = (int) results[1];
+                    int successCount = (int) results[2];
+
+                    if (!fatalError && errorCount == 0) {
                         tweetDownloadProgressLabel.setText("<html>Collection retrieval finished successfully.</html>");
+                    } else if (!fatalError) {
+                        tweetDownloadProgressLabel.setText("<html>Retrieval completed, but some errors occurred.<br/>"
+                                + String.valueOf(successCount) + " collections were retrieved successfully, "
+                                + "and " + String.valueOf(errorCount) + " failed and were not retrieved." + "</html>");
                     } else {
-                        tweetDownloadProgressLabel.setText("<html>Retrieval completed, but one or more collections encountered an error.</html>");
+                        tweetDownloadProgressLabel.setText("<html>A fatal error occurred - no collections were retrieved.</html>");
+                        LOGGER.error("Fatal error: " + errorResults.get(0).getErrorCode().getStatusMessage());
                     }
                     tweetDownloadProgressBar.setVisible(false);
                     tweetDownloadProgressBar.setValue(0);
                     tweetDownloadProgressBar.setIndeterminate(true);
-                    Account selAcc = GUI.getTweetsPanel().getCurrentlySelectedAccount();
+                    Account selAcc = GUI.getCollectionsPanel().getCurrentlySelectedAccount();
                     if (selAcc.getTwitterID().equals(account.getTwitterID())) {
-                        GUI.getTweetsPanel().refreshCollectionBoxModel(false);
+                        GUI.getCollectionsPanel().refreshCollectionBoxModel(false);
                     }
                     enableAllAccountButtons();
                 }
@@ -465,7 +479,9 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
         }
         final Integer countBeforeStart = count.intValue();
-        String msg = "<html>Retrieving tweets will take a while, depending on the size of your tweet history. <br/>Press OK to proceed.</html>";
+        String msg = "<html>Retrieving tweets may take a few minutes, depending on the size of your tweet history. "
+                + "<br/><br/>Note that this might not retrieve all media tweets from your account, due to limitations of the standard Twitter API."
+                + "<br/><br/>Press OK to proceed.</html>";
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result != JOptionPane.OK_OPTION) {
             enableAllAccountButtons();
@@ -475,15 +491,18 @@ public class AccountsPanel extends javax.swing.JPanel {
         tweetDownloadProgressBar.setVisible(true);
         SwingWorker worker = new SwingWorker<Object, Pair<Integer, Integer>>() {
 
+            Integer storedTweetCount = 0;
+            Integer receivedTweetCount = 0;
+
             @Override
             protected Object doInBackground() {
-                OperationResult res = new OperationResult();
                 CURRENTLY_PROCESSING = true;
                 Pair<OperationResult, ArrayList<StatusJSON>> returnResults;
                 ArrayList<StatusJSON> statuses = new ArrayList<>();
                 Long historicalMaxID = finalHistoricalMaxID;
                 Long latestMaxID = finalLatestMaxID;
                 Boolean finished = false;
+                OperationResult finalResult = new OperationResult();
                 int consecutiveErrors = 0;
                 try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
                     while (!finished) {
@@ -492,13 +511,12 @@ public class AccountsPanel extends javax.swing.JPanel {
                             returnResults = RESTAPI.getAllUnrecordedUserTweetsByDate(httpclient, account,
                                     historicalMaxID, latestMaxID, tweetFolderPath, highestIDInDB);
                             OperationResult lastResult = returnResults.getLeft();
-                            res.setArtRetweeterStatusCode(lastResult.getArtRetweeterStatusCode());
-                            res.setArtRetweeterStatusMessage(lastResult.getArtRetweeterStatusMessage());
-                            if (lastResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+                            finalResult = lastResult;
+                            if (lastResult.wasSuccessful()) {
                                 consecutiveErrors = 0;
                                 ArrayList<StatusJSON> returnedStatuses = returnResults.getRight();
                                 statuses.addAll(returnedStatuses);
-                                Pair<Long, Long> resultPair = (Pair<Long, Long>) lastResult.getReturnedObject();
+                                Pair<Long, Long> resultPair = (Pair<Long, Long>) lastResult.getTwitterResponse().getReturnedObject();
                                 if (returnedStatuses.isEmpty()) {
                                     finished = true;
                                     LOGGER.debug("No more statuses to retrieve.");
@@ -521,15 +539,21 @@ public class AccountsPanel extends javax.swing.JPanel {
                                     }
                                 } else {
                                     historicalMaxID = resultPair.getLeft();
+                                    CoreDB.updateTable(DBTable.ACCOUNTS,
+                                            new String[]{"historicalmaxid"},
+                                            new Object[]{historicalMaxID},
+                                            new String[]{"twitterid"},
+                                            new Object[]{account.getTwitterID()});
                                 }
 
-                                res.setStoredTweetCount(res.getStoredTweetCount() + lastResult.getStoredTweetCount());
-                                res.setReceivedTweetCount(res.getReceivedTweetCount() + lastResult.getReceivedTweetCount());
-                                publish(Pair.of(res.getStoredTweetCount(), res.getReceivedTweetCount()));
+                                storedTweetCount += lastResult.getTwitterResponse().getStoredTweetCount();
+                                receivedTweetCount += lastResult.getTwitterResponse().getReceivedTweetCount();
+                                publish(Pair.of(storedTweetCount, receivedTweetCount));
 
-                            } else if (lastResult.getArtRetweeterStatusCode().equals(OperationResult.RATE_LIMIT_EXCEEDED_ERROR)) {
-                                return Pair.of(res, statuses);
+                            } else if (lastResult.getErrorCode().equals(StatusCode.RATE_LIMIT_EXCEEDED_ERROR)) {
+                                return Pair.of(lastResult, statuses);
                             } else {
+                                LOGGER.error("Error: " + lastResult.getErrorCode().toString());
                                 try {
                                     Thread.sleep(10 * 1000);
                                 } catch (Exception e) {
@@ -540,14 +564,12 @@ public class AccountsPanel extends javax.swing.JPanel {
                                 if (consecutiveErrors >= 3) {
                                     finished = true;
                                 }
-                                LOGGER.error("Query error. ");
                             }
                         } catch (Exception e) {
                             LOGGER.error("Tweet retrieval encountered exception", e);
-                            res.setArtRetweeterStatusCode(OperationResult.MISC_ERROR);
-                            res.setArtRetweeterStatusMessage("Tweet retrieval encountered exception");
+                            finalResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
                             CURRENTLY_PROCESSING = false;
-                            return Pair.of(res, statuses);
+                            return Pair.of(finalResult, statuses);
                         }
 
                         try {
@@ -559,12 +581,12 @@ public class AccountsPanel extends javax.swing.JPanel {
                     }
 
                     CURRENTLY_PROCESSING = false;
-                    return Pair.of(res, statuses);
+                    return Pair.of(finalResult, statuses);
                 } catch (Exception e) {
                     LOGGER.error("Failed to create httpclient!", e);
-                    res.setArtRetweeterStatusCode(OperationResult.MISC_ERROR);
-                    res.setArtRetweeterStatusMessage("Failed to create httpclient!");
-                    return Pair.of(res, null);
+                    finalResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
+                    finalResult.getClientResponse().setExtraStatusMessage("Failed to create httpclient!");
+                    return Pair.of(finalResult, null);
                 }
             }
 
@@ -620,23 +642,23 @@ public class AccountsPanel extends javax.swing.JPanel {
                     tm.setValueAt(count, modelRow, tweetsRetrievedColumnIndex);
                 }
 
-                Integer artRetweeterStatusCode = res.getArtRetweeterStatusCode();
+                StatusCode artRetweeterStatusCode = res.getTwitterResponse().getStatusCode();
 
-                if (artRetweeterStatusCode.equals(OperationResult.QUERY_OK)) {
+                if (res.wasSuccessful()) {
                     tweetDownloadProgressLabel.setText("<html>Tweet retrieval finished successfully. "
-                            + String.valueOf(res.getStoredTweetCount()) + " stored, out of "
-                            + String.valueOf(res.getReceivedTweetCount()) + " received.</html>");
-                } else if (artRetweeterStatusCode.equals(OperationResult.RATE_LIMIT_EXCEEDED_ERROR)) {
-                    int resetTimeSeconds = (int) res.getReturnedObject();
+                            + String.valueOf(storedTweetCount) + " stored, out of "
+                            + String.valueOf(receivedTweetCount) + " received.</html>");
+                } else if (artRetweeterStatusCode.equals(StatusCode.RATE_LIMIT_EXCEEDED_ERROR)) {
+                    int resetTimeSeconds = (int) res.getTwitterResponse().getReturnedObject();
                     tweetDownloadProgressLabel.setText("<html>Twitter rate limit exceeded. You must wait " + String.valueOf(resetTimeSeconds)
                             + " before attempting to retry.</html>");
                 } else if (results.getRight() != null) {
                     tweetDownloadProgressLabel.setText("<html>An error occurred, but some tweets were successfully retrieved.</html>");
                 }
                 tweetDownloadProgressBar.setVisible(false);
-                Account selAcc = GUI.getTweetsPanel().getCurrentlySelectedAccount();
+                Account selAcc = GUI.getCollectionsPanel().getCurrentlySelectedAccount();
                 if (selAcc.getTwitterID().equals(account.getTwitterID())) {
-                    GUI.getTweetsPanel().refreshTweetsTable();
+                    GUI.getCollectionsPanel().refreshTweetsTable();
                 }
                 enableAllAccountButtons();
             }
@@ -669,12 +691,12 @@ public class AccountsPanel extends javax.swing.JPanel {
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
-        OperationResult reqTokenResult = RESTAPI.requestRequestToken();
-        if (!reqTokenResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-            GUIHelperMethods.showErrorMessage(reqTokenResult, LOGGER, null);
+        OperationResult reqTokenResult = RESTAPI.oauthRequestToken();
+        if (!reqTokenResult.wasSuccessful()) {
+            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, null);
             return;
         }
-        RequestToken token = (RequestToken) reqTokenResult.getReturnedObject();
+        RequestToken token = (RequestToken) reqTokenResult.getTwitterResponse().getReturnedObject();
         if (token == null) {
             return;
         }
@@ -711,17 +733,17 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
 
         String pin = (String) results.get(0);
-        OperationResult authResult = RESTAPI.requestAccessToken(pin, token);
-        if (!authResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-            GUIHelperMethods.showErrorMessage(reqTokenResult, LOGGER, null);
+        OperationResult authResult = RESTAPI.oauthAccessToken(pin, token);
+        if (!authResult.wasSuccessful()) {
+            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, null);
             return;
         }
 
-        Account account = (Account) authResult.getReturnedObject();
+        Account account = (Account) authResult.getTwitterResponse().getReturnedObject();
         CoreDB.addAccountToDB(account);
         DefaultTableModel dtm = (DefaultTableModel) accountsTable.getModel();
         dtm.addRow(new Object[]{account.getScreenName(), 0});
-        GUI.getTweetsPanel().refreshAccountBoxModel(false);
+        GUI.getCollectionsPanel().refreshAccountBoxModel(false);
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -750,20 +772,24 @@ public class AccountsPanel extends javax.swing.JPanel {
         int modelRow = accountsTable.convertRowIndexToModel(row);
         int accountNameColumnIndex = accountsTable.getColumnModel().getColumnIndex("Account Name");
         String screenName = (String) accountsTable.getModel().getValueAt(modelRow, accountNameColumnIndex);
-        
+
         DBResponse accountResp = CoreDB.selectFromTable(DBTable.ACCOUNTS,
-                new String[]{"screenname"},
+                new String[]{"screen_name"},
                 new Object[]{screenName});
         if (!accountResp.wasSuccessful()) {
-            
+
         } else if (accountResp.getReturnedRows().isEmpty()) {
-            
+
         }
-        
+
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
 
         String confirmDelete = "<html>Are you sure you want to delete account '" + screenName
-                + "'? This action cannot be undone."+ "</html>";
+                + "' from ArtRetweeter? This action cannot be undone.<br/><br/>"
+                + "Note that this method does not revoke access to this application. "
+                + "To do that, you must log into the Twitter<br/>website and go to Settings->Security and "
+                + "account access->Apps and sessions to revoke permissions."
+                + "</html>";
         Integer deleteResult = JOptionPane.showConfirmDialog(GUI.getInstance(), confirmDelete,
                 "Delete Account", JOptionPane.YES_NO_OPTION);
         if (deleteResult != JOptionPane.YES_OPTION) {
@@ -776,8 +802,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getTwitterID(), account.getTwitterID()});
         deleteQuery = "DELETE FROM accounts WHERE id=?";
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getId()});
-        
-        
+
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

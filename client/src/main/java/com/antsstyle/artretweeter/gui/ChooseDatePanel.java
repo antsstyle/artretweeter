@@ -46,20 +46,38 @@ public class ChooseDatePanel extends JPanel {
         p.put("text.year", "Year");
         JDatePanelImpl datePanelImpl = new JDatePanelImpl(model, p);
         datePicker = new JDatePickerImpl(datePanelImpl, new DateLabelFormatter());
-        add(datePicker, BorderLayout.PAGE_START);
         JPanel dateDisplayPanel = new JPanel();
+        dateDisplayPanel.setLayout(new BoxLayout(dateDisplayPanel, BoxLayout.Y_AXIS));
         JPanel timeDisplayPanel = new JPanel();
+        JLabel label = new JLabel("<html>Please choose a date at least 1 hour from now.</html>");
+        dateDisplayPanel.add(label);
+        dateDisplayPanel.add(datePicker);
         timeDisplayPanel.setLayout(new BoxLayout(timeDisplayPanel, BoxLayout.X_AXIS));
         hourComboBox = new JComboBox();
         for (int i = 0; i < 24; i++) {
             hourComboBox.addItem(String.valueOf(i));
         }
         minuteComboBox = new JComboBox();
-        for (int i = 0; i < 60; i+=15) {
+        for (int i = 0; i < 60; i += 15) {
             minuteComboBox.addItem(String.valueOf(i));
         }
-        hourComboBox.setSelectedItem(String.valueOf((int) cal.get(Calendar.HOUR_OF_DAY)));
-        minuteComboBox.setSelectedItem(String.valueOf((int) cal.get(Calendar.MINUTE)));
+        Integer hour = cal.get(Calendar.HOUR_OF_DAY);
+
+        Integer minute = cal.get(Calendar.MINUTE);
+        if (minute < 15) {
+            minuteComboBox.setSelectedItem(String.valueOf(15));
+        } else if (minute < 30) {
+            minuteComboBox.setSelectedItem(String.valueOf(30));
+        } else if (minute < 45) {
+            minuteComboBox.setSelectedItem(String.valueOf(45));
+        } else {
+            minuteComboBox.setSelectedItem(String.valueOf(0));
+            hour++;
+            if (hour == 24) {
+                hour = 0;
+            }
+        }
+        hourComboBox.setSelectedItem(String.valueOf(hour));
         timeDisplayPanel.add(hourComboBox);
         timeDisplayPanel.add(minuteComboBox);
         add(dateDisplayPanel, BorderLayout.PAGE_START);
@@ -70,8 +88,8 @@ public class ChooseDatePanel extends JPanel {
         Date selectedDate = (Date) datePicker.getModel().getValue();
         Calendar cal = Calendar.getInstance();
         cal.setTime(selectedDate);
-        cal.set(Calendar.HOUR_OF_DAY, (int) hourComboBox.getSelectedItem());
-        cal.set(Calendar.MINUTE, (int) minuteComboBox.getSelectedItem());
+        cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt((String) hourComboBox.getSelectedItem()));
+        cal.set(Calendar.MINUTE, Integer.parseInt((String) minuteComboBox.getSelectedItem()));
         cal.set(Calendar.SECOND, 0);
         return new Timestamp(cal.getTimeInMillis());
     }

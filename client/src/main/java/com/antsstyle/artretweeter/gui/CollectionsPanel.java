@@ -18,13 +18,10 @@ import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.tools.ImageTools;
-import com.antsstyle.artretweeter.tools.PathTools;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
 import com.antsstyle.artretweeter.tools.SwingTools;
-import com.antsstyle.artretweeter.twitter.Endpoint;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import com.google.gson.Gson;
-import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -32,10 +29,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,18 +39,20 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -63,42 +60,15 @@ import org.apache.logging.log4j.Logger;
  *
  * @author antss
  */
-public class CollectionsPanel extends javax.swing.JPanel {
+public class CollectionsPanel extends TweetDisplayBasePanel {
 
     private static final Logger LOGGER = LogManager.getLogger(CollectionsPanel.class);
 
     private final DefaultComboBoxModel selectAccountBoxModel = new DefaultComboBoxModel();
     private final DefaultComboBoxModel selectCollectionBoxModel = new DefaultComboBoxModel();
 
-    private static final int STANDARD_PANEL_WIDTH = 420;
-    private static final int STANDARD_PANEL_HEIGHT = 641;
-    private static final int STANDARD_PANEL_MARGIN = 2;
-    private static final int STANDARD_PANEL_INSET = 1;
-
-    private static final String PENDING_ADD = "Pending Add";
-    private static final String PENDING_DELETE = "Pending Delete";
-    private static final String IN_COLLECTION = "In Collection";
-
     private Account currentlySelectedAccount = null;
     private TwitterCollectionHolder currentlySelectedCollection = null;
-
-    private static final Account ALL_TWEETS_ACCOUNT = new Account()
-            .setScreenName("<show all tweets>");
-
-    private static final Account NO_ACCOUNTS = new Account()
-            .setScreenName("<no accounts added>");
-
-    private static final Account DB_ERROR_ACCOUNT = new Account()
-            .setScreenName("<database error>");
-
-    private static final TwitterCollectionHolder SELECT_ACCOUNT_FIRST = new TwitterCollectionHolder()
-            .setName("<select an account first>");
-
-    private static final TwitterCollectionHolder NO_COLLECTIONS = new TwitterCollectionHolder()
-            .setName("<none>");
-
-    private static final TwitterCollectionHolder DB_ERROR_COLLECTION = new TwitterCollectionHolder()
-            .setName("<database error>");
 
     private static final HashMap<String, HashMap<Long, CollectionOperation>> curationChanges = new HashMap<>();
 
@@ -168,9 +138,6 @@ public class CollectionsPanel extends javax.swing.JPanel {
     public void refreshCollectionBoxModel(boolean initialRefresh) {
         selectCollectionComboBox.setEnabled(false);
         boolean noElementsBefore = noCollectionsInBoxModel();
-        LOGGER.debug("RefreshColl: " + initialRefresh + "   " + noElementsBefore);
-        LOGGER.debug("Currently selected account: " + currentlySelectedAccount.getScreenName());
-        LOGGER.debug("Currently selected collection: " + currentlySelectedCollection);
         selectCollectionBoxModel.removeAllElements();
         if (currentlySelectedAccount.equals(NO_ACCOUNTS)) {
             selectCollectionBoxModel.addElement(SELECT_ACCOUNT_FIRST);
@@ -178,7 +145,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
             selectCollectionBoxModel.setSelectedItem(selectCollectionBoxModel.getElementAt(0));
             selectCollectionComboBox.setEnabled(true);
             return;
-        } 
+        }
 
         DBResponse resp = CoreDB.selectFromTable(DBTable.COLLECTIONS,
                 new String[]{"usertwitterid"},
@@ -190,13 +157,11 @@ public class CollectionsPanel extends javax.swing.JPanel {
             selectCollectionBoxModel.setSelectedItem(selectCollectionBoxModel.getElementAt(0));
             return;
         }
-        LOGGER.debug("Coll size: " + resp.getReturnedRows().size());
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TwitterCollectionHolder holder = ResultSetConversion.getTwitterCollection(row);
             selectCollectionBoxModel.addElement(holder);
         }
-        LOGGER.debug("selsize: " + selectCollectionBoxModel.getSize());
         if (selectCollectionBoxModel.getSize() != 0) {
             selectCollectionBoxModel.setSelectedItem(selectCollectionBoxModel.getElementAt(0));
             currentlySelectedCollection = (TwitterCollectionHolder) selectCollectionBoxModel.getElementAt(0);
@@ -211,6 +176,14 @@ public class CollectionsPanel extends javax.swing.JPanel {
     }
 
     public void initialise() {
+        imagePanes[0] = tweetImageScrollPane1;
+        imagePanes[1] = tweetImageScrollPane2;
+        imagePanes[2] = tweetImageScrollPane3;
+        imagePanes[3] = tweetImageScrollPane4;
+        imageLabels[0] = tweetImageLabel1;
+        imageLabels[1] = tweetImageLabel2;
+        imageLabels[2] = tweetImageLabel3;
+        imageLabels[3] = tweetImageLabel4;
         tweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (event.getValueIsAdjusting()) {
                 return;
@@ -219,10 +192,24 @@ public class CollectionsPanel extends javax.swing.JPanel {
             if (row == -1) {
                 return;
             }
-            showTweetPreview();
+            GUIHelperMethods.showTweetPreview(tweetsTable, getPanelAttributes(), imagePanes, imageLabels);
+        });
+        collectionTweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
+            if (event.getValueIsAdjusting()) {
+                return;
+            }
+            int row = collectionTweetsTable.getSelectedRow();
+            if (row == -1) {
+                return;
+            }
+            GUIHelperMethods.showTweetPreview(collectionTweetsTable, getPanelAttributes(), imagePanes, imageLabels);
         });
         refreshAccountBoxModel(true);
         refreshCollectionBoxModel(true);
+    }
+
+    public Integer[] getPanelAttributes() {
+        return new Integer[]{STANDARD_PANEL_WIDTH, STANDARD_PANEL_HEIGHT, STANDARD_PANEL_MARGIN, STANDARD_PANEL_INSET};
     }
 
     /**
@@ -237,13 +224,13 @@ public class CollectionsPanel extends javax.swing.JPanel {
         tweetsTable = new javax.swing.JTable();
         selectAccountComboBox = new javax.swing.JComboBox<>();
         jLabel2 = new javax.swing.JLabel();
-        retweetApprovalScrollPane1 = new javax.swing.JScrollPane();
+        tweetImageScrollPane1 = new javax.swing.JScrollPane();
         tweetImageLabel1 = new javax.swing.JLabel();
-        retweetApprovalScrollPane2 = new javax.swing.JScrollPane();
+        tweetImageScrollPane2 = new javax.swing.JScrollPane();
         tweetImageLabel2 = new javax.swing.JLabel();
-        retweetApprovalScrollPane3 = new javax.swing.JScrollPane();
+        tweetImageScrollPane3 = new javax.swing.JScrollPane();
         tweetImageLabel3 = new javax.swing.JLabel();
-        retweetApprovalScrollPane4 = new javax.swing.JScrollPane();
+        tweetImageScrollPane4 = new javax.swing.JScrollPane();
         tweetImageLabel4 = new javax.swing.JLabel();
         jScrollPane27 = new javax.swing.JScrollPane();
         collectionTweetsTable = new javax.swing.JTable();
@@ -252,8 +239,6 @@ public class CollectionsPanel extends javax.swing.JPanel {
         jLabel3 = new javax.swing.JLabel();
         addTweetManuallyButton = new javax.swing.JButton();
         addTweetManuallyStatusLabel = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        commitCollectionChangesButton = new javax.swing.JButton();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         selectCollectionComboBox = new javax.swing.JComboBox<>();
@@ -262,6 +247,11 @@ public class CollectionsPanel extends javax.swing.JPanel {
         createNewCollectionButton = new javax.swing.JButton();
         deleteCollectionButton = new javax.swing.JButton();
         viewCollectionOnTwitterButton = new javax.swing.JButton();
+        jPanel3 = new javax.swing.JPanel();
+        moveTweetUpButton = new javax.swing.JButton();
+        moveTweetDownButton = new javax.swing.JButton();
+        setTweetOrderButton = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
 
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         jLabel1.setText("Tweets");
@@ -326,37 +316,37 @@ public class CollectionsPanel extends javax.swing.JPanel {
         jLabel2.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel2.setText("Select account: ");
 
-        retweetApprovalScrollPane1.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane1.setPreferredSize(new java.awt.Dimension(420, 641));
+        tweetImageScrollPane1.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane1.setPreferredSize(new java.awt.Dimension(420, 641));
 
         tweetImageLabel1.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 3, true));
         tweetImageLabel1.setOpaque(true);
-        retweetApprovalScrollPane1.setViewportView(tweetImageLabel1);
+        tweetImageScrollPane1.setViewportView(tweetImageLabel1);
 
-        retweetApprovalScrollPane2.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane2.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane2.setPreferredSize(new java.awt.Dimension(420, 641));
+        tweetImageScrollPane2.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane2.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane2.setPreferredSize(new java.awt.Dimension(420, 641));
 
         tweetImageLabel2.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 3, true));
         tweetImageLabel2.setOpaque(true);
-        retweetApprovalScrollPane2.setViewportView(tweetImageLabel2);
+        tweetImageScrollPane2.setViewportView(tweetImageLabel2);
 
-        retweetApprovalScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane3.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane3.setPreferredSize(new java.awt.Dimension(420, 641));
+        tweetImageScrollPane3.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane3.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane3.setPreferredSize(new java.awt.Dimension(420, 641));
 
         tweetImageLabel3.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 3, true));
         tweetImageLabel3.setOpaque(true);
-        retweetApprovalScrollPane3.setViewportView(tweetImageLabel3);
+        tweetImageScrollPane3.setViewportView(tweetImageLabel3);
 
-        retweetApprovalScrollPane4.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane4.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-        retweetApprovalScrollPane4.setPreferredSize(new java.awt.Dimension(420, 641));
+        tweetImageScrollPane4.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane4.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        tweetImageScrollPane4.setPreferredSize(new java.awt.Dimension(420, 641));
 
         tweetImageLabel4.setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 3, true));
         tweetImageLabel4.setOpaque(true);
-        retweetApprovalScrollPane4.setViewportView(tweetImageLabel4);
+        tweetImageScrollPane4.setViewportView(tweetImageLabel4);
 
         jScrollPane27.setMaximumSize(new java.awt.Dimension(898, 184));
         jScrollPane27.setMinimumSize(new java.awt.Dimension(898, 184));
@@ -368,11 +358,11 @@ public class CollectionsPanel extends javax.swing.JPanel {
 
             },
             new String [] {
-                "ID", "Tweet Text", "Status"
+                "ID", "Tweet Text", "Order"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Long.class, java.lang.String.class, java.lang.String.class
+                java.lang.Long.class, java.lang.String.class, java.lang.Integer.class
             };
             boolean[] canEdit = new boolean [] {
                 false, false, false
@@ -386,14 +376,16 @@ public class CollectionsPanel extends javax.swing.JPanel {
                 return canEdit [columnIndex];
             }
         });
+        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane27.setViewportView(collectionTweetsTable);
         if (collectionTweetsTable.getColumnModel().getColumnCount() > 0) {
             collectionTweetsTable.getColumnModel().getColumn(0).setMinWidth(50);
             collectionTweetsTable.getColumnModel().getColumn(0).setPreferredWidth(50);
             collectionTweetsTable.getColumnModel().getColumn(0).setMaxWidth(50);
-            collectionTweetsTable.getColumnModel().getColumn(2).setMinWidth(150);
-            collectionTweetsTable.getColumnModel().getColumn(2).setPreferredWidth(150);
-            collectionTweetsTable.getColumnModel().getColumn(2).setMaxWidth(150);
+            collectionTweetsTable.getColumnModel().getColumn(2).setMinWidth(40);
+            collectionTweetsTable.getColumnModel().getColumn(2).setPreferredWidth(40);
+            collectionTweetsTable.getColumnModel().getColumn(2).setMaxWidth(40);
         }
 
         addTweetManuallyTextField.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
@@ -409,27 +401,13 @@ public class CollectionsPanel extends javax.swing.JPanel {
             }
         });
 
-        jLabel6.setText("<html>Note: Adding or removing tweets from a collection is not finalised until you press the \"Commit collection changes\" button.</html>");
-
-        commitCollectionChangesButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        commitCollectionChangesButton.setText("<html>Commit collection changes</html>");
-        commitCollectionChangesButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                commitCollectionChangesButtonActionPerformed(evt);
-            }
-        });
-
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(commitCollectionChangesButton, javax.swing.GroupLayout.DEFAULT_SIZE, 186, Short.MAX_VALUE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel3)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
@@ -449,11 +427,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
                     .addComponent(addTweetManuallyButton, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(addTweetManuallyStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(commitCollectionChangesButton)
-                    .addComponent(jLabel6))
-                .addContainerGap())
+                .addContainerGap(102, Short.MAX_VALUE))
         );
 
         jLabel4.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
@@ -518,6 +492,79 @@ public class CollectionsPanel extends javax.swing.JPanel {
             }
         });
 
+        jPanel3.setMaximumSize(new java.awt.Dimension(86, 211));
+        jPanel3.setMinimumSize(new java.awt.Dimension(86, 211));
+
+        moveTweetUpButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        moveTweetUpButton.setText("Up");
+        moveTweetUpButton.setEnabled(false);
+        moveTweetUpButton.setMaximumSize(new java.awt.Dimension(74, 33));
+        moveTweetUpButton.setMinimumSize(new java.awt.Dimension(74, 33));
+        moveTweetUpButton.setPreferredSize(new java.awt.Dimension(74, 33));
+        moveTweetUpButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                moveTweetUpButtonActionPerformed(evt);
+            }
+        });
+
+        moveTweetDownButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        moveTweetDownButton.setText("Down");
+        moveTweetDownButton.setToolTipText("");
+        moveTweetDownButton.setEnabled(false);
+        moveTweetDownButton.setMaximumSize(new java.awt.Dimension(74, 33));
+        moveTweetDownButton.setMinimumSize(new java.awt.Dimension(74, 33));
+        moveTweetDownButton.setPreferredSize(new java.awt.Dimension(74, 33));
+        moveTweetDownButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                moveTweetDownButtonActionPerformed(evt);
+            }
+        });
+
+        setTweetOrderButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        setTweetOrderButton.setText("Set");
+        setTweetOrderButton.setEnabled(false);
+        setTweetOrderButton.setMaximumSize(new java.awt.Dimension(74, 33));
+        setTweetOrderButton.setMinimumSize(new java.awt.Dimension(74, 33));
+        setTweetOrderButton.setPreferredSize(new java.awt.Dimension(74, 33));
+        setTweetOrderButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                setTweetOrderButtonActionPerformed(evt);
+            }
+        });
+
+        jLabel7.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        jLabel7.setText("<html>Collection tweet ordering</html>");
+        jLabel7.setMaximumSize(new java.awt.Dimension(74, 52));
+        jLabel7.setMinimumSize(new java.awt.Dimension(74, 52));
+        jLabel7.setPreferredSize(new java.awt.Dimension(74, 52));
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(moveTweetDownButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(setTweetOrderButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel7, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(moveTweetUpButton, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap())
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(moveTweetUpButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(moveTweetDownButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(setTweetOrderButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -528,16 +575,18 @@ public class CollectionsPanel extends javax.swing.JPanel {
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 717, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel1)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jLabel2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(addTweetToCurrentlySelectedCollectionButton))
+                            .addComponent(addTweetToCurrentlySelectedCollectionButton)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 625, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jScrollPane27, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
@@ -559,13 +608,13 @@ public class CollectionsPanel extends javax.swing.JPanel {
                                         .addComponent(viewCollectionOnTwitterButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addGap(0, 0, Short.MAX_VALUE))))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(retweetApprovalScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(tweetImageScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(2, 2, 2)
-                        .addComponent(retweetApprovalScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(tweetImageScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(2, 2, 2)
-                        .addComponent(retweetApprovalScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(tweetImageScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(4, 4, 4)
-                        .addComponent(retweetApprovalScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(tweetImageScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -574,18 +623,22 @@ public class CollectionsPanel extends javax.swing.JPanel {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(selectCollectionComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(viewCollectionOnTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(selectCollectionComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(viewCollectionOnTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(selectAccountComboBox, javax.swing.GroupLayout.DEFAULT_SIZE, 33, Short.MAX_VALUE)
                     .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane27, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
-                    .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jScrollPane27, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
+                        .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addGap(6, 6, 6)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(addTweetToCurrentlySelectedCollectionButton)
@@ -595,10 +648,10 @@ public class CollectionsPanel extends javax.swing.JPanel {
                         .addComponent(deleteCollectionButton)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(retweetApprovalScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(retweetApprovalScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(retweetApprovalScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(retweetApprovalScrollPane4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(tweetImageScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(tweetImageScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(tweetImageScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(tweetImageScrollPane4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(8, 8, 8))
         );
     }// </editor-fold>//GEN-END:initComponents
@@ -630,6 +683,15 @@ public class CollectionsPanel extends javax.swing.JPanel {
         }
     }//GEN-LAST:event_selectCollectionComboBoxActionPerformed
 
+    private void setCollectionOrderButtonsEnabled() {
+        boolean invalidCollection = currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedCollection.equals(NO_COLLECTIONS)
+                || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)
+                || currentlySelectedCollection.equals(DB_ERROR_COLLECTION);
+        moveTweetUpButton.setEnabled(!invalidCollection);
+        moveTweetDownButton.setEnabled(!invalidCollection);
+        setTweetOrderButton.setEnabled(!invalidCollection);
+    }
+
     private void deleteTweetFromCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetFromCollectionButtonActionPerformed
         deleteTweetFromCollectionButton.setEnabled(false);
         deleteTweetFromCollection();
@@ -648,12 +710,6 @@ public class CollectionsPanel extends javax.swing.JPanel {
         deleteCollectionButton.setEnabled(true);
     }//GEN-LAST:event_deleteCollectionButtonActionPerformed
 
-    private void commitCollectionChangesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_commitCollectionChangesButtonActionPerformed
-        commitCollectionChangesButton.setEnabled(false);
-        commitCollectionChanges();
-        commitCollectionChangesButton.setEnabled(true);
-    }//GEN-LAST:event_commitCollectionChangesButtonActionPerformed
-
     private void addTweetToCurrentlySelectedCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addTweetToCurrentlySelectedCollectionButtonActionPerformed
         addTweetToCurrentlySelectedCollectionButton.setEnabled(false);
         addTweetToCollection();
@@ -665,6 +721,67 @@ public class CollectionsPanel extends javax.swing.JPanel {
         viewCollectionOnTwitter();
         viewCollectionOnTwitterButton.setEnabled(true);
     }//GEN-LAST:event_viewCollectionOnTwitterButtonActionPerformed
+
+    private void setTweetOrderButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_setTweetOrderButtonActionPerformed
+        setTweetOrderButton.setEnabled(false);
+        setTweetOrder();
+        setTweetOrderButton.setEnabled(true);
+    }//GEN-LAST:event_setTweetOrderButtonActionPerformed
+
+    private void moveTweetDownButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_moveTweetDownButtonActionPerformed
+        moveTweetDownButton.setEnabled(false);
+        moveTweet(false);
+        moveTweetDownButton.setEnabled(true);
+    }//GEN-LAST:event_moveTweetDownButtonActionPerformed
+
+    private void moveTweetUpButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_moveTweetUpButtonActionPerformed
+        moveTweetUpButton.setEnabled(false);
+        moveTweet(true);
+        moveTweetUpButton.setEnabled(true);
+    }//GEN-LAST:event_moveTweetUpButtonActionPerformed
+
+    private void setTweetOrder() {
+        int row = collectionTweetsTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        if (collectionTweetsTable.getRowCount() < 2) {
+            return;
+        }
+        int modelRow = collectionTweetsTable.convertRowIndexToModel(row);
+        TableModel tm = collectionTweetsTable.getModel();
+    }
+
+    private void moveTweet(boolean up) {
+        int row = collectionTweetsTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        if (collectionTweetsTable.getRowCount() < 2) {
+            return;
+        }
+        int modelRow = collectionTweetsTable.convertRowIndexToModel(row);
+        TableModel tm = collectionTweetsTable.getModel();
+        int orderColumnIndex = collectionTweetsTable.getColumnModel().getColumnIndex("Order");
+        if (up && modelRow == 0) {
+            return;
+        }
+        if (!up && (modelRow == collectionTweetsTable.getRowCount() - 1)) {
+            return;
+        }
+        Integer otherRowOrderNumber;
+        Integer otherRowNumber;
+        if (up) {
+            otherRowNumber = modelRow - 1;
+        } else {
+            otherRowNumber = modelRow + 1;
+        }
+        otherRowOrderNumber = (Integer) tm.getValueAt(otherRowNumber, orderColumnIndex);
+        Integer orderNumber = (Integer) tm.getValueAt(modelRow, orderColumnIndex);
+        tm.setValueAt(orderNumber, otherRowNumber, orderColumnIndex);
+        tm.setValueAt(otherRowOrderNumber, modelRow, orderColumnIndex);
+
+    }
 
     private void queueTweetForRetweeting() {
         int row = tweetsTable.getSelectedRow();
@@ -774,18 +891,17 @@ public class CollectionsPanel extends javax.swing.JPanel {
             return;
         }
         TweetHolder tweet = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-
-        HashMap<Long, CollectionOperation> changes = curationChanges.get(currentlySelectedCollection.getTwitterID());
-        if (changes == null) {
-            changes = new HashMap<>();
-            changes.put(tweet.getTweetID(), CollectionOperation.ADD);
-            curationChanges.put(currentlySelectedCollection.getTwitterID(), changes);
-        } else {
-            changes.put(tweet.getTweetID(), CollectionOperation.ADD);
+        OperationResult result = RESTAPI.collectionsEntriesAdd(currentlySelectedCollection.getTwitterID(),
+                tweet.getTweetID(), currentlySelectedAccount);
+        if (!result.wasSuccessful()) {
+            String msg = "Twitter API returned an error: ";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+
         String tweetText = (String) tweetsTable.getModel().getValueAt(modelRow, textColumnIndex);
         DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
-        dtm.addRow(new Object[]{id, tweetText, "Pending Add"});
+        dtm.addRow(new Object[]{id, tweetText});
     }
 
     private boolean checkTweetInCollectionTable(Integer dbIDToCheck) {
@@ -811,8 +927,8 @@ public class CollectionsPanel extends javax.swing.JPanel {
             }
             Long tweetID = Long.valueOf(url.substring(url.lastIndexOf("/") + 1));
             OperationResult res = RESTAPI.getTweetByID(tweetID, currentlySelectedAccount, tweetFolderPath, true);
-            if (res.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-                StatusJSON status = (StatusJSON) res.getReturnedObject();
+            if (res.wasSuccessful()) {
+                StatusJSON status = (StatusJSON) res.getTwitterResponse().getReturnedObject();
                 DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
                 dtm.addRow(new Object[]{status.getInternalDatabaseID(), status.getText(),
                     status.getRetweet_count(), status.getFavorite_count()});
@@ -820,7 +936,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
                 addTweetManuallyTextField.setText("");
                 addTweetManuallyStatusLabel.setText("Tweet added successfully.");
             } else {
-                GUIHelperMethods.showErrorMessage(res, LOGGER, null);
+                GUIHelperMethods.showErrors(res, LOGGER, null);
             }
         } else {
             String msg = "The entered URL is not a valid Twitter status URL.";
@@ -836,9 +952,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
         }
         int modelRow = collectionTweetsTable.convertRowIndexToModel(row);
         int idColumnIndex = collectionTweetsTable.getColumnModel().getColumnIndex("ID");
-        int statusColumnIndex = collectionTweetsTable.getColumnModel().getColumnIndex("Status");
         Integer id = (Integer) collectionTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
-
         DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
                 new String[]{"id"},
                 new Object[]{id});
@@ -854,25 +968,15 @@ public class CollectionsPanel extends javax.swing.JPanel {
             return;
         }
         TweetHolder tweet = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-
-        String status = (String) collectionTweetsTable.getValueAt(modelRow, statusColumnIndex);
-        if (status.equals(PENDING_ADD)) {
-            DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
-            dtm.removeRow(modelRow);
-            HashMap<Long, CollectionOperation> changes = curationChanges.get(currentlySelectedCollection.getTwitterID());
-            changes.remove(tweet.getTweetID());
-            curationChanges.remove(currentlySelectedCollection.getTwitterID());
-        } else if (status.equals(IN_COLLECTION)) {
-            collectionTweetsTable.setValueAt(PENDING_DELETE, modelRow, statusColumnIndex);
-            HashMap<Long, CollectionOperation> changes = curationChanges.get(currentlySelectedCollection.getTwitterID());
-            if (changes == null) {
-                changes = new HashMap<>();
-                changes.put(tweet.getTweetID(), CollectionOperation.REMOVE);
-                curationChanges.put(currentlySelectedCollection.getTwitterID(), changes);
-            } else {
-                changes.put(tweet.getTweetID(), CollectionOperation.REMOVE);
-            }
+        OperationResult result = RESTAPI.collectionsEntriesRemove(currentlySelectedCollection.getTwitterID(),
+                tweet.getTweetID(), currentlySelectedAccount);
+        if (!result.wasSuccessful()) {
+            String msg = "Twitter API returned an error: ";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
+        DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
+        dtm.removeRow(modelRow);
     }
 
     private void commitCollectionChanges() {
@@ -891,14 +995,14 @@ public class CollectionsPanel extends javax.swing.JPanel {
             json.setChanges(curationChanges.get(k));
             LOGGER.debug("Number of changes to curate: " + curationChanges.get(k).size());
             String jsonString = gson.toJson(json, CollectionCurateParamsJSON.class);
-            result = RESTAPI.collectionCurate(jsonString, currentlySelectedAccount);
-            if (!result.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+            result = RESTAPI.collectionsEntriesCurate(jsonString, currentlySelectedAccount);
+            if (!result.wasSuccessful()) {
                 errors = true;
             }
             RESTAPI.getFullyHydratedCollectionByID(k, currentlySelectedAccount);
         }
         if (errors) {
-            GUIHelperMethods.showErrorMessage(result, LOGGER, endText);
+            GUIHelperMethods.showErrors(result, LOGGER, endText);
         } else {
             String msg = "<html>Collections curated successfully.</html>";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -920,8 +1024,8 @@ public class CollectionsPanel extends javax.swing.JPanel {
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Delete Collection", JOptionPane.OK_CANCEL_OPTION);
 
         if (result == JOptionPane.OK_OPTION) {
-            OperationResult opResult = RESTAPI.collectionDestroy(currentlySelectedCollection.getTwitterID(), currentlySelectedAccount);
-            if (opResult.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
+            OperationResult opResult = RESTAPI.collectionsDestroy(currentlySelectedCollection.getTwitterID(), currentlySelectedAccount);
+            if (opResult.wasSuccessful()) {
                 CoreDB.deleteFromTable(DBTable.COLLECTIONS,
                         new String[]{"id"},
                         new Object[]{currentlySelectedCollection.getDatabaseID()});
@@ -929,7 +1033,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
                 DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
                 dtm.setRowCount(0);
             } else {
-                GUIHelperMethods.showErrorMessage(opResult, LOGGER, null);
+                GUIHelperMethods.showErrors(opResult, LOGGER, null);
             }
         }
     }
@@ -949,13 +1053,21 @@ public class CollectionsPanel extends javax.swing.JPanel {
         }
 
         String message = "Please enter a name for your new collection, and (optionally) a description.";
-        ArrayList<Object> results = SwingTools.askForUserInput("Create a new Twitter collection", message, "Name: ", "Description: ");
+        String[] inputNames = new String[]{"Name: ", "Description: ", "Ordering: "};
+        JComboBox box = new JComboBox();
+        box.addItem(CollectionOrdering.CURATION_REVERSE_CHRON);
+        box.addItem(CollectionOrdering.TWEET_CHRON);
+        box.addItem(CollectionOrdering.TWEET_REVERSE_CHRON);
+        JComponent[] components = new JComponent[]{new JTextField(), new JTextField(), box};
+        ArrayList<Object> results = SwingTools.askForUserInput("Create a new Twitter collection", message,
+                inputNames, components);
         if (results == null) {
             return;
         }
 
         String name = (String) results.get(0);
         String description = (String) results.get(1);
+        CollectionOrdering ordering = (CollectionOrdering) results.get(2);
         if (description.trim().equals("")) {
             description = null;
         }
@@ -965,9 +1077,9 @@ public class CollectionsPanel extends javax.swing.JPanel {
             LOGGER.error(msg);
             return;
         }
-        OperationResult res = RESTAPI.collectionCreate(name, description, CollectionOrdering.CURATION_REVERSE_CHRON, currentlySelectedAccount);
-        if (res.getArtRetweeterStatusCode().equals(OperationResult.QUERY_OK)) {
-            TwitterCollectionHolder holder = (TwitterCollectionHolder) res.getReturnedObject();
+        OperationResult res = RESTAPI.collectionsCreate(name, description, ordering, currentlySelectedAccount);
+        if (res.wasSuccessful()) {
+            TwitterCollectionHolder holder = (TwitterCollectionHolder) res.getTwitterResponse().getReturnedObject();
             Object[] params = new Object[]{currentlySelectedAccount.getTwitterID(), holder.getTwitterID(),
                 holder.getCollectionURL(), holder.getName(), holder.getDescription(), holder.getOrdering().getParameterName()};
             CoreDB.insertCollection(params);
@@ -975,7 +1087,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Success", JOptionPane.INFORMATION_MESSAGE);
             refreshCollectionBoxModel(false);
         } else {
-            GUIHelperMethods.showErrorMessage(res, LOGGER, null);
+            GUIHelperMethods.showErrors(res, LOGGER, null);
         }
 
     }
@@ -1000,7 +1112,7 @@ public class CollectionsPanel extends javax.swing.JPanel {
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
-            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), IN_COLLECTION});
+            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText()});
         }
     }
 
@@ -1042,172 +1154,6 @@ public class CollectionsPanel extends javax.swing.JPanel {
         tweetImageLabel4.setIcon(null);
     }
 
-    /**
-     * Displays the images related to the selected data entry in the management table.
-     */
-    protected void showTweetPreview() {
-        int row = tweetsTable.getSelectedRow();
-        if (row == -1) {
-            return;
-        }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        TableColumnModel tcm = tweetsTable.getColumnModel();
-        TableModel model = tweetsTable.getModel();
-        int idColumnIndex = tcm.getColumnIndex("ID");
-        Integer id = (Integer) model.getValueAt(modelRow, idColumnIndex);
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"id"},
-                new Object[]{id});
-        if (!resp.wasSuccessful()) {
-            String msg = "Failed to retrieve tweet information from database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return;
-        }
-        if (resp.getReturnedRows().isEmpty()) {
-            String msg = "Tweet was not found in the database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return;
-        }
-        TweetHolder holder = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-
-        ArrayList<Path> filePaths = holder.getFilePaths();
-        int numImages = filePaths.size();
-        if (numImages < 1 || numImages > 4) {
-            // Invalid number of images in tweet
-            String msg = "Invalid number of images in tweet - check log output.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error("Number of images in tweet: " + numImages);
-            return;
-        }
-        ArrayList<BufferedImage> images = new ArrayList<>();
-        int combinedImageWidth = 0;
-        for (int i = 0; i < numImages; i++) {
-            Path filePath = filePaths.get(i);
-            try {
-                BufferedImage img = ImageIO.read(filePath.toFile());
-                images.add(img);
-                combinedImageWidth += img.getWidth();
-            } catch (IOException e) {
-                LOGGER.error("Failed to load image number " + i + "!", e);
-                String msg = "Failed to load images for tweet - check log output.";
-                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-        }
-        ArrayList<Double> widthRatios = new ArrayList<>();
-        for (BufferedImage img : images) {
-            int width = img.getWidth();
-            double ratio = (double) width / combinedImageWidth;
-            widthRatios.add(ratio);
-        }
-        int x;
-        int y = retweetApprovalScrollPane1.getY();
-        int fullWidthAvailable = 4 * (STANDARD_PANEL_WIDTH + STANDARD_PANEL_MARGIN + STANDARD_PANEL_INSET);
-        switch (numImages) {
-            case 1:
-                Dimension d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane1, d1);
-                setAllSizes(tweetImageLabel1, d1);
-                retweetApprovalScrollPane2.setVisible(false);
-                retweetApprovalScrollPane3.setVisible(false);
-                retweetApprovalScrollPane4.setVisible(false);
-                break;
-            case 2:
-                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane1, d1);
-                setAllSizes(tweetImageLabel1, d1);
-                x = retweetApprovalScrollPane1.getX() + (int) d1.getWidth();
-                Dimension d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane2, d2);
-                setAllSizes(tweetImageLabel2, d2);
-                retweetApprovalScrollPane2.setLocation(x, y);
-                retweetApprovalScrollPane2.setVisible(true);
-                retweetApprovalScrollPane3.setVisible(false);
-                retweetApprovalScrollPane4.setVisible(false);
-                break;
-            case 3:
-                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane1, d1);
-                setAllSizes(tweetImageLabel1, d1);
-                x = retweetApprovalScrollPane1.getX() + (int) d1.getWidth();
-                d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane2, d2);
-                setAllSizes(tweetImageLabel2, d2);
-                retweetApprovalScrollPane2.setLocation(x, y);
-                Dimension d3 = new Dimension((int) (widthRatios.get(2) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                x = retweetApprovalScrollPane2.getX() + (int) d2.getWidth();
-                setAllSizes(retweetApprovalScrollPane3, d3);
-                setAllSizes(tweetImageLabel3, d3);
-                retweetApprovalScrollPane3.setLocation(x, y);
-                retweetApprovalScrollPane2.setVisible(true);
-                retweetApprovalScrollPane3.setVisible(true);
-                retweetApprovalScrollPane4.setVisible(false);
-                break;
-            case 4:
-                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane1, d1);
-                setAllSizes(tweetImageLabel1, d1);
-                x = retweetApprovalScrollPane1.getX() + (int) d1.getWidth();
-                d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane2, d2);
-                setAllSizes(tweetImageLabel2, d2);
-                retweetApprovalScrollPane2.setLocation(x, y);
-                x = retweetApprovalScrollPane2.getX() + (int) d2.getWidth();
-                d3 = new Dimension((int) (widthRatios.get(2) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane3, d3);
-                setAllSizes(tweetImageLabel3, d3);
-                retweetApprovalScrollPane3.setLocation(x, y);
-                x = retweetApprovalScrollPane3.getX() + (int) d3.getWidth();
-                Dimension d4 = new Dimension((int) (widthRatios.get(3) * fullWidthAvailable), STANDARD_PANEL_HEIGHT);
-                setAllSizes(retweetApprovalScrollPane4, d4);
-                setAllSizes(tweetImageLabel4, d4);
-                retweetApprovalScrollPane4.setLocation(x, y);
-                retweetApprovalScrollPane2.setVisible(true);
-                retweetApprovalScrollPane3.setVisible(true);
-                retweetApprovalScrollPane4.setVisible(true);
-                break;
-        }
-        int width = retweetApprovalScrollPane1.getWidth();
-        int height = retweetApprovalScrollPane1.getHeight();
-        ImageIcon icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(0), width, height));
-        tweetImageLabel1.setIcon(icon);
-        if (numImages > 1) {
-            width = retweetApprovalScrollPane2.getWidth();
-            height = retweetApprovalScrollPane2.getHeight();
-            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(1), width, height));
-            tweetImageLabel2.setIcon(icon);
-        }
-        if (numImages > 2) {
-            width = retweetApprovalScrollPane3.getWidth();
-            height = retweetApprovalScrollPane3.getHeight();
-            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(2), width, height));
-            tweetImageLabel3.setIcon(icon);
-        }
-        if (numImages > 3) {
-            width = retweetApprovalScrollPane4.getWidth();
-            height = retweetApprovalScrollPane4.getHeight();
-            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(3), width, height));
-            tweetImageLabel4.setIcon(icon);
-        }
-        //tweetTextArea.setText(fullTweetText);
-    }
-
-    private void setAllSizes(JLabel label, Dimension d) {
-        label.setMinimumSize(d);
-        label.setSize(d);
-        label.setMaximumSize(d);
-        label.setPreferredSize(d);
-    }
-
-    private void setAllSizes(JScrollPane pane, Dimension d) {
-        pane.setMinimumSize(d);
-        pane.setSize(d);
-        pane.setMaximumSize(d);
-        pane.setPreferredSize(d);
-    }
-
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addTweetManuallyButton;
@@ -1215,7 +1161,6 @@ public class CollectionsPanel extends javax.swing.JPanel {
     private javax.swing.JTextField addTweetManuallyTextField;
     private javax.swing.JButton addTweetToCurrentlySelectedCollectionButton;
     protected javax.swing.JTable collectionTweetsTable;
-    private javax.swing.JButton commitCollectionChangesButton;
     private javax.swing.JButton createNewCollectionButton;
     private javax.swing.JButton deleteCollectionButton;
     private javax.swing.JButton deleteTweetFromCollectionButton;
@@ -1224,20 +1169,24 @@ public class CollectionsPanel extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel3;
     private javax.swing.JScrollPane jScrollPane26;
     private javax.swing.JScrollPane jScrollPane27;
-    protected javax.swing.JScrollPane retweetApprovalScrollPane1;
-    protected javax.swing.JScrollPane retweetApprovalScrollPane2;
-    protected javax.swing.JScrollPane retweetApprovalScrollPane3;
-    protected javax.swing.JScrollPane retweetApprovalScrollPane4;
+    private javax.swing.JButton moveTweetDownButton;
+    private javax.swing.JButton moveTweetUpButton;
     private javax.swing.JComboBox<String> selectAccountComboBox;
     private javax.swing.JComboBox<String> selectCollectionComboBox;
+    private javax.swing.JButton setTweetOrderButton;
     protected javax.swing.JLabel tweetImageLabel1;
     protected javax.swing.JLabel tweetImageLabel2;
     protected javax.swing.JLabel tweetImageLabel3;
     protected javax.swing.JLabel tweetImageLabel4;
+    protected javax.swing.JScrollPane tweetImageScrollPane1;
+    protected javax.swing.JScrollPane tweetImageScrollPane2;
+    protected javax.swing.JScrollPane tweetImageScrollPane3;
+    protected javax.swing.JScrollPane tweetImageScrollPane4;
     protected javax.swing.JTable tweetsTable;
     private javax.swing.JButton viewCollectionOnTwitterButton;
     // End of variables declaration//GEN-END:variables

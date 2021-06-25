@@ -29,6 +29,17 @@ public class ResultSetConversion {
                 .setTweetID((Long) row.get("TWEETID"));
         return entry;
     }
+    
+    public static RetweetQueueEntry getFailedRetweetQueueEntry(HashMap<String, Object> row) {
+        RetweetQueueEntry entry = new RetweetQueueEntry()
+                .setId((Integer) row.get("ID"))
+                .setInternalAccountID((Integer) row.get("INTERNALACCOUNTID"))
+                .setRetweetTime((Timestamp) row.get("RETWEETTIME"))
+                .setTweetID((Long) row.get("TWEETID"))
+                .setErrorCode((Integer) row.get("ERRORCODE"))
+                .setFailReason((String) row.get("FAILREASON"));
+        return entry;
+    }
 
     /**
      * Note this method does not hydrate the tweets list for the collection.

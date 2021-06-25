@@ -17,6 +17,26 @@ public class RetweetQueueEntry {
     private Long tweetID;
     private Integer internalAccountID;
     private Timestamp retweetTime;
+    private Integer errorCode;
+
+    public Integer getErrorCode() {
+        return errorCode;
+    }
+
+    public RetweetQueueEntry setErrorCode(Integer errorCode) {
+        this.errorCode = errorCode;
+        return this;
+    }
+
+    public String getFailReason() {
+        return failReason;
+    }
+
+    public RetweetQueueEntry setFailReason(String failReason) {
+        this.failReason = failReason;
+        return this;
+    }
+    private String failReason;
 
     public Integer getId() {
         return id;

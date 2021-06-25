@@ -98,7 +98,8 @@ public class CoreDB {
     private static final String CREATE_COLLECTION_TWEETS_TABLE = "CREATE TABLE collectiontweets ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
             + "tweetid BIGINT NOT NULL, "
-            + "collectionid VARCHAR(255) NOT NULL)";
+            + "collectionid VARCHAR(255) NOT NULL, "
+            + "ordernumber INTEGER)";
 
     private static final String CREATE_USER_RATELIMITS_TABLE = "CREATE TABLE userratelimits ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
@@ -118,12 +119,20 @@ public class CoreDB {
     private static final String CREATE_RETWEET_QUEUE_TABLE = "CREATE TABLE retweetqueue ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
             + "tweetid BIGINT NOT NULL, "
-            + "internalaccountid INTEGER NOT NULL, "
+            + "retweetingusertwitterid BIGINT NOT NULL, "
             + "retweettime TIMESTAMP NOT NULL)";
+
+    private static final String CREATE_FAILED_RETWEETS_TABLE = "CREATE TABLE failedretweets ("
+            + "id INTEGER IDENTITY PRIMARY KEY, "
+            + "tweetid BIGINT NOT NULL, "
+            + "retweetingusertwitterid BIGINT NOT NULL, "
+            + "retweettime TIMESTAMP NOT NULL, "
+            + "errorcode INTEGER NOT NULL, "
+            + "failreason VARCHAR(255) NOT NULL)";
 
     private static final String CREATE_RETWEETS_TABLE = "CREATE TABLE retweets ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "retweetinguserid BIGINT NOT NULL, "
+            + "retweetingusertwitterid BIGINT NOT NULL, "
             + "originaltweetid BIGINT NOT NULL, "
             + "retweetid BIGINT NOT NULL, "
             + "originaltweettime TIMESTAMP NOT NULL, "
@@ -207,7 +216,7 @@ public class CoreDB {
             + " retweetqueue.retweettime=vals.retweettime"
             + " WHEN NOT MATCHED THEN INSERT (tweetid,internalaccountid,retweettime) VALUES (vals.tweetid, vals.internalaccountid, vals.retweettime)";
 
-    private static final String RETWEETS_INSERT_QUERY = "INSERT INTO retweets (retweetinguserid,originaltweetid,retweetid,originaltweettime,retweettime)"
+    private static final String RETWEETS_INSERT_QUERY = "INSERT INTO retweets (retweetingusertwitterid,originaltweetid,retweetid,originaltweettime,retweettime)"
             + " VALUES(?,?,?,?,?)";
 
     /**
@@ -315,7 +324,7 @@ public class CoreDB {
     public static boolean insertRetweetQueueEntry(Object[] params) {
         return runCustomUpdate(RETWEET_QUEUE_MERGE_QUERY, params);
     }
-    
+
     public static boolean insertRetweetEntry(Object[] params) {
         return runCustomUpdate(RETWEETS_INSERT_QUERY, params);
     }
@@ -513,6 +522,8 @@ public class CoreDB {
             stmt = conn.prepareStatement(RETWEET_QUEUE_TABLE_ADD_UNIQUE);
             stmt.executeUpdate();
             stmt = conn.prepareStatement(CREATE_RETWEETS_TABLE);
+            stmt.executeUpdate();
+            stmt = conn.prepareStatement(CREATE_FAILED_RETWEETS_TABLE);
             stmt.executeUpdate();
         } catch (Exception e) {
             LOGGER.error(e);

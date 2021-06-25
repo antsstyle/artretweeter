@@ -7,13 +7,27 @@ package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.configuration.GUIConfig;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
+import com.antsstyle.artretweeter.datastructures.ServerResponse;
+import com.antsstyle.artretweeter.datastructures.TweetHolder;
+import com.antsstyle.artretweeter.datastructures.TwitterResponse;
+import com.antsstyle.artretweeter.db.CoreDB;
+import com.antsstyle.artretweeter.db.DBResponse;
+import com.antsstyle.artretweeter.db.DBTable;
+import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.tools.ImageTools;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -34,6 +48,8 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicScrollBarUI;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -200,16 +216,206 @@ public class GUIHelperMethods {
         }
     }
 
-    public static void showErrorMessage(OperationResult result, Logger logger, String endText) {
-        String error = result.getLogMessage();
+    public static void showErrors(OperationResult result, Logger logger, String endText) {
+        String error;
+        if (result.getClientResponse() != null && !result.getClientResponse().wasSuccessful()) {
+            error = result.getClientResponse().getStatusCode().getStatusMessage();
+            if (result.getClientResponse().getExtraStatusMessage() != null) {
+                error = error.concat(": ").concat(result.getClientResponse().getExtraStatusMessage());
+            }
+        } else if (result.getServerResponse() != null && !result.getServerResponse().wasSuccessful()) {
+            error = result.getServerResponse().getStatusCode().getStatusMessage();
+            if (result.getServerResponse().getExtraStatusMessage() != null) {
+                error = error.concat(": ").concat(result.getServerResponse().getExtraStatusMessage());
+            }
+        } else if (result.getTwitterResponse() != null && !result.getTwitterResponse().wasSuccessful()) {
+            error = result.getTwitterResponse().getStatusCode().getStatusMessage();
+            if (result.getTwitterResponse().getExtraStatusMessage() != null) {
+                error = error.concat(": ").concat(result.getTwitterResponse().getExtraStatusMessage());
+            }
+        } else {
+            return;
+        }
         String msg = "<html>Error performing operation. Error was:<br/><br/>"
                 + error;
         if (endText != null) {
             msg = msg.concat("<br/><br/>").concat(endText);
-        msg = msg.concat(" </html>");
+            msg = msg.concat(" </html>");
         }
         JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
         logger.error(msg);
+    }
+
+    /**
+     * Displays the images related to the selected data entry in the management table.
+     * @param table
+     * @param panelAttributes
+     * @param panes
+     * @param labels
+     */
+    protected static void showTweetPreview(JTable table, Integer[] panelAttributes, JScrollPane[] panes, JLabel[] labels) {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        Integer standardPanelWidth = panelAttributes[0];
+        Integer standardPanelHeight = panelAttributes[1];
+        Integer standardPanelMargin = panelAttributes[2];
+        Integer standardPanelInset = panelAttributes[3];
+        
+        int modelRow = table.convertRowIndexToModel(row);
+        TableColumnModel tcm = table.getColumnModel();
+        TableModel model = table.getModel();
+        int idColumnIndex = tcm.getColumnIndex("ID");
+        Integer id = (Integer) model.getValueAt(modelRow, idColumnIndex);
+        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS, new String[]{"id"}, new Object[]{id});
+        if (!resp.wasSuccessful()) {
+            String msg = "Failed to retrieve tweet information from database!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return;
+        }
+        if (resp.getReturnedRows().isEmpty()) {
+            String msg = "Tweet was not found in the database!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return;
+        }
+        TweetHolder holder = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
+        ArrayList<Path> filePaths = holder.getFilePaths();
+        int numImages = filePaths.size();
+        if (numImages < 1 || numImages > 4) {
+            // Invalid number of images in tweet
+            String msg = "Invalid number of images in tweet - check log output.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error("Number of images in tweet: " + numImages);
+            return;
+        }
+        ArrayList<BufferedImage> images = new ArrayList<>();
+        int combinedImageWidth = 0;
+        for (int i = 0; i < numImages; i++) {
+            Path filePath = filePaths.get(i);
+            try {
+                BufferedImage img = ImageIO.read(filePath.toFile());
+                images.add(img);
+                combinedImageWidth += img.getWidth();
+            } catch (IOException e) {
+                LOGGER.error("Failed to load image number " + i + "!", e);
+                String msg = "Failed to load images for tweet - check log output.";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+        ArrayList<Double> widthRatios = new ArrayList<>();
+        for (BufferedImage img : images) {
+            int width = img.getWidth();
+            double ratio = (double) width / combinedImageWidth;
+            widthRatios.add(ratio);
+        }
+        int x;
+        int y = panes[0].getY();
+        int fullWidthAvailable = 4 * (standardPanelWidth + standardPanelMargin + standardPanelInset);
+        switch (numImages) {
+            case 1:
+                Dimension d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[0], d1);
+                setAllSizes(labels[0], d1);
+                panes[1].setVisible(false);
+                panes[2].setVisible(false);
+                panes[3].setVisible(false);
+                break;
+            case 2:
+                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[0], d1);
+                setAllSizes(labels[0], d1);
+                x = panes[0].getX() + (int) d1.getWidth();
+                Dimension d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[1], d2);
+                setAllSizes(labels[1], d2);
+                panes[1].setLocation(x, y);
+                panes[1].setVisible(true);
+                panes[2].setVisible(false);
+                panes[3].setVisible(false);
+                break;
+            case 3:
+                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[0], d1);
+                setAllSizes(labels[0], d1);
+                x = panes[0].getX() + (int) d1.getWidth();
+                d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[1], d2);
+                setAllSizes(labels[1], d2);
+                panes[1].setLocation(x, y);
+                Dimension d3 = new Dimension((int) (widthRatios.get(2) * fullWidthAvailable), standardPanelHeight);
+                x = panes[1].getX() + (int) d2.getWidth();
+                setAllSizes(panes[2], d3);
+                setAllSizes(labels[2], d3);
+                panes[2].setLocation(x, y);
+                panes[1].setVisible(true);
+                panes[2].setVisible(true);
+                panes[3].setVisible(false);
+                break;
+            case 4:
+                d1 = new Dimension((int) (widthRatios.get(0) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[0], d1);
+                setAllSizes(labels[0], d1);
+                x = panes[0].getX() + (int) d1.getWidth();
+                d2 = new Dimension((int) (widthRatios.get(1) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[1], d2);
+                setAllSizes(labels[1], d2);
+                panes[1].setLocation(x, y);
+                x = panes[1].getX() + (int) d2.getWidth();
+                d3 = new Dimension((int) (widthRatios.get(2) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[2], d3);
+                setAllSizes(labels[2], d3);
+                panes[2].setLocation(x, y);
+                x = panes[2].getX() + (int) d3.getWidth();
+                Dimension d4 = new Dimension((int) (widthRatios.get(3) * fullWidthAvailable), standardPanelHeight);
+                setAllSizes(panes[3], d4);
+                setAllSizes(labels[3], d4);
+                panes[3].setLocation(x, y);
+                panes[1].setVisible(true);
+                panes[2].setVisible(true);
+                panes[3].setVisible(true);
+                break;
+        }
+        int width = panes[0].getWidth();
+        int height = panes[0].getHeight();
+        ImageIcon icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(0), width, height));
+        labels[0].setIcon(icon);
+        if (numImages > 1) {
+            width = panes[1].getWidth();
+            height = panes[1].getHeight();
+            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(1), width, height));
+            labels[1].setIcon(icon);
+        }
+        if (numImages > 2) {
+            width = panes[2].getWidth();
+            height = panes[2].getHeight();
+            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(2), width, height));
+            labels[2].setIcon(icon);
+        }
+        if (numImages > 3) {
+            width = panes[3].getWidth();
+            height = panes[3].getHeight();
+            icon = new ImageIcon(ImageTools.getScaledImageForViewing(images.get(3), width, height));
+            labels[3].setIcon(icon);
+        }
+        //tweetTextArea.setText(fullTweetText);
+    }
+
+    protected static void setAllSizes(JLabel label, Dimension d) {
+        label.setMinimumSize(d);
+        label.setSize(d);
+        label.setMaximumSize(d);
+        label.setPreferredSize(d);
+    }
+
+    protected static void setAllSizes(JScrollPane pane, Dimension d) {
+        pane.setMinimumSize(d);
+        pane.setSize(d);
+        pane.setMaximumSize(d);
+        pane.setPreferredSize(d);
     }
 
 }

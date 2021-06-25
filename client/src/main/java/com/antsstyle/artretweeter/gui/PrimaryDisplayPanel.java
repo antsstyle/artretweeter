@@ -123,7 +123,7 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_goToAccountsButtonActionPerformed
 
     private void goToTweetsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToTweetsButtonActionPerformed
-       GUI.getInstance().switchPanels(GUI.getTweetsPanel());
+       GUI.getInstance().switchPanels(GUI.getCollectionsPanel());
     }//GEN-LAST:event_goToTweetsButtonActionPerformed
 
     private void goToRetweetQueuingButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToRetweetQueuingButtonActionPerformed

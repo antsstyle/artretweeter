@@ -5,19 +5,15 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
+import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.tools.ImageTools;
 import com.antsstyle.artretweeter.tools.PathTools;
-import com.antsstyle.artretweeter.twitter.RESTAPI;
-import com.google.gson.Gson;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hsqldb.rights.User;
 
 /**
  *
@@ -74,7 +70,7 @@ public class StatusJSON {
         Path filepath1, filepath2 = null, filepath3 = null, filepath4 = null;
         String url1, url2 = null, url3 = null, url4 = null;
         if (extended_entities == null && (entities.getMedia() == null || entities.getMedia().length == 0)) {
-            result.setArtRetweeterStatusCode(OperationResult.QUERY_OK_NO_IMAGES_IN_TWEET);
+            result.setTwitterResponse(new TwitterResponse(StatusCode.TWEET_HAS_NO_IMAGES));
             return result;
         }
         if (extended_entities == null) {
@@ -83,36 +79,35 @@ public class StatusJSON {
             url1 = entities.getMedia()[0].getMedia_url();
         }
         filepath1 = tweetFolderPath.resolve(url1.substring(url1.lastIndexOf("/") + 1));
-        FileDownloadResult res1 = ImageTools.downloadImageFromSiteWithRetry(url1, filepath1, false);
-        if (!res1.isSuccessful()) {
-            result.setArtRetweeterStatusCode(OperationResult.DOWNLOAD_ERROR);
-            return result;
+        OperationResult res1 = ImageTools.downloadImageFromSiteWithRetry(url1, filepath1, false);
+        if (!res1.wasSuccessful()) {
+            return res1;
         }
-        if (res1.isWasDownloaded()) {
+
+        if (!res1.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
             try {
                 Thread.sleep(1000);
             } catch (Exception e) {
                 LOGGER.error("Interrupted - aborting tweet download.", e);
-                result.setArtRetweeterStatusCode(OperationResult.INTERRUPTED_ERROR);
-                result.setArtRetweeterStatusMessage("Interrupted - aborting tweet download.");
+                result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
                 return result;
             }
         }
+
         if (extended_entities.getMedia() != null && extended_entities.getMedia().length > 1) {
             url2 = extended_entities.getMedia()[1].getMedia_url();
             filepath2 = tweetFolderPath.resolve(url2.substring(url2.lastIndexOf("/") + 1));
-            FileDownloadResult res2 = ImageTools.downloadImageFromSiteWithRetry(url2, filepath2, false);
-            if (!res2.isSuccessful()) {
-                result.setArtRetweeterStatusCode(OperationResult.DOWNLOAD_ERROR);
-                return result;
+            OperationResult res2 = ImageTools.downloadImageFromSiteWithRetry(url2, filepath2, false);
+            if (!res2.wasSuccessful()) {
+                return res2;
             }
-            if (res2.isWasDownloaded()) {
+
+            if (!res2.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setArtRetweeterStatusCode(OperationResult.INTERRUPTED_ERROR);
-                    result.setArtRetweeterStatusMessage("Interrupted - aborting tweet download.");
+                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
                     return result;
                 }
             }
@@ -121,18 +116,16 @@ public class StatusJSON {
         if (extended_entities.getMedia() != null && extended_entities.getMedia().length > 2) {
             url3 = extended_entities.getMedia()[2].getMedia_url();
             filepath3 = tweetFolderPath.resolve(url3.substring(url3.lastIndexOf("/") + 1));
-            FileDownloadResult res3 = ImageTools.downloadImageFromSiteWithRetry(url3, filepath3, false);
-            if (!res3.isSuccessful()) {
-                result.setArtRetweeterStatusCode(OperationResult.DOWNLOAD_ERROR);
-                return result;
+            OperationResult res3 = ImageTools.downloadImageFromSiteWithRetry(url3, filepath3, false);
+            if (!res3.wasSuccessful()) {
+                return res3;
             }
-            if (res3.isWasDownloaded()) {
+            if (!res3.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setArtRetweeterStatusCode(OperationResult.INTERRUPTED_ERROR);
-                    result.setArtRetweeterStatusMessage("Interrupted - aborting tweet download.");
+                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
                     return result;
                 }
             }
@@ -140,18 +133,16 @@ public class StatusJSON {
         if (extended_entities.getMedia() != null && extended_entities.getMedia().length > 3) {
             url4 = extended_entities.getMedia()[3].getMedia_url();
             filepath4 = tweetFolderPath.resolve(url4.substring(url4.lastIndexOf("/") + 1));
-            FileDownloadResult res4 = ImageTools.downloadImageFromSiteWithRetry(url4, filepath4, false);
-            if (!res4.isSuccessful()) {
-                result.setArtRetweeterStatusCode(OperationResult.DOWNLOAD_ERROR);
-                return result;
+            OperationResult res4 = ImageTools.downloadImageFromSiteWithRetry(url4, filepath4, false);
+            if (!res4.wasSuccessful()) {
+                return res4;
             }
-            if (res4.isWasDownloaded()) {
+            if (!res4.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setArtRetweeterStatusCode(OperationResult.INTERRUPTED_ERROR);
-                    result.setArtRetweeterStatusMessage("Interrupted - aborting tweet download.");
+                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
                     return result;
                 }
             }
@@ -174,8 +165,8 @@ public class StatusJSON {
             PathTools.convertPathToString(filepath3), PathTools.convertPathToString(filepath4), url1, url2, url3, url4,
             createdAtTimestamp, favorite_count, retweet_count,
             textParam, source};
-        result.setArtRetweeterStatusCode(OperationResult.QUERY_OK);
-        result.setReturnedObject(params);
+        result.setClientResponse(new ClientResponse(StatusCode.SUCCESS));
+        result.getClientResponse().setReturnedObject(params);
         return result;
     }
 

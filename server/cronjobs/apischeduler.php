@@ -1,6 +1,6 @@
 <?php
 
-require "../core.php";
+require_once "../core.php";
 
 postScheduledRetweets();
 

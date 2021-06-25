@@ -29,3 +29,4 @@ server/twitteroauth/
 server/nbproject/
 client/nbactions.xml
 client/tweetimages/
+/client/target/

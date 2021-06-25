@@ -5,7 +5,9 @@
  */
 package com.antsstyle.artretweeter.tools;
 
-import com.antsstyle.artretweeter.datastructures.FileDownloadResult;
+import com.antsstyle.artretweeter.datastructures.ClientResponse;
+import com.antsstyle.artretweeter.datastructures.OperationResult;
+import com.antsstyle.artretweeter.enumerations.StatusCode;
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -85,15 +87,15 @@ public class ImageTools {
         return returnImg;
     }
 
-    public static FileDownloadResult downloadImageFromSiteWithRetry(String imageURL, Path fullFilePath, boolean overwriteExisting) {
+    public static OperationResult downloadImageFromSiteWithRetry(String imageURL, Path fullFilePath, boolean overwriteExisting) {
         return downloadImageFromSiteWithRetry(imageURL, fullFilePath, 3, false);
     }
 
-    public static FileDownloadResult downloadImageFromSiteWithRetry(String imageURL, Path fullFilePath, int retryLimit, boolean overwriteExisting) {
+    public static OperationResult downloadImageFromSiteWithRetry(String imageURL, Path fullFilePath, int retryLimit, boolean overwriteExisting) {
         int attempts = 0;
         while (attempts < retryLimit) {
-            FileDownloadResult result = downloadImageFromSite(imageURL, fullFilePath, overwriteExisting);
-            if (result.isSuccessful()) {
+            OperationResult result = downloadImageFromSite(imageURL, fullFilePath, overwriteExisting);
+            if (result.wasSuccessful()) {
                 return result;
             } else {
                 int waitSecondsMultiplier = (int) Math.pow(2, attempts);
@@ -102,19 +104,15 @@ public class ImageTools {
                     Thread.sleep(Math.max((5 * waitSecondsMultiplier) * 1000, 1000));
                 } catch (Exception e) {
                     LOGGER.error("Interrupted while waiting to retry image download - aborting.", e);
-                    result.setSuccessful(false);
-                    result.setWasDownloaded(false);
-                    result.setWasInterrupted(true);
+                    result.getClientResponse().setStatusCode(StatusCode.INTERRUPTED_ERROR);
                 }
             }
         }
         LOGGER.error("Maximum retry limit reached - aborting image download.");
-        FileDownloadResult result = new FileDownloadResult()
-                .setSuccessful(false)
-                .setWasDownloaded(false)
-                .setMaxRetryReached(true)
-                .setWasInterrupted(false);
-        return result;
+        ClientResponse result = new ClientResponse(StatusCode.MAX_DOWNLOAD_RETRY_REACHED);
+        OperationResult opResult = new OperationResult();
+        opResult.setClientResponse(result);
+        return opResult;
     }
 
     /**
@@ -125,11 +123,12 @@ public class ImageTools {
      * @param overwriteExisting Whether to overwrite the existing file at the given path, if one exists.
      * @return True on success, false otherwise.
      */
-    public static FileDownloadResult downloadImageFromSite(String imageURL, Path fullFilePath, boolean overwriteExisting) {
-        FileDownloadResult result = new FileDownloadResult();
+    public static OperationResult downloadImageFromSite(String imageURL, Path fullFilePath, boolean overwriteExisting) {
+        OperationResult result = new OperationResult();
+        ClientResponse clientResp;
         if (Files.exists(fullFilePath) && !overwriteExisting) {
-            result.setSuccessful(true);
-            result.setWasDownloaded(false);
+            clientResp = new ClientResponse(StatusCode.FILE_ALREADY_DOWNLOADED);
+            result.setClientResponse(clientResp);
             return result;
         }
         HttpGet httpGet = new HttpGet(imageURL);
@@ -139,9 +138,9 @@ public class ImageTools {
         httpGet.setHeader("Accept-Language", "en-US,en;q=0.5");
         httpGet.setHeader("Accept-Encoding", "gzip, deflate, br");
         httpGet.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        boolean successful;
         try ( CloseableHttpClient httpclient = HttpClients.createDefault();  CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
             HttpEntity entity1 = response1.getEntity();
+
             try ( InputStream is = entity1.getContent();  OutputStream os = new FileOutputStream(fullFilePath.toFile())) {
                 int bufferSize = 65536;
                 byte[] byteBuffer = new byte[bufferSize];
@@ -149,19 +148,19 @@ public class ImageTools {
                 while ((length2 = is.read(byteBuffer)) != -1) {
                     os.write(byteBuffer, 0, length2);
                 }
-                successful = true;
+                clientResp = new ClientResponse(StatusCode.SUCCESS);
             } catch (Exception e) {
                 LOGGER.error("Failed to download image from webpage!", e);
-                successful = false;
+                clientResp = new ClientResponse(StatusCode.DOWNLOAD_ERROR);
             }
             EntityUtils.consume(entity1);
-            result.setSuccessful(successful);
-            result.setWasDownloaded(successful);
+
+            result.setClientResponse(clientResp);
             return result;
         } catch (Exception e) {
             LOGGER.error("Could not retrieve URL for image source!", e);
-            result.setSuccessful(false);
-            result.setWasDownloaded(false);
+            clientResp = new ClientResponse(StatusCode.MISC_ERROR);
+            result.setClientResponse(clientResp);
             return result;
         }
     }
