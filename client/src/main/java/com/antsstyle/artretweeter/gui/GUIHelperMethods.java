@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.configuration.GUIConfig;
+import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
@@ -14,6 +15,7 @@ import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.ImageTools;
 import java.awt.Color;
 import java.awt.Component;
@@ -24,7 +26,9 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -48,6 +52,7 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicScrollBarUI;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import org.apache.logging.log4j.LogManager;
@@ -416,6 +421,91 @@ public class GUIHelperMethods {
         pane.setSize(d);
         pane.setMaximumSize(d);
         pane.setPreferredSize(d);
+    }
+
+    public static boolean queueRetweet(JTable table, Account account) {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            return false;
+        }
+        int modelRow = table.convertRowIndexToModel(row);
+        int idColumnIndex = table.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) table.getModel().getValueAt(modelRow, idColumnIndex);
+        DBResponse selectResp = CoreDB.selectFromTable(DBTable.TWEETS, new String[]{"id"}, new Object[]{id});
+        if (!selectResp.wasSuccessful()) {
+            String msg = "Failed to query DB for tweet information!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        } else if (selectResp.getReturnedRows().isEmpty()) {
+            String msg = "This tweet doesn't exist in DB - has the DB file been modified?";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        }
+        TweetHolder tweet = ResultSetConversion.getTweet(selectResp.getReturnedRows().get(0));
+        DBResponse accountsResp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
+        if (!accountsResp.wasSuccessful()) {
+            String msg = "Failed to query DB for accounts information!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        } else if (accountsResp.getReturnedRows().isEmpty()) {
+            String msg = "You cannot queue a retweet without an account. Add one first.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        }
+        boolean isAuthorised = false;
+        ArrayList<HashMap<String, Object>> rows = accountsResp.getReturnedRows();
+        for (HashMap<String, Object> dbRow : rows) {
+            Account acc = ResultSetConversion.getAccount(dbRow);
+            if (acc.getTwitterID().equals(tweet.getUserTwitterID())) {
+                isAuthorised = true;
+                break;
+            }
+        }
+        if (!isAuthorised) {
+            String msg = "ArtRetweeter will only queue retweets for tweets from accounts you own.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        }
+        ChooseDatePanel2 datePanel = new ChooseDatePanel2();
+        int selectionResult = JOptionPane.showConfirmDialog(GUI.getInstance(), datePanel, "Select Retweet Date", JOptionPane.OK_CANCEL_OPTION);
+        if (selectionResult != JOptionPane.OK_OPTION) {
+            return false;
+        }
+        Timestamp time = datePanel.getSelectedTime();
+        LOGGER.debug("Time: " + time);
+        OperationResult opResult = ServerAPI.queueRetweet(account, tweet.getTweetID(), time);
+        if (!opResult.wasSuccessful()) {
+            String msg = "Failed to contact ArtRetweeter server. Try again later.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        }
+        Boolean success = (Boolean) opResult.getServerResponse().getReturnedObject();
+        LOGGER.debug("Success: " + success);
+        if (success) {
+            if (CoreDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), account.getTwitterID(), time})) {
+                DBResponse resp = CoreDB.selectFromTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "internalaccountid", "retweettime"}, new Object[]{tweet.getTweetID(), account.getId(), time});
+                Integer newID = (Integer) resp.getReturnedRows().get(0).get("ID");
+                DefaultTableModel dtm = (DefaultTableModel) QueuingPanel.queuedTweetsTable.getModel();
+                dtm.addRow(new Object[]{newID, tweet.getFullTweetText(), time});
+                return true;
+            } else {
+                String msg = "<html>Queued successfully, but an error occurred adding this queue entry to the ArtRetweeter client.</html>";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.error(msg);
+                return false;
+            }
+        } else {
+            String msg = "<html>ArtRetweeter server returned an error, check log output.</html>";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return false;
+        }
     }
 
 }

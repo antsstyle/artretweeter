@@ -70,8 +70,6 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
     private Account currentlySelectedAccount = null;
     private TwitterCollectionHolder currentlySelectedCollection = null;
 
-    private static final HashMap<String, HashMap<Long, CollectionOperation>> curationChanges = new HashMap<>();
-
     /**
      * Creates new form TweetsPanel
      */
@@ -783,46 +781,6 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
     }
 
-    private void queueTweetForRetweeting() {
-        int row = tweetsTable.getSelectedRow();
-        if (row == -1) {
-            return;
-        }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        TableModel model = tweetsTable.getModel();
-        TableColumnModel tcm = tweetsTable.getColumnModel();
-        int idColumnIndex = tcm.getColumnIndex("ID");
-        Integer id = (Integer) model.getValueAt(modelRow, idColumnIndex);
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"id"},
-                new Object[]{id});
-        if (!resp.wasSuccessful()) {
-            String msg = "Failed to retrieve tweet information from database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (resp.getReturnedRows().isEmpty()) {
-            String msg = "Tweet was not found in the database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        TweetHolder holder = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-        ChooseDatePanel datePanel = new ChooseDatePanel();
-        int confirmResult = JOptionPane.showConfirmDialog(GUI.getInstance(), datePanel, "Enter Date", JOptionPane.OK_CANCEL_OPTION);
-        if (confirmResult != JOptionPane.OK_OPTION) {
-            return;
-        }
-        Timestamp retweetTime = datePanel.getSelectedTime();
-        Timestamp nowPlusFiveMinutes = new Timestamp(System.currentTimeMillis() + 60 * 5 * 1000);
-        if (retweetTime.before(nowPlusFiveMinutes)) {
-            String msg = "<html>You cannot pick a date in the past, or a date less than five minutes from now.</html>";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        CoreDB.insertRetweetQueueEntry(new Object[]{holder.getTweetID(), currentlySelectedAccount.getId(),
-            retweetTime});
-    }
-
     private void viewCollectionOnTwitter() {
         if (currentlySelectedCollection.equals(NO_COLLECTIONS)
                 || currentlySelectedCollection.equals(DB_ERROR_COLLECTION)) {
@@ -977,39 +935,6 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         }
         DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
         dtm.removeRow(modelRow);
-    }
-
-    private void commitCollectionChanges() {
-        if (curationChanges.isEmpty()) {
-            return;
-        }
-        Gson gson = new Gson();
-        Set<String> collectionsToCurate = curationChanges.keySet();
-        boolean errors = false;
-        String endText = "If multiple collections were"
-                + " curated, not all may have been updated.";
-        OperationResult result = null;
-        for (String k : collectionsToCurate) {
-            CollectionCurateParamsJSON json = new CollectionCurateParamsJSON();
-            json.setId(k);
-            json.setChanges(curationChanges.get(k));
-            LOGGER.debug("Number of changes to curate: " + curationChanges.get(k).size());
-            String jsonString = gson.toJson(json, CollectionCurateParamsJSON.class);
-            result = RESTAPI.collectionsEntriesCurate(jsonString, currentlySelectedAccount);
-            if (!result.wasSuccessful()) {
-                errors = true;
-            }
-            RESTAPI.getFullyHydratedCollectionByID(k, currentlySelectedAccount);
-        }
-        if (errors) {
-            GUIHelperMethods.showErrors(result, LOGGER, endText);
-        } else {
-            String msg = "<html>Collections curated successfully.</html>";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Success", JOptionPane.INFORMATION_MESSAGE);
-        }
-
-        curationChanges.clear();
-        refreshCollectionTweetsTable();
     }
 
     private void deleteCollection() {

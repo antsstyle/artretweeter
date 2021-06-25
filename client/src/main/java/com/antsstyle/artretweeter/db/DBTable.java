@@ -13,6 +13,7 @@ public enum DBTable {
 
     ACCOUNTS("accounts"),
     APPRATELIMITS("appratelimits"),
+    FAILEDRETWEETS("failedretweets"),
     TWEETS("tweets"),
     CONFIGURATION("configuration"),
     COLLECTIONS("collections"),

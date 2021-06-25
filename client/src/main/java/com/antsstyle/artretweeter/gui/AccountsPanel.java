@@ -660,6 +660,10 @@ public class AccountsPanel extends javax.swing.JPanel {
                 if (selAcc.getTwitterID().equals(account.getTwitterID())) {
                     GUI.getCollectionsPanel().refreshTweetsTable();
                 }
+                Account queueSelAcc = GUI.getQueuingPanel().getCurrentlySelectedAccount();
+                if (queueSelAcc.getTwitterID().equals(account.getTwitterID())) {
+                    GUI.getQueuingPanel().refreshTweetsTable();
+                }
                 enableAllAccountButtons();
             }
         };
@@ -744,6 +748,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         DefaultTableModel dtm = (DefaultTableModel) accountsTable.getModel();
         dtm.addRow(new Object[]{account.getScreenName(), 0});
         GUI.getCollectionsPanel().refreshAccountBoxModel(false);
+        GUI.getQueuingPanel().refreshAccountBoxModel(false);
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
     }

@@ -210,11 +210,11 @@ public class CoreDB {
             + " WHEN NOT MATCHED THEN INSERT (tweetid,collectionid) VALUES (vals.tweetid, vals.collectionid)";
 
     private static final String RETWEET_QUEUE_MERGE_QUERY = "MERGE INTO retweetqueue USING (VALUES (?,?,?))"
-            + " AS vals(tweetid,internalaccountid,retweettime) ON (retweetqueue.tweetid = vals.tweetid"
-            + " AND retweetqueue.internalaccountid = vals.internalaccountid)"
-            + " WHEN MATCHED THEN UPDATE SET retweetqueue.tweetid=vals.tweetid,retweetqueue.internalaccountid=vals.internalaccountid,"
+            + " AS vals(tweetid,retweetingusertwitterid,retweettime) ON (retweetqueue.tweetid = vals.tweetid"
+            + " AND retweetqueue.retweetingusertwitterid = vals.retweetingusertwitterid)"
+            + " WHEN MATCHED THEN UPDATE SET retweetqueue.tweetid=vals.tweetid,retweetqueue.retweetingusertwitterid=vals.retweetingusertwitterid,"
             + " retweetqueue.retweettime=vals.retweettime"
-            + " WHEN NOT MATCHED THEN INSERT (tweetid,internalaccountid,retweettime) VALUES (vals.tweetid, vals.internalaccountid, vals.retweettime)";
+            + " WHEN NOT MATCHED THEN INSERT (tweetid,retweetingusertwitterid,retweettime) VALUES (vals.tweetid, vals.retweetingusertwitterid, vals.retweettime)";
 
     private static final String RETWEETS_INSERT_QUERY = "INSERT INTO retweets (retweetingusertwitterid,originaltweetid,retweetid,originaltweettime,retweettime)"
             + " VALUES(?,?,?,?,?)";
