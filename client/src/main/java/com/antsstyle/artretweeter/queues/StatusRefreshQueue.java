@@ -99,16 +99,16 @@ public class StatusRefreshQueue implements Runnable {
             ArrayList<RetweetQueueEntry> scheduledRetweets = returnedPair.getLeft();
             ArrayList<RetweetQueueEntry> failedRetweets = returnedPair.getLeft();
             for (RetweetQueueEntry entry : scheduledRetweets) {
-                deleteParams.add(new Object[]{entry.getTweetID(), entry.getInternalAccountID()});
+                deleteParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
             }
             for (RetweetQueueEntry entry : failedRetweets) {
-                insertParams.add(new Object[]{entry.getTweetID(), entry.getInternalAccountID(), entry.getRetweetTime(),
+                insertParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
                     entry.getErrorCode(), entry.getFailReason()});
             }
         }
-        String deleteQuery = "DELETE FROM retweetqueue WHERE tweetid=? AND internalaccountid=?";
+        String deleteQuery = "DELETE FROM retweetqueue WHERE tweetid=? AND retweetingusertwitterid=?";
         CoreDB.runParameterisedUpdateBatch(deleteQuery, deleteParams);
-        String insertQuery = "INSERT INTO failedretweets (tweetid,internalaccountid,retweettime,errorcode,failreason) "
+        String insertQuery = "INSERT INTO failedretweets (tweetid,retweetingusertwitterid,retweettime,errorcode,failreason) "
                 + "VALUES (?,?,?,?,?)";
         CoreDB.runParameterisedUpdateBatch(insertQuery, insertParams);
         SwingUtilities.invokeLater(() -> {

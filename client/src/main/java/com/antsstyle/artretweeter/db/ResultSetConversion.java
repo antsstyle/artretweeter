@@ -24,7 +24,7 @@ public class ResultSetConversion {
     public static RetweetQueueEntry getRetweetQueueEntry(HashMap<String, Object> row) {
         RetweetQueueEntry entry = new RetweetQueueEntry()
                 .setId((Integer) row.get("ID"))
-                .setInternalAccountID((Integer) row.get("INTERNALACCOUNTID"))
+                .setRetweetingUserTwitterID((Long) row.get("RETWEETINGUSERTWITTERID"))
                 .setRetweetTime((Timestamp) row.get("RETWEETTIME"))
                 .setTweetID((Long) row.get("TWEETID"));
         return entry;
@@ -33,7 +33,7 @@ public class ResultSetConversion {
     public static RetweetQueueEntry getFailedRetweetQueueEntry(HashMap<String, Object> row) {
         RetweetQueueEntry entry = new RetweetQueueEntry()
                 .setId((Integer) row.get("ID"))
-                .setInternalAccountID((Integer) row.get("INTERNALACCOUNTID"))
+                .setRetweetingUserTwitterID((Long) row.get("RETWEETINGUSERTWITTERID"))
                 .setRetweetTime((Timestamp) row.get("RETWEETTIME"))
                 .setTweetID((Long) row.get("TWEETID"))
                 .setErrorCode((Integer) row.get("ERRORCODE"))

@@ -367,6 +367,8 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         CoreDB.deleteFromTable(DBTable.FAILEDRETWEETS,
                 new String[]{"retweetingusertwitterid"},
                 new Object[]{currentlySelectedAccount.getTwitterID()});
+        DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+        dtm.setRowCount(0);
     }
 
     private void requeueFailedRetweet() {

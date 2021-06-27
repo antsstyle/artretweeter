@@ -15,7 +15,16 @@ public class RetweetQueueEntry {
     
     private Integer id;
     private Long tweetID;
-    private Integer internalAccountID;
+    private Long retweetingUserTwitterID;
+
+    public Long getRetweetingUserTwitterID() {
+        return retweetingUserTwitterID;
+    }
+
+    public RetweetQueueEntry setRetweetingUserTwitterID(Long retweetingUserTwitterID) {
+        this.retweetingUserTwitterID = retweetingUserTwitterID;
+        return this;
+    }
     private Timestamp retweetTime;
     private Integer errorCode;
 
@@ -53,15 +62,6 @@ public class RetweetQueueEntry {
 
     public RetweetQueueEntry setTweetID(Long tweetID) {
         this.tweetID = tweetID;
-        return this;
-    }
-
-    public Integer getInternalAccountID() {
-        return internalAccountID;
-    }
-
-    public RetweetQueueEntry setInternalAccountID(Integer internalAccountID) {
-        this.internalAccountID = internalAccountID;
         return this;
     }
 

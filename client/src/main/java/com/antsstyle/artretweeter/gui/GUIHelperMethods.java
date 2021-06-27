@@ -489,7 +489,9 @@ public class GUIHelperMethods {
         LOGGER.debug("Success: " + success);
         if (success) {
             if (CoreDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), account.getTwitterID(), time})) {
-                DBResponse resp = CoreDB.selectFromTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "internalaccountid", "retweettime"}, new Object[]{tweet.getTweetID(), account.getId(), time});
+                DBResponse resp = CoreDB.selectFromTable(DBTable.RETWEETQUEUE, 
+                        new String[]{"tweetid", "retweetingusertwitterid", "retweettime"}, new Object[]{tweet.getTweetID(), 
+                            account.getTwitterID(), time});
                 Integer newID = (Integer) resp.getReturnedRows().get(0).get("ID");
                 DefaultTableModel dtm = (DefaultTableModel) QueuingPanel.queuedTweetsTable.getModel();
                 dtm.addRow(new Object[]{newID, tweet.getFullTweetText(), time});

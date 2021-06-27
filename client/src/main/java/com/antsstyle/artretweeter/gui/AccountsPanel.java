@@ -255,8 +255,16 @@ public class AccountsPanel extends javax.swing.JPanel {
     }
 
     private void retrieveCollections() {
+        if (accountsTable.getRowCount() == 0) {
+            String statusMessage = "You must add an account before retrieving collections.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            enableAllAccountButtons();
+            return;
+        }
         int row = accountsTable.getSelectedRow();
         if (row == -1) {
+            String statusMessage = "Select an account in the table to retrieve collections for.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
             enableAllAccountButtons();
             return;
         }
@@ -394,8 +402,16 @@ public class AccountsPanel extends javax.swing.JPanel {
     }
 
     private void retrieveTweets() {
+        if (accountsTable.getRowCount() == 0) {
+            String statusMessage = "You must add an account before retrieving tweets.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            enableAllAccountButtons();
+            return;
+        }
         int row = accountsTable.getSelectedRow();
         if (row == -1) {
+            String statusMessage = "Select an account in the table to retrieve tweets for.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
             enableAllAccountButtons();
             return;
         }
@@ -749,6 +765,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         dtm.addRow(new Object[]{account.getScreenName(), 0});
         GUI.getCollectionsPanel().refreshAccountBoxModel(false);
         GUI.getQueuingPanel().refreshAccountBoxModel(false);
+        GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -788,7 +805,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
 
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
-
+        RESTAPI.oauthInvalidateToken(account);
         String confirmDelete = "<html>Are you sure you want to delete account '" + screenName
                 + "' from ArtRetweeter? This action cannot be undone.<br/><br/>"
                 + "Note that this method does not revoke access to this application. "
@@ -800,8 +817,8 @@ public class AccountsPanel extends javax.swing.JPanel {
         if (deleteResult != JOptionPane.YES_OPTION) {
             return;
         }
-        String deleteQuery = "DELETE FROM retweetsqueue WHERE internalaccountid=?";
-        CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getId()});
+        String deleteQuery = "DELETE FROM retweetsqueue WHERE retweetingusertwitterid=?";
+        CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getTwitterID()});
         deleteQuery = "DELETE FROM tweets WHERE usertwitterid=? "
                 + " AND tweetid NOT IN (SELECT tweetid FROM collections WHERE usertwitterid != ?)";
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getTwitterID(), account.getTwitterID()});

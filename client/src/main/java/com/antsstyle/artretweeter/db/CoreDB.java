@@ -160,7 +160,7 @@ public class CoreDB {
             = " ALTER TABLE appratelimits ADD UNIQUE (endpoint)";
 
     private static final String RETWEET_QUEUE_TABLE_ADD_UNIQUE
-            = "ALTER TABLE retweetqueue ADD UNIQUE (tweetid,internalaccountid)";
+            = "ALTER TABLE retweetqueue ADD UNIQUE (tweetid,retweetingusertwitterid)";
 
     private static final String USER_RATELIMITS_MERGE_QUERY = "MERGE INTO userratelimits USING (VALUES(?,?,?,?,?))"
             + " AS vals(usertwitterid,endpoint,maxlimit,remaininglimit,resettime) ON "

@@ -455,12 +455,21 @@ public class RESTAPI {
         return apiCallResult;
     }
 
+    public static OperationResult oauthInvalidateToken(Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.OAUTH_INVALIDATE_TOKEN, account);
+        if (!apiCallResult.wasSuccessful()) {
+            return apiCallResult;
+        }
+        return apiCallResult;
+    }
+    
     public static OperationResult oauthRequestToken() {
         List<NameValuePair> nvps = new ArrayList<>();
         String requestParameters = "['oauth_callback' => 'oob']";
         nvps.add(new BasicNameValuePair("twitter_endpoint", "oauth/request_token"));
         nvps.add(new BasicNameValuePair("requestparameters", requestParameters));
-        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.REQUEST_TOKEN, null);
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.OAUTH_REQUEST_TOKEN, null);
         if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
@@ -480,7 +489,7 @@ public class RESTAPI {
         nvps.add(new BasicNameValuePair("oauth_token", token.getToken()));
         nvps.add(new BasicNameValuePair("oauth_verifier", pin));
         nvps.add(new BasicNameValuePair("twitter_endpoint", "oauth/access_token"));
-        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.ACCESS_TOKEN, null);
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.OAUTH_ACCESS_TOKEN, null);
         if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }

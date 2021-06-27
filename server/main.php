@@ -76,6 +76,9 @@ switch ($twitter_endpoint) {
     case "oauth/authorize":
         ArtRetweeter\oauthAuthorize();
         break;
+    case "oauth/invalidate_token":
+        ArtRetweeter\oauthInvalidateToken($userauth);
+        break;
     case "oauth/request_token":
         ArtRetweeter\oauthRequestToken();
         break;

@@ -53,25 +53,30 @@ function postScheduledRetweets() {
         $params['trim_user'] = 1;
         $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'], $access_token, $access_token_secret);
         $connection->setRetries(1, 1);
-        $queryres = queryTwitterUserAuth($connection, $endpoint, "POST", $params, $userauth, false);
+        $query_result = queryTwitterUserAuth($connection, $endpoint, "POST", $params, $userauth, false, false);
         $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
                 . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
                 . "? FROM scheduledretweets WHERE id=?";
-        if (!$queryres) {
+        if (!$query_result) {
+            error_log("Schedule time was significantly missed - adding to failed retweets queue.");
             $GLOBALS['database_connection']->prepare($insertFailedRetweetQuery)
                     ->execute([1, "Missed schedule", $dbid]);
         } else {
-            // Check if object is error first
-            if (isset($queryres['errors'])) {
-                $errcode = $queryres['errors'][0]['code'];
-                $errmsg = $queryres['errors'][0]['message'];
+            if ($query_result->errors) {
+                if (is_array($query_result->errors)) {
+                    $errcode = $query_result->errors[0]['code'];
+                    $errmsg = $query_result->errors[0]['message'];
+                } else {
+                    $errcode = $query_result->errors->code;
+                    $errmsg = $query_result->errors->message;
+                }
+                error_log("Retweet query returned errors!");
                 $GLOBALS['database_connection']->prepare($insertFailedRetweetQuery)
                         ->execute([$errcode, $errmsg, $dbid]);
             } else {
-                $retweetedstatus = $queryres['retweeted_status'];
-                $retweetid = $retweetedstatus['id'];
-                $retweettime = $retweetedstatus['created_at'];
-                updateRetweetRecordsInDB($userauth['twitter_id'], $retweetid, $retweettime);
+                $retweetedstatus = $query_result->retweeted_status;
+                $retweetid = $retweetedstatus->id;
+                updateRetweetRecordsInDB($userauth['twitter_id'], $retweetid);
             }
         }
         $GLOBALS['database_connection']->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$dbid]);
@@ -92,7 +97,9 @@ function getQueueStatusInDB($userauthtwitterid) {
         $returnarray['failedretweets'] = false;
     } else {
         $returnarray['failedretweets'] = $failedRetweetsStmt->fetchAll();
+        $GLOBALS['database_connection']->prepare("DELETE FROM failedretweets WHERE retweetingusertwitterid=?")->execute([$userauthtwitterid]);
     }
+
     echo encodeDBResponseInformation($returnarray);
 }
 
@@ -190,10 +197,11 @@ function checkRetweetRecordsInDB($usertwitterid, $echo = true) {
     }
 }
 
-function updateRetweetRecordsInDB($usertwitterid, $tweetid, $retweettime) {
+function updateRetweetRecordsInDB($usertwitterid, $tweetid) {
     $stmt = $GLOBALS['database_connection']->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweettime) 
 	VALUES (?,?,?)");
-    $success = $stmt->execute([$usertwitterid, $tweetid, $retweettime]);
+    $current_time = date("Y-m-d H:i:s", time());
+    $success = $stmt->execute([$usertwitterid, $tweetid, $current_time]);
     return $success;
 }
 
@@ -258,7 +266,7 @@ function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params,
         $echo = true) {
     $userauthtwitterid = $userauth['twitter_id'];
     validateUserAuth($userauth);
-    checkUserRateLimitInDB($userauthtwitterid, $endpoint);
+    checkUserRateLimitInDB($userauthtwitterid, $endpoint, $echo);
     if ($httpRequestType == 'GET') {
         if ($paramsisjsondata) {
             $result = $connection->get($endpoint, $params, true);

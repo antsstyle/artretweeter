@@ -1,7 +1,9 @@
 <?php
 
 namespace ArtRetweeter;
+
 require_once "core.php";
+
 use Abraham\TwitterOAuth\TwitterOAuth;
 
 function oauthAccessToken() {
@@ -35,7 +37,18 @@ function oauthAuthorize() {
         exit;
     }
     $oauth_token_array['oauth_token'] = $oauth_token;
-    $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret']);
+    $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],);
     $response = $connection->url("oauth/authorize", $oauth_token_array);
+    echo encodeTwitterResponseInformation($connection, $response);
+}
+
+function oauthInvalidateToken($userauth) {
+    if (!$userauth['access_token'] || !$userauth['access_token_secret'] || !$userauth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
+            $userauth['access_token'], $userauth['access_token_secret']);
+    $response = $connection->oauth("oauth/invalidate_token", ["access_token" => $userauth['access_token']]);
     echo encodeTwitterResponseInformation($connection, $response);
 }
