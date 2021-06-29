@@ -42,13 +42,13 @@ function oauthAuthorize() {
     echo encodeTwitterResponseInformation($connection, $response);
 }
 
-function oauthInvalidateToken($userauth) {
-    if (!$userauth['access_token'] || !$userauth['access_token_secret'] || !$userauth['twitter_id']) {
+function oauthInvalidateToken($userAuth) {
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
         echo encodeErrorInformation("Parameters are not set correctly.");
         exit;
     }
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
-            $userauth['access_token'], $userauth['access_token_secret']);
+            $userAuth['access_token'], $userAuth['access_token_secret']);
     $response = $connection->oauth("oauth/invalidate_token");
     echo encodeTwitterResponseInformation($connection, $response);
 }

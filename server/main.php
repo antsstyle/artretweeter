@@ -9,13 +9,13 @@ require_once "statuses.php";
 $request_method = filter_var(getenv('REQUEST_METHOD'), FILTER_SANITIZE_STRING);
 $access_token = filter_input(INPUT_POST, 'access_token', FILTER_SANITIZE_STRING);
 $access_token_secret = filter_input(INPUT_POST, 'access_token_secret', FILTER_SANITIZE_STRING);
-$userauthtwitterid = filter_input(INPUT_POST, 'user_auth_twitter_id', FILTER_SANITIZE_NUMBER_INT);
+$userAuthTwitterID = filter_input(INPUT_POST, 'user_auth_twitter_id', FILTER_SANITIZE_NUMBER_INT);
 $twitter_endpoint = filter_input(INPUT_POST, 'twitter_endpoint', FILTER_SANITIZE_STRING);
 $artretweeter_endpoint = filter_input(INPUT_POST, 'artretweeter_endpoint', FILTER_SANITIZE_STRING);
 
-$userauth['twitter_id'] = $userauthtwitterid;
-$userauth['access_token'] = $access_token;
-$userauth['access_token_secret'] = $access_token_secret;
+$userAuth['twitter_id'] = $userAuthTwitterID;
+$userAuth['access_token'] = $access_token;
+$userAuth['access_token_secret'] = $access_token_secret;
 
 if ($request_method != "POST") {
     echo ArtRetweeter\encodeErrorInformation("Invalid request type.");
@@ -30,16 +30,16 @@ if (!$artretweeter_endpoint && !$twitter_endpoint) {
 if ($artretweeter_endpoint) {
     switch ($artretweeter_endpoint) {
         case "accounts/remove":
-            ArtRetweeter\removeAccount($userauth);
+            ArtRetweeter\removeAccount($userAuth);
             break;
         case "retweets/queuestatus":
-            ArtRetweeter\getQueueStatus($userauth);
+            ArtRetweeter\getQueueStatus($userAuth);
             break;
         case "retweets/queue":
-            ArtRetweeter\queueRetweet($userauth);
+            ArtRetweeter\queueRetweet($userAuth);
             break;
         case "retweets/unqueue":
-            ArtRetweeter\unqueueRetweet($userauth);
+            ArtRetweeter\unqueueRetweet($userAuth);
             break;
     }
     exit();
@@ -47,28 +47,31 @@ if ($artretweeter_endpoint) {
 
 switch ($twitter_endpoint) {
     case "collections/create":
-        ArtRetweeter\collectionsCreate($userauth);
+        ArtRetweeter\collectionsCreate($userAuth);
         break;
     case "collections/destroy":
-        ArtRetweeter\collectionsDestroy($userauth);
+        ArtRetweeter\collectionsDestroy($userAuth);
         break;
     case "collections/entries":
-        ArtRetweeter\collectionsEntries($userauth);
+        ArtRetweeter\collectionsEntries($userAuth);
         break;
     case "collections/entries/add":
-        ArtRetweeter\collectionsEntriesAdd($userauth);
+        ArtRetweeter\collectionsEntriesAdd($userAuth);
         break;
     case "collections/entries/curate":
-        ArtRetweeter\collectionsEntriesCurate($userauth);
+        ArtRetweeter\collectionsEntriesCurate($userAuth);
         break;
     case "collections/entries/move":
-        ArtRetweeter\collectionsEntriesMove($userauth);
+        ArtRetweeter\collectionsEntriesMove($userAuth);
+        break;
+    case "collections/entries/remove":
+        ArtRetweeter\collectionsEntriesRemove($userAuth);
         break;
     case "collections/list":
-        ArtRetweeter\collectionsList($userauth);
+        ArtRetweeter\collectionsList($userAuth);
         break;
     case "collections/show":
-        ArtRetweeter\collectionsShow($userauth);
+        ArtRetweeter\collectionsShow($userAuth);
         break;
     case "oauth/access_token":
         ArtRetweeter\oauthAccessToken();
@@ -77,25 +80,22 @@ switch ($twitter_endpoint) {
         ArtRetweeter\oauthAuthorize();
         break;
     case "oauth/invalidate_token":
-        ArtRetweeter\oauthInvalidateToken($userauth);
+        ArtRetweeter\oauthInvalidateToken($userAuth);
         break;
     case "oauth/request_token":
         ArtRetweeter\oauthRequestToken();
         break;
     case "statuses/lookup":
-        ArtRetweeter\statusesLookup($userauth);
-        break;
-    case "statuses/retweet":
-        ArtRetweeter\statusesRetweet($userauth);
+        ArtRetweeter\statusesLookup($userAuth);
         break;
     case "statuses/show":
-        ArtRetweeter\statusesShow($userauth);
+        ArtRetweeter\statusesShow($userAuth);
         break;
     case "statuses/unretweet":
-        ArtRetweeter\statusesUnretweet($userauth);
+        ArtRetweeter\statusesUnretweet($userAuth);
         break;
     case "statuses/user_timeline":
-        ArtRetweeter\statusesUserTimeline($userauth);
+        ArtRetweeter\statusesUserTimeline($userAuth);
         break;
     default:
         echo ArtRetweeter\encodeErrorInformation("Invalid endpoint, or endpoint not supported.");

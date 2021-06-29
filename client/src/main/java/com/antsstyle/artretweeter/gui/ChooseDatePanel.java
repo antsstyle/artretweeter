@@ -52,6 +52,7 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt((String) hourComboBox.getSelectedItem()));
         cal.set(Calendar.MINUTE, Integer.parseInt((String) minuteComboBox.getSelectedItem()));
         cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
         return new Timestamp(cal.getTimeInMillis());
     }
 

@@ -45,6 +45,8 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         jSeparator4 = new javax.swing.JToolBar.Separator();
         goToFailedRetweetsButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator5 = new javax.swing.JToolBar.Separator();
+        goToHelpAndInfoButton = new com.antsstyle.artretweeter.gui.WWButton();
+        jSeparator6 = new javax.swing.JToolBar.Separator();
 
         displayAreaPanel.setMaximumSize(new java.awt.Dimension(1820, 1080));
 
@@ -119,6 +121,20 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         mainMenuToolBar.add(goToFailedRetweetsButton);
         mainMenuToolBar.add(jSeparator5);
 
+        goToHelpAndInfoButton.setText("Help & Info");
+        goToHelpAndInfoButton.setToolTipText("");
+        goToHelpAndInfoButton.setFocusable(false);
+        goToHelpAndInfoButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        goToHelpAndInfoButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        goToHelpAndInfoButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        goToHelpAndInfoButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                goToHelpAndInfoButtonActionPerformed(evt);
+            }
+        });
+        mainMenuToolBar.add(goToHelpAndInfoButton);
+        mainMenuToolBar.add(jSeparator6);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -151,11 +167,16 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         GUI.getInstance().switchPanels(GUI.getFailedRetweetsPanel());
     }//GEN-LAST:event_goToFailedRetweetsButtonActionPerformed
 
+    private void goToHelpAndInfoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToHelpAndInfoButtonActionPerformed
+        GUI.getInstance().switchPanels(GUI.getHelpPanel());
+    }//GEN-LAST:event_goToHelpAndInfoButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel displayAreaPanel;
     private com.antsstyle.artretweeter.gui.WWButton goToAccountsButton;
     private com.antsstyle.artretweeter.gui.WWButton goToFailedRetweetsButton;
+    private com.antsstyle.artretweeter.gui.WWButton goToHelpAndInfoButton;
     private com.antsstyle.artretweeter.gui.WWButton goToRetweetQueuingButton;
     private com.antsstyle.artretweeter.gui.WWButton goToTweetsButton;
     private javax.swing.JToolBar.Separator jSeparator1;
@@ -163,6 +184,7 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
     private javax.swing.JToolBar.Separator jSeparator3;
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JToolBar.Separator jSeparator5;
+    private javax.swing.JToolBar.Separator jSeparator6;
     protected javax.swing.JToolBar mainMenuToolBar;
     // End of variables declaration//GEN-END:variables
 }

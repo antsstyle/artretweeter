@@ -48,8 +48,13 @@ public class StatusRefreshQueue implements Runnable {
         } else {
             cal.setTimeInMillis(Long.valueOf((String) selectResp.getReturnedRows().get(0).get("VALUE")));
         }
-        if (cal.getTime().before(new Date(System.currentTimeMillis()))) {
-            refreshGUI();
+        //if (cal.getTime().before(new Date(System.currentTimeMillis()))) {
+        refreshGUI();
+        //}
+        try {
+            Thread.sleep(Math.max(cal.getTimeInMillis() - System.currentTimeMillis(), 15 * 60 * 1000));
+        } catch (Exception e) {
+            return;
         }
         while (true) {
             refreshGUI();
@@ -102,9 +107,10 @@ public class StatusRefreshQueue implements Runnable {
             if (!queueResp.wasSuccessful()) {
                 continue;
             }
-            if (queueResp.getReturnedRows().isEmpty()) {
+            /*if (queueResp.getReturnedRows().isEmpty()) {
                 continue;
-            }
+            }*/
+            ArrayList<HashMap<String, Object>> queueRows = queueResp.getReturnedRows();
             OperationResult result = ServerAPI.getQueueStatus(account);
             if (!result.wasSuccessful()) {
                 LOGGER.error("Failed to get queue status from ArtRetweeter server for account: " + account.getTwitterID());
@@ -113,15 +119,38 @@ public class StatusRefreshQueue implements Runnable {
             ServerResponse response = result.getServerResponse();
             Pair<ArrayList<RetweetQueueEntry>, ArrayList<RetweetQueueEntry>> returnedPair
                     = (Pair<ArrayList<RetweetQueueEntry>, ArrayList<RetweetQueueEntry>>) response.getReturnedObject();
-            ArrayList<RetweetQueueEntry> scheduledRetweets = returnedPair.getLeft();
-            ArrayList<RetweetQueueEntry> failedRetweets = returnedPair.getLeft();
-            for (RetweetQueueEntry entry : scheduledRetweets) {
-                deleteParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
+            ArrayList<RetweetQueueEntry> scheduledRetweetsOnServer = returnedPair.getLeft();
+            ArrayList<RetweetQueueEntry> failedRetweetsOnServer = returnedPair.getRight();
+
+            ArrayList<RetweetQueueEntry> scheduledRetweetsOnClient = new ArrayList<>();
+            for (HashMap<String, Object> queueRow : queueRows) {
+                RetweetQueueEntry entry = ResultSetConversion.getRetweetQueueEntry(queueRow);
+                scheduledRetweetsOnClient.add(entry);
             }
-            for (RetweetQueueEntry entry : failedRetweets) {
-                insertParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
-                    entry.getErrorCode(), entry.getFailReason()});
+            LOGGER.debug("SERVER:");
+            for (RetweetQueueEntry e: scheduledRetweetsOnServer) {
+                LOGGER.debug("ID: " + e.getId());
+                LOGGER.debug("Tweet ID: " + e.getTweetID());
+                LOGGER.debug("User Twitter ID: " + e.getRetweetingUserTwitterID());
+                LOGGER.debug("Time: " + e.getRetweetTime());
             }
+            LOGGER.debug("CLIENT:");
+            for (RetweetQueueEntry e: scheduledRetweetsOnClient) {
+                LOGGER.debug("ID: " + e.getId());
+                LOGGER.debug("Tweet ID: " + e.getTweetID());
+                LOGGER.debug("User Twitter ID: " + e.getRetweetingUserTwitterID());
+                LOGGER.debug("Time: " + e.getRetweetTime());
+            }
+            for (RetweetQueueEntry entry : scheduledRetweetsOnClient) {
+                if (failedRetweetsOnServer.contains(entry)) {
+                    insertParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
+                        entry.getErrorCode(), entry.getFailReason()});
+                    deleteParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
+                } else if (!scheduledRetweetsOnServer.contains(entry)) {
+                    deleteParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
+                }
+            }
+
             try {
                 Thread.sleep(1000);
             } catch (Exception e) {
@@ -129,10 +158,16 @@ public class StatusRefreshQueue implements Runnable {
             }
         }
         String deleteQuery = "DELETE FROM retweetqueue WHERE tweetid=? AND retweetingusertwitterid=?";
-        CoreDB.runParameterisedUpdateBatch(deleteQuery, deleteParams);
+        if (!deleteParams.isEmpty()) {
+            CoreDB.runParameterisedUpdateBatch(deleteQuery, deleteParams);
+        }
+
         String insertQuery = "INSERT INTO failedretweets (tweetid,retweetingusertwitterid,retweettime,errorcode,failreason) "
                 + "VALUES (?,?,?,?,?)";
-        CoreDB.runParameterisedUpdateBatch(insertQuery, insertParams);
+        if (!insertParams.isEmpty()) {
+            CoreDB.runParameterisedUpdateBatch(insertQuery, insertParams);
+        }
+
         SwingUtilities.invokeLater(() -> {
             GUI.getQueuingPanel().refreshQueueTable();
         });

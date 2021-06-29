@@ -4,13 +4,13 @@ namespace ArtRetweeter;
 
 require_once "core.php";
 
-function removeAccount($userauth) {
-    if (!$userauth['access_token'] || !$userauth['access_token_secret'] || !$userauth['twitter_id']) {
+function removeAccount($userAuth) {
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
         echo encodeErrorInformation("Parameters are not set correctly.");
         exit;
     }
 
-    validateUserAuth($userauth);
+    validateUserAuth($userAuth);
 
-    removeAccountFromDB($userauth['twitter_id']);
+    removeAccountFromDB($userAuth['twitter_id']);
 }

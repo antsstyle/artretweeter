@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.datastructures;
 
 import java.sql.Timestamp;
+import java.util.Objects;
 
 /**
  *
@@ -72,6 +73,25 @@ public class RetweetQueueEntry {
     public RetweetQueueEntry setRetweetTime(Timestamp retweetTime) {
         this.retweetTime = retweetTime;
         return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof RetweetQueueEntry)) {
+            return false;
+        }
+        RetweetQueueEntry otherEntry = (RetweetQueueEntry) o;
+        return (this.retweetTime.equals(otherEntry.getRetweetTime()) && this.getTweetID().equals(otherEntry.getTweetID())
+                && this.getRetweetingUserTwitterID().equals(otherEntry.getRetweetingUserTwitterID()));
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 29 * hash + Objects.hashCode(this.tweetID);
+        hash = 29 * hash + Objects.hashCode(this.retweetingUserTwitterID);
+        hash = 29 * hash + Objects.hashCode(this.retweetTime);
+        return hash;
     }
     
 }

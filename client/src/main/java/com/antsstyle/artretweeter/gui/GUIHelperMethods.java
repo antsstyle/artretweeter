@@ -243,14 +243,13 @@ public class GUIHelperMethods {
         } else {
             return;
         }
-        String msg = "<html>Error performing operation. Error was:<br/><br/>"
+        String msg = "<html>Error performing operation.<br/><br/>"
                 + error;
         if (endText != null) {
             msg = msg.concat("<br/><br/>").concat(endText);
             msg = msg.concat(" </html>");
         }
         JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-        logger.error(msg);
     }
 
     /**
@@ -501,10 +500,7 @@ public class GUIHelperMethods {
         }
         OperationResult opResult = ServerAPI.queueRetweet(account, tweet.getTweetID(), time);
         if (!opResult.wasSuccessful()) {
-            LOGGER.debug(opResult.getErrorCode());
-            String msg = "Failed to contact ArtRetweeter server. Try again later.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
+            showErrors(opResult, LOGGER, null);
             return false;
         }
         Boolean success = (Boolean) opResult.getServerResponse().getReturnedObject();

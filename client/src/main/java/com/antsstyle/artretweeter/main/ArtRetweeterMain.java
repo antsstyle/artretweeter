@@ -7,6 +7,7 @@ package com.antsstyle.artretweeter.main;
 
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.gui.GUI;
+import com.antsstyle.artretweeter.queues.StatusRefreshQueue;
 import java.io.FileReader;
 import java.util.Properties;
 import javax.swing.JOptionPane;
@@ -50,6 +51,8 @@ public class ArtRetweeterMain {
             GUI.getInstance()
                     .setVisible(true);
         });
+        StatusRefreshQueue queue = new StatusRefreshQueue();
+        queue.run();
     }
 
 }

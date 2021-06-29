@@ -62,7 +62,8 @@ public class ServerAPI {
                 JsonObject obj = arr.get(i).getAsJsonObject();
                 RetweetQueueEntry entry = new RetweetQueueEntry()
                         .setTweetID(obj.get("tweetid").getAsLong())
-                        .setRetweetTime(new Timestamp(obj.get("retweettime").getAsLong()));
+                        .setRetweetingUserTwitterID(obj.get("retweetingusertwitterid").getAsLong())
+                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong()*1000));
                 scheduledEntries.add(entry);
             }
         } else {
@@ -74,7 +75,8 @@ public class ServerAPI {
                 JsonObject obj = arr.get(i).getAsJsonObject();
                 RetweetQueueEntry entry = new RetweetQueueEntry()
                         .setTweetID(obj.get("tweetid").getAsLong())
-                        .setRetweetTime(new Timestamp(obj.get("retweettime").getAsLong()))
+                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong()*1000))
+                        .setRetweetingUserTwitterID(obj.get("retweetingusertwitterid").getAsLong())
                         .setErrorCode(obj.get("errorcode").getAsInt())
                         .setFailReason(obj.get("failreason").getAsString());
                 failedEntries.add(entry);
@@ -157,8 +159,10 @@ public class ServerAPI {
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
             int artRetweeterServerErrors = 0;
-            while (artRetweeterServerErrors < 4) {
-                LOGGER.debug("Art retweeter errors: " + artRetweeterServerErrors);
+            while (artRetweeterServerErrors < 1) {
+                if (artRetweeterServerErrors > 0) {
+                    LOGGER.debug("Art retweeter server errors: " + artRetweeterServerErrors);
+                }
                 try ( CloseableHttpResponse response = httpclient.execute(httpPost)) {
                     Pair<ServerResponse, JsonObject> checkResult = processResponse(response);
                     int httpCode = response.getStatusLine().getStatusCode();
@@ -170,7 +174,7 @@ public class ServerAPI {
                             LOGGER.debug("Log message: " + checkResult.getLeft().getLogMessage());
                         }
                         artRetweeterServerErrors++;
-                        if (artRetweeterServerErrors == 3) {
+                        if (artRetweeterServerErrors == 1) {
                             if (checkResult.getLeft() != null) {
                                 opResult.setServerResponse(checkResult.getLeft());
                                 return opResult;

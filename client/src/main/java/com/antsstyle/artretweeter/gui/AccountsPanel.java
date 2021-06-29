@@ -799,13 +799,17 @@ public class AccountsPanel extends javax.swing.JPanel {
                 new String[]{"screen_name"},
                 new Object[]{screenName});
         if (!accountResp.wasSuccessful()) {
-
+            String statusMessage = "Failed to get account information from DB!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         } else if (accountResp.getReturnedRows().isEmpty()) {
-
+            String statusMessage = "Could not find account in DB - has the database folder been modified?";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
-        RESTAPI.oauthInvalidateToken(account);
+        //RESTAPI.oauthInvalidateToken(account);
         String confirmDelete = "<html>Are you sure you want to delete account '" + screenName
                 + "' from ArtRetweeter? This action cannot be undone.<br/><br/>"
                 + "Note that this method does not revoke access to this application. "
