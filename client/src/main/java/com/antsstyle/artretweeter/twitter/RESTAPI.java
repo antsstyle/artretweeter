@@ -7,6 +7,8 @@ package com.antsstyle.artretweeter.twitter;
 
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
+import com.antsstyle.artretweeter.datastructures.CollectionCurateParamsJSON;
+import com.antsstyle.artretweeter.datastructures.CollectionCurateRespJSON;
 import com.antsstyle.artretweeter.datastructures.CollectionOrdering;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.TwitterResponse;
@@ -448,10 +450,15 @@ public class RESTAPI {
         return apiCallResult;
     }
 
-    public static OperationResult collectionsEntriesCurate(String jsonData, Account account) {
+    public static OperationResult collectionsEntriesCurate(CollectionCurateParamsJSON jsonData, Account account) {
+        Gson gson = new Gson();
+        String jsonDataString = gson.toJson(jsonData, CollectionCurateParamsJSON.class);
         List<NameValuePair> nvps = new ArrayList<>();
-        nvps.add(new BasicNameValuePair("json_data", jsonData));
+        nvps.add(new BasicNameValuePair("json_data", jsonDataString));
         OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.COLLECTIONS_ENTRIES_CURATE, account);
+        JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
+        CollectionCurateRespJSON returnObject = gson.fromJson(responseJSON, CollectionCurateRespJSON.class);
+        apiCallResult.getTwitterResponse().setReturnedObject(returnObject);
         return apiCallResult;
     }
 

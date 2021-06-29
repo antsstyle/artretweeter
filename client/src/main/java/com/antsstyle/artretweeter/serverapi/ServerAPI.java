@@ -163,6 +163,12 @@ public class ServerAPI {
                     Pair<ServerResponse, JsonObject> checkResult = processResponse(response);
                     int httpCode = response.getStatusLine().getStatusCode();
                     if (httpCode != 200 || checkResult.getLeft() != null) {
+                        if (httpCode != 200) {
+                            LOGGER.debug("HTTP code: " + httpCode);
+                        }
+                        if (checkResult.getLeft() != null) {
+                            LOGGER.debug("Log message: " + checkResult.getLeft().getLogMessage());
+                        }
                         artRetweeterServerErrors++;
                         if (artRetweeterServerErrors == 3) {
                             if (checkResult.getLeft() != null) {

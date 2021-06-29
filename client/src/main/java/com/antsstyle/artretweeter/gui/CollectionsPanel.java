@@ -7,6 +7,8 @@ package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.CollectionCurateParamsJSON;
+import com.antsstyle.artretweeter.datastructures.CollectionCurateRespJSON;
+import com.antsstyle.artretweeter.datastructures.CollectionCurateRespJSON.CollectionCurateResponse.CollectionCurateEntry;
 import com.antsstyle.artretweeter.datastructures.CollectionOperation;
 import com.antsstyle.artretweeter.datastructures.CollectionOrdering;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
@@ -32,6 +34,8 @@ import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -241,7 +245,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         jLabel5 = new javax.swing.JLabel();
         selectCollectionComboBox = new javax.swing.JComboBox<>();
         addTweetToCurrentlySelectedCollectionButton = new javax.swing.JButton();
-        deleteTweetFromCollectionButton = new javax.swing.JButton();
+        deleteTweetsFromCollectionButton = new javax.swing.JButton();
         createNewCollectionButton = new javax.swing.JButton();
         deleteCollectionButton = new javax.swing.JButton();
         viewCollectionOnTwitterButton = new javax.swing.JButton();
@@ -282,8 +286,8 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 return canEdit [columnIndex];
             }
         });
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         jScrollPane26.setViewportView(tweetsTable);
         if (tweetsTable.getColumnModel().getColumnCount() > 0) {
             tweetsTable.getColumnModel().getColumn(0).setMinWidth(50);
@@ -374,8 +378,8 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 return canEdit [columnIndex];
             }
         });
-        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        collectionTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         jScrollPane27.setViewportView(collectionTweetsTable);
         if (collectionTweetsTable.getColumnModel().getColumnCount() > 0) {
             collectionTweetsTable.getColumnModel().getColumn(0).setMinWidth(50);
@@ -447,7 +451,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         });
 
         addTweetToCurrentlySelectedCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        addTweetToCurrentlySelectedCollectionButton.setText("Add tweet to currently selected collection");
+        addTweetToCurrentlySelectedCollectionButton.setText("Add tweets to currently selected collection");
         addTweetToCurrentlySelectedCollectionButton.setToolTipText("");
         addTweetToCurrentlySelectedCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -455,11 +459,11 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
             }
         });
 
-        deleteTweetFromCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        deleteTweetFromCollectionButton.setText("Delete tweet from collection");
-        deleteTweetFromCollectionButton.addActionListener(new java.awt.event.ActionListener() {
+        deleteTweetsFromCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        deleteTweetsFromCollectionButton.setText("Delete tweets from collection");
+        deleteTweetsFromCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                deleteTweetFromCollectionButtonActionPerformed(evt);
+                deleteTweetsFromCollectionButtonActionPerformed(evt);
             }
         });
 
@@ -593,7 +597,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                                     .addGroup(layout.createSequentialGroup()
                                         .addComponent(createNewCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(deleteTweetFromCollectionButton)
+                                        .addComponent(deleteTweetsFromCollectionButton)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(deleteCollectionButton))
                                     .addGroup(layout.createSequentialGroup()
@@ -641,7 +645,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(addTweetToCurrentlySelectedCollectionButton)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(deleteTweetFromCollectionButton)
+                        .addComponent(deleteTweetsFromCollectionButton)
                         .addComponent(createNewCollectionButton)
                         .addComponent(deleteCollectionButton)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -690,11 +694,11 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         setTweetOrderButton.setEnabled(!invalidCollection);
     }
 
-    private void deleteTweetFromCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetFromCollectionButtonActionPerformed
-        deleteTweetFromCollectionButton.setEnabled(false);
-        deleteTweetFromCollection();
-        deleteTweetFromCollectionButton.setEnabled(true);
-    }//GEN-LAST:event_deleteTweetFromCollectionButtonActionPerformed
+    private void deleteTweetsFromCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetsFromCollectionButtonActionPerformed
+        deleteTweetsFromCollectionButton.setEnabled(false);
+        deleteTweetsFromCollection();
+        deleteTweetsFromCollectionButton.setEnabled(true);
+    }//GEN-LAST:event_deleteTweetsFromCollectionButtonActionPerformed
 
     private void createNewCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createNewCollectionButtonActionPerformed
         createNewCollectionButton.setEnabled(false);
@@ -817,49 +821,113 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedCollection.equals(NO_COLLECTIONS)) {
             String msg = "Select a collection to add this tweet to first.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
             return;
         } else if (currentlySelectedCollection.equals(DB_ERROR_COLLECTION)) {
             String msg = "You cannot add tweets to collections until the database error is resolved.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        int row = tweetsTable.getSelectedRow();
-        if (row == -1) {
-            return;
-        }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
-        int textColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Tweet Text");
-        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
-        if (checkTweetInCollectionTable(id)) {
-            return;
-        }
 
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"id"},
-                new Object[]{id});
+        int[] rows = tweetsTable.getSelectedRows();
+        if (rows.length == 0) {
+            return;
+        }
+        int[] modelRows = new int[rows.length];
+        for (int i = 0; i < rows.length; i++) {
+            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+        }
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        HashMap<Long, CollectionOperation> curationParameters = new HashMap<>();
+        ArrayList<Object> tweetDBParams = new ArrayList<>();
+        ArrayList<Integer> tweetIDs = new ArrayList<>();
+        for (int i = 0; i < modelRows.length; i++) {
+            Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRows[i], idColumnIndex);
+            if (!checkTweetInCollectionTable(id)) {
+                tweetDBParams.add(id);
+                tweetIDs.add(id);
+            }
+        }
+        if (tweetDBParams.isEmpty()) {
+            String msg = "The tweets you have selected are already in the specified collection.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        String query = "SELECT * FROM tweets WHERE id IN (?";
+        for (int i = 1; i < tweetDBParams.size(); i++) {
+            query = query.concat(",?");
+        }
+        query = query.concat(")");
+
+        DBResponse resp = CoreDB.customQuerySelect(query, tweetDBParams.toArray(new Object[tweetDBParams.size()]));
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweet information from DB - check log output.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         } else if (resp.getReturnedRows().isEmpty()) {
-            String msg = "Tweet record does not exist in DB - has the database file been modified?";
+            String msg = "Tweet records do not exist in DB - has the database file been modified?";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        TweetHolder tweet = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-        OperationResult result = RESTAPI.collectionsEntriesAdd(currentlySelectedCollection.getTwitterID(),
-                tweet.getTweetID(), currentlySelectedAccount);
+        ArrayList<HashMap<String, Object>> dbRows = resp.getReturnedRows();
+        ArrayList<TweetHolder> validTweets = new ArrayList<>();
+        for (HashMap<String, Object> dbRow : dbRows) {
+            TweetHolder tweet = ResultSetConversion.getTweet(dbRow);
+            if (tweetIDs.contains(tweet.getId())) {
+                curationParameters.put(tweet.getTweetID(), CollectionOperation.ADD);
+                validTweets.add(tweet);
+            }
+        }
+        OperationResult result;
+        if (validTweets.size() == 1) {
+            result = RESTAPI.collectionsEntriesAdd(currentlySelectedCollection.getTwitterID(),
+                    validTweets.get(0).getTweetID(), currentlySelectedAccount);
+        } else {
+            CollectionCurateParamsJSON jsonData = new CollectionCurateParamsJSON()
+                    .setId(currentlySelectedCollection.getTwitterID());
+            jsonData.setChanges(curationParameters);
+            result = RESTAPI.collectionsEntriesCurate(jsonData, currentlySelectedAccount);
+        }
+
         if (!result.wasSuccessful()) {
-            String msg = "Twitter API returned an error: ";
+            String msg = "Twitter API returned an error: " + result.getErrorCode().getStatusMessage();
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String tweetText = (String) tweetsTable.getModel().getValueAt(modelRow, textColumnIndex);
-        DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
-        dtm.addRow(new Object[]{id, tweetText});
+        ArrayList<Object[]> insertParams = new ArrayList<>();
+        if (validTweets.size() == 1) {
+            DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
+            dtm.addRow(new Object[]{validTweets.get(0).getId(), validTweets.get(0).getFullTweetText()});
+            insertParams.add(new Object[]{validTweets.get(0).getTweetID(), currentlySelectedCollection.getTwitterID()});
+        } else {
+            CollectionCurateRespJSON json = (CollectionCurateRespJSON) result.getTwitterResponse().getReturnedObject();
+            CollectionCurateEntry[] entries = json.getResponse().getEntries();
+            if (entries == null) {
+                entries = new CollectionCurateEntry[0];
+            }
+            HashMap<Long, String> failedEntries = new HashMap<>();
+            for (CollectionCurateEntry entry : entries) {
+                failedEntries.put(entry.getEntry().getTweetID(), entry.getEntry().getOp());
+            }
+          //  Set<Long> attemptedIDs = validTweets.keySet();
+            Set<Long> failedEntryKeys = failedEntries.keySet();
+            ArrayList<Integer> modelRowsToRemove = new ArrayList<>();
+           /* for (Long tweetID : attemptedIDs) {
+                if (!failedEntryKeys.contains(tweetID)) {
+                    insertParams.add(new Object[]{tweetID, currentlySelectedCollection.getTwitterID()});
+                }
+            }*/
+           /* if (!failedEntries.isEmpty()) {
+                StringBuilder msg = new StringBuilder("<html>One or more entries were not added successfully.<br/><br/>");
+                for (Long l : failedEntryKeys) {
+                    String reason = failedEntries.get(l);
+                    msg = msg.append("Tweet ID ").append(dbIDModelRowMap.get(validTweets.get(l).getId()))
+                            .append(" failed with reason: ").append(reason).append("<br/>");
+                }
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+            }*/
+        }
+
     }
 
     private boolean checkTweetInCollectionTable(Integer dbIDToCheck) {
@@ -903,38 +971,123 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         }
     }
 
-    private void deleteTweetFromCollection() {
-        int row = collectionTweetsTable.getSelectedRow();
-        if (row == -1) {
+    private void deleteTweetsFromCollection() {
+        int[] rows = collectionTweetsTable.getSelectedRows();
+        if (rows.length == 0) {
             return;
         }
-        int modelRow = collectionTweetsTable.convertRowIndexToModel(row);
+        int[] modelRows = new int[rows.length];
+        for (int i = 0; i < rows.length; i++) {
+            modelRows[i] = collectionTweetsTable.convertRowIndexToModel(rows[i]);
+        }
+        Arrays.sort(modelRows);
         int idColumnIndex = collectionTweetsTable.getColumnModel().getColumnIndex("ID");
-        Integer id = (Integer) collectionTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"id"},
-                new Object[]{id});
+        HashMap<Long, CollectionOperation> curationParameters = new HashMap<>();
+        ArrayList<Object> tweetDBParams = new ArrayList<>();
+        ArrayList<Integer> tweetIDs = new ArrayList<>();
+        HashMap<Integer, Integer> dbIDModelRowMap = new HashMap<>();
+        for (int i = 0; i < modelRows.length; i++) {
+            Integer id = (Integer) collectionTweetsTable.getModel().getValueAt(modelRows[i], idColumnIndex);
+            tweetDBParams.add(id);
+            tweetIDs.add(id);
+            dbIDModelRowMap.put(id, modelRows[i]);
+        }
+        String query = "SELECT * FROM tweets WHERE id IN (?";
+        for (int i = 1; i < tweetDBParams.size(); i++) {
+            query = query.concat(",?");
+        }
+        query = query.concat(")");
+
+        DBResponse resp = CoreDB.customQuerySelect(query, tweetDBParams.toArray(new Object[tweetDBParams.size()]));
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweet information from DB - check log output.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
             return;
         } else if (resp.getReturnedRows().isEmpty()) {
-            String msg = "Tweet record does not exist in DB - has the database file been modified?";
+            String msg = "Tweet records do not exist in DB - has the database file been modified?";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
             return;
         }
-        TweetHolder tweet = ResultSetConversion.getTweet(resp.getReturnedRows().get(0));
-        OperationResult result = RESTAPI.collectionsEntriesRemove(currentlySelectedCollection.getTwitterID(),
-                tweet.getTweetID(), currentlySelectedAccount);
+        ArrayList<HashMap<String, Object>> dbRows = resp.getReturnedRows();
+        HashMap<Long, TweetHolder> validTweets = new HashMap<>();
+        for (HashMap<String, Object> dbRow : dbRows) {
+            TweetHolder tweet = ResultSetConversion.getTweet(dbRow);
+            if (tweetIDs.contains(tweet.getId())) {
+                curationParameters.put(tweet.getTweetID(), CollectionOperation.REMOVE);
+                validTweets.put(tweet.getTweetID(), tweet);
+            }
+        }
+        OperationResult result;
+        if (validTweets.size() == 1) {
+            ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
+            result = RESTAPI.collectionsEntriesRemove(currentlySelectedCollection.getTwitterID(),
+                    keys.get(0), currentlySelectedAccount);
+        } else {
+            CollectionCurateParamsJSON jsonData = new CollectionCurateParamsJSON()
+                    .setId(currentlySelectedCollection.getTwitterID());
+            jsonData.setChanges(curationParameters);
+            result = RESTAPI.collectionsEntriesCurate(jsonData, currentlySelectedAccount);
+        }
+
         if (!result.wasSuccessful()) {
-            String msg = "Twitter API returned an error: ";
+            String msg = "Twitter API returned an error: " + result.getErrorCode().getStatusMessage();
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
-        dtm.removeRow(modelRow);
+        if (validTweets.size() == 1) {
+            dtm.removeRow(modelRows[0]);
+            ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
+            CoreDB.deleteFromTable(DBTable.COLLECTIONTWEETS,
+                    new String[]{"collectionid", "tweetid"},
+                    new Object[]{currentlySelectedCollection.getTwitterID(), keys.get(0)});
+        } else {
+            CollectionCurateRespJSON json = (CollectionCurateRespJSON) result.getTwitterResponse().getReturnedObject();
+            CollectionCurateEntry[] entries = json.getResponse().getEntries();
+            if (entries == null) {
+                entries = new CollectionCurateEntry[0];
+            }
+            HashMap<Long, String> failedEntries = new HashMap<>();
+            for (CollectionCurateEntry entry : entries) {
+                failedEntries.put(entry.getEntry().getTweetID(), entry.getEntry().getOp());
+            }
+            Set<Long> attemptedIDs = validTweets.keySet();
+            Set<Long> failedEntryKeys = failedEntries.keySet();
+            ArrayList<Integer> modelRowsToRemove = new ArrayList<>();
+            ArrayList<Long> tweetIDsToDelete = new ArrayList<>();
+            for (Long tweetID : attemptedIDs) {
+                if (!failedEntryKeys.contains(tweetID)) {
+                    modelRowsToRemove.add(dbIDModelRowMap.get(validTweets.get(tweetID).getId()));
+                    tweetIDsToDelete.add(tweetID);
+                }
+            }
+            Collections.sort(modelRowsToRemove);
+            for (int i = 0; i < modelRowsToRemove.size(); i++) {
+                dtm.removeRow(modelRowsToRemove.get(i) - i);
+            }
+            String deleteQuery = "DELETE FROM collectiontweets WHERE collectionid=? AND tweetid IN (?";
+            Object[] deleteParams = new Object[tweetIDsToDelete.size() + 1];
+            deleteParams[0] = currentlySelectedCollection.getTwitterID();
+            deleteParams[1] = tweetIDsToDelete.get(0);
+            for (int i = 1; i < tweetIDsToDelete.size(); i++) {
+                deleteQuery = deleteQuery.concat(",?");
+                deleteParams[i + 1] = tweetIDsToDelete.get(i);
+            }
+            deleteQuery = deleteQuery.concat(")");
+            if (!tweetIDsToDelete.isEmpty()) {
+                CoreDB.runCustomUpdate(deleteQuery, deleteParams);
+            }
+            if (!failedEntries.isEmpty()) {
+                StringBuilder msg = new StringBuilder("<html>One or more entries were not deleted successfully.<br/><br/>");
+                for (Long l : failedEntryKeys) {
+                    String reason = failedEntries.get(l);
+                    msg = msg.append("Tweet ID ").append(dbIDModelRowMap.get(validTweets.get(l).getId()))
+                            .append(" failed with reason: ").append(reason).append("<br/>");
+                }
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
     }
 
     private void deleteCollection() {
@@ -1049,9 +1202,8 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"usertwitterid"},
-                new Object[]{currentlySelectedAccount.getTwitterID()});
+        String query = "SELECT * FROM tweets WHERE usertwitterid=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, currentlySelectedAccount.getTwitterID());
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweets for this user from DB!";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
@@ -1088,7 +1240,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
     protected javax.swing.JTable collectionTweetsTable;
     private javax.swing.JButton createNewCollectionButton;
     private javax.swing.JButton deleteCollectionButton;
-    private javax.swing.JButton deleteTweetFromCollectionButton;
+    private javax.swing.JButton deleteTweetsFromCollectionButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;

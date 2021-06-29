@@ -58,25 +58,23 @@ function postScheduledRetweets() {
                 . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
                 . "? FROM scheduledretweets WHERE id=?";
         if (!$query_result) {
-            error_log("Schedule time was significantly missed - adding to failed retweets queue.");
             $GLOBALS['database_connection']->prepare($insertFailedRetweetQuery)
-                    ->execute([1, "Missed schedule", $dbid]);
+                    ->execute([2, "Internal error whilst attempting to retweet", $dbid]);
         } else {
             if ($query_result->errors) {
                 if (is_array($query_result->errors)) {
-                    $errcode = $query_result->errors[0]['code'];
-                    $errmsg = $query_result->errors[0]['message'];
+                    $errcode = $query_result->errors[0]->code;
+                    $errmsg = $query_result->errors[0]->message;
                 } else {
                     $errcode = $query_result->errors->code;
                     $errmsg = $query_result->errors->message;
                 }
-                error_log("Retweet query returned errors!");
                 $GLOBALS['database_connection']->prepare($insertFailedRetweetQuery)
                         ->execute([$errcode, $errmsg, $dbid]);
             } else {
-                $retweetedstatus = $query_result->retweeted_status;
-                $retweetid = $retweetedstatus->id;
-                updateRetweetRecordsInDB($userauth['twitter_id'], $retweetid);
+                $originalstatus = $query_result->retweeted_status;
+                $originaltweetid = $originalstatus->id;
+                updateRetweetRecordsInDB($userauth['twitter_id'], $originaltweetid);
             }
         }
         $GLOBALS['database_connection']->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$dbid]);
@@ -145,7 +143,7 @@ function updateAccessToken($response) {
                 $response['user_id'], $response['oauth_token'], $response['oauth_token_secret']]);
 }
 
-function checkRetweetRecordsInDB($usertwitterid, $echo = true) {
+function checkRetweetRecordsInDB($usertwitterid, $echoAndExit = true) {
     $datelimit24hour = date("Y-m-d H:i:s", strtotime('-24 hours', time()));
     $datelimit1hour = date("Y-m-d H:i:s", strtotime('-1 hour', time()));
     $perdaylimit = 10;
@@ -158,26 +156,31 @@ function checkRetweetRecordsInDB($usertwitterid, $echo = true) {
     $success = $stmt->execute();
     if (!$success) {
         error_log("Failed to get retweet records.");
-        echo encodeDBResponseInformation($stmt->errorInfo());
-        exit();
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($stmt->errorInfo());
+            exit();
+        }
+        return true;
     }
     $results = $stmt->fetchAll();
     if (!$results) {
         return true;
+    } else if (count($results) < $perhourlimit) {
+        return true;
     } else if (count($results) == $perdaylimit) {
         $timetoresetseconds = (60 * 60 * 24) - (time() - $results[9]['retweettime']);
-        if ($echo) {
+        if ($echoAndExit) {
             echo encodeErrorInformation("Too many retweets in 24 hour period.", $timetoresetseconds);
             exit();
         }
         return false;
-    } else if (count($results) > 1) {
+    } else if (count($results) >= $perhourlimit) {
         $stmt = $GLOBALS['database_connection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? AND retweettime >= ? 
                   ORDER BY retweettime DESC LIMIT ?");
         $success = $stmt->execute([$usertwitterid, $datelimit1hour, $perhourlimit]);
         if (!$success) {
             error_log("Failed to get retweet records.");
-            if ($echo) {
+            if ($echoAndExit) {
                 echo encodeDBResponseInformation($stmt->errorInfo());
                 exit();
             }
@@ -188,7 +191,7 @@ function checkRetweetRecordsInDB($usertwitterid, $echo = true) {
             return true;
         } else {
             $timetoresetseconds = (60 * 60) - (time() - $results[1]['retweettime']);
-            if ($echo) {
+            if ($echoAndExit) {
                 echo encodeErrorInformation("Too many retweets in 1 hour period.", $timetoresetseconds);
                 exit();
             }
@@ -240,23 +243,25 @@ function updateUserRateLimitInDB($usertwitterid, $endpoint, $headers) {
     return $success;
 }
 
-function checkUserRateLimitInDB($usertwitterid, $endpoint, $echo = true) {
+function checkUserRateLimitInDB($usertwitterid, $endpoint, $echoAndExit = true) {
     $stmt = $GLOBALS['database_connection']->prepare("SELECT * FROM ratelimitrecords WHERE usertwitterid=? AND endpoint=?");
     $success = $stmt->execute([$usertwitterid, $endpoint]);
     if (!$success) {
         error_log("Failed to get user rate limit records.");
-        echo encodeDBResponseInformation($stmt->errorInfo());
-        exit();
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($stmt->errorInfo());
+            exit();
+        }
+        return true;
     }
     $result = $stmt->fetch();
 
     if ($result && $result['remaininglimit'] < 5) {
-        if ($echo) {
+        if ($echoAndExit) {
             echo encodeErrorInformation("Rate limit reached.", $result['timetoresetseconds']);
             exit();
-        } else {
-            return false;
         }
+        return false;
     } else {
         return true;
     }
@@ -289,5 +294,11 @@ function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params,
 }
 
 function removeAccountFromDB($twitter_id) {
-    
+    $success['queue_cleared'] = $GLOBALS['database_connection']
+            ->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=?")
+            ->execute([$twitter_id]);
+    $success['user_cleared'] = $GLOBALS['database_connection']
+            ->prepare("DELETE FROM users WHERE twitterid=?")
+            ->execute([$twitter_id]);
+    echo encodeDBResponseInformation($success);
 }

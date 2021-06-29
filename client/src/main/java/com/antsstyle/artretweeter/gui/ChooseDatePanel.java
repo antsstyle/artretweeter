@@ -42,7 +42,7 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         if (hour < 10) {
             hourString = "0".concat(hourString);
         }
-        hourComboBox.setSelectedItem(String.valueOf(hour));
+        hourComboBox.setSelectedItem(hourString);
     }
 
     public Timestamp getSelectedTime() {

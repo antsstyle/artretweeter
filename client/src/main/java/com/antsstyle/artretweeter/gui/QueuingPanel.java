@@ -198,14 +198,14 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
             },
             new String [] {
-                "ID", "Tweet Text", "Date Posted", "Retweets", "Likes"
+                "ID", "Tweet Text", "Date Posted", "Retweets", "Likes", "RT#"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Long.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class
+                java.lang.Long.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Long.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false
+                false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -232,6 +232,9 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             tweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
             tweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
             tweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
+            tweetsTable.getColumnModel().getColumn(5).setMinWidth(40);
+            tweetsTable.getColumnModel().getColumn(5).setPreferredWidth(40);
+            tweetsTable.getColumnModel().getColumn(5).setMaxWidth(40);
         }
 
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
@@ -452,7 +455,7 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
     private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
         queueRetweetButton.setEnabled(false);
-        GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount);
+        GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount, false);
         queueRetweetButton.setEnabled(true);
     }//GEN-LAST:event_queueRetweetButtonActionPerformed
 
@@ -468,9 +471,8 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         changeRetweetTimeButton.setEnabled(true);
     }//GEN-LAST:event_changeRetweetTimeButtonActionPerformed
 
-
     private void changeRetweetTime() {
-        GUIHelperMethods.queueRetweet(queuedTweetsTable, currentlySelectedAccount);
+        GUIHelperMethods.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
     }
 
     private void unqueueRetweet() {
@@ -481,6 +483,26 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         int modelRow = queuedTweetsTable.convertRowIndexToModel(row);
         int idColumnIndex = queuedTweetsTable.getColumnModel().getColumnIndex("ID");
         Integer id = (Integer) queuedTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        DBResponse selectResp = CoreDB.selectFromTable(DBTable.TWEETS,
+                new String[]{"id"},
+                new Object[]{id});
+        if (!selectResp.wasSuccessful()) {
+            String msg = "Failed to retrieve tweet information from DB!";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (selectResp.getReturnedRows().isEmpty()) {
+            String msg = "Tweet could not be found in DB - has the database folder been modified?";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        TweetHolder tweet = ResultSetConversion.getTweet(selectResp.getReturnedRows().get(0));
+        OperationResult result = ServerAPI.unqueueRetweet(currentlySelectedAccount, tweet.getTweetID());
+        if (!result.wasSuccessful()) {
+            String msg = "<html>ArtRetweeter server returned an error:<br/><br/>".concat("logmessageREMOVETHIS").concat("</html>");
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         DBResponse deleteResp = CoreDB.deleteFromTable(DBTable.RETWEETQUEUE,
                 new String[]{"id"},
                 new Object[]{id});
@@ -490,7 +512,6 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         } else {
             String msg = "Failed to delete entry from queue - check log output.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
         }
     }
 
@@ -498,13 +519,12 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        DBResponse resp = CoreDB.selectFromTable(DBTable.TWEETS,
-                new String[]{"usertwitterid"},
-                new Object[]{currentlySelectedAccount.getTwitterID()});
+        String query = "SELECT tweets.*,(SELECT COUNT(id) FROM retweets WHERE tweets.usertwitterid=retweets.retweetingusertwitterid) AS c "
+                + "FROM tweets WHERE usertwitterid=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, currentlySelectedAccount.getTwitterID());
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweets for this user from DB!";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
             return;
         }
         SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -513,8 +533,10 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
+            Long retweetCount = (Long) row.get("C");
             String dateString = DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
-            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount()});
+            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount(),
+                retweetCount});
         }
     }
 

@@ -49,6 +49,6 @@ function oauthInvalidateToken($userauth) {
     }
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userauth['access_token'], $userauth['access_token_secret']);
-    $response = $connection->oauth("oauth/invalidate_token", ["access_token" => $userauth['access_token']]);
+    $response = $connection->oauth("oauth/invalidate_token");
     echo encodeTwitterResponseInformation($connection, $response);
 }

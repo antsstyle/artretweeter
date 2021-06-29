@@ -34,7 +34,7 @@ public class StatusRefreshQueue implements Runnable {
 
     @Override
     public void run() {
-        Calendar cal = Calendar.getInstance();
+        Calendar cal = getNextRefreshTime();
         DBResponse selectResp = CoreDB.selectFromTable(DBTable.CONFIGURATION,
                 new String[]{"name"},
                 new Object[]{"artretweeter.nextstatusrefreshtime"});
@@ -53,7 +53,7 @@ public class StatusRefreshQueue implements Runnable {
         }
         while (true) {
             refreshGUI();
-            cal.add(Calendar.MINUTE, 15);
+            cal = getNextRefreshTime();
             CoreDB.updateTable(DBTable.CONFIGURATION,
                     new String[]{"value"},
                     new Object[]{String.valueOf(cal.getTimeInMillis())},
@@ -65,6 +65,22 @@ public class StatusRefreshQueue implements Runnable {
                 return;
             }
         }
+    }
+
+    private Calendar getNextRefreshTime() {
+        Calendar cal = Calendar.getInstance();
+        Integer minutes = cal.get(Calendar.MINUTE);
+        if (minutes <= 15) {
+            cal.set(Calendar.MINUTE, 16);
+        } else if (minutes <= 30) {
+            cal.set(Calendar.MINUTE, 31);
+        } else if (minutes <= 45) {
+            cal.set(Calendar.MINUTE, 46);
+        } else {
+            cal.add(Calendar.HOUR_OF_DAY, 1);
+            cal.set(Calendar.MINUTE, 1);
+        }
+        return cal;
     }
 
     private void refreshGUI() {
@@ -91,6 +107,7 @@ public class StatusRefreshQueue implements Runnable {
             }
             OperationResult result = ServerAPI.getQueueStatus(account);
             if (!result.wasSuccessful()) {
+                LOGGER.error("Failed to get queue status from ArtRetweeter server for account: " + account.getTwitterID());
                 continue;
             }
             ServerResponse response = result.getServerResponse();
@@ -104,6 +121,11 @@ public class StatusRefreshQueue implements Runnable {
             for (RetweetQueueEntry entry : failedRetweets) {
                 insertParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
                     entry.getErrorCode(), entry.getFailReason()});
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                return;
             }
         }
         String deleteQuery = "DELETE FROM retweetqueue WHERE tweetid=? AND retweetingusertwitterid=?";
