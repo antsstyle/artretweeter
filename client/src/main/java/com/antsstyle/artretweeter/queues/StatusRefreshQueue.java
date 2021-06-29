@@ -48,9 +48,9 @@ public class StatusRefreshQueue implements Runnable {
         } else {
             cal.setTimeInMillis(Long.valueOf((String) selectResp.getReturnedRows().get(0).get("VALUE")));
         }
-        //if (cal.getTime().before(new Date(System.currentTimeMillis()))) {
-        refreshGUI();
-        //}
+        if (cal.getTime().before(new Date(System.currentTimeMillis()))) {
+            refreshGUI();
+        }
         try {
             Thread.sleep(Math.max(cal.getTimeInMillis() - System.currentTimeMillis(), 15 * 60 * 1000));
         } catch (Exception e) {
@@ -107,9 +107,9 @@ public class StatusRefreshQueue implements Runnable {
             if (!queueResp.wasSuccessful()) {
                 continue;
             }
-            /*if (queueResp.getReturnedRows().isEmpty()) {
+            if (queueResp.getReturnedRows().isEmpty()) {
                 continue;
-            }*/
+            }
             ArrayList<HashMap<String, Object>> queueRows = queueResp.getReturnedRows();
             OperationResult result = ServerAPI.getQueueStatus(account);
             if (!result.wasSuccessful()) {
@@ -126,20 +126,6 @@ public class StatusRefreshQueue implements Runnable {
             for (HashMap<String, Object> queueRow : queueRows) {
                 RetweetQueueEntry entry = ResultSetConversion.getRetweetQueueEntry(queueRow);
                 scheduledRetweetsOnClient.add(entry);
-            }
-            LOGGER.debug("SERVER:");
-            for (RetweetQueueEntry e: scheduledRetweetsOnServer) {
-                LOGGER.debug("ID: " + e.getId());
-                LOGGER.debug("Tweet ID: " + e.getTweetID());
-                LOGGER.debug("User Twitter ID: " + e.getRetweetingUserTwitterID());
-                LOGGER.debug("Time: " + e.getRetweetTime());
-            }
-            LOGGER.debug("CLIENT:");
-            for (RetweetQueueEntry e: scheduledRetweetsOnClient) {
-                LOGGER.debug("ID: " + e.getId());
-                LOGGER.debug("Tweet ID: " + e.getTweetID());
-                LOGGER.debug("User Twitter ID: " + e.getRetweetingUserTwitterID());
-                LOGGER.debug("Time: " + e.getRetweetTime());
             }
             for (RetweetQueueEntry entry : scheduledRetweetsOnClient) {
                 if (failedRetweetsOnServer.contains(entry)) {

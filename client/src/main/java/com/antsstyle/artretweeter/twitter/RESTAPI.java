@@ -28,7 +28,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -92,9 +91,6 @@ public class RESTAPI {
         Gson gson = new Gson();
         try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
-            PrintWriter pw = new PrintWriter("I:/zzztestoutput.txt");
-            pw.println(jsonString);
-            pw.close();
             JsonObject responseJSON = gson.fromJson(jsonString, JsonObject.class);
             if (responseJSON.keySet().contains("headers")) {
                 try {
@@ -184,8 +180,6 @@ public class RESTAPI {
             userTwitterID = account.getTwitterID();
             nameValuePairs.add(new BasicNameValuePair("access_token", account.getToken()));
             nameValuePairs.add(new BasicNameValuePair("access_token_secret", account.getTokenSecret()));
-            // nameValuePairs.add(new BasicNameValuePair("access_token", "test"));
-            // nameValuePairs.add(new BasicNameValuePair("access_token_secret", "alsotest"));
             nameValuePairs.add(new BasicNameValuePair("user_auth_twitter_id", String.valueOf(account.getTwitterID())));
             nameValuePairs.add(new BasicNameValuePair("twitter_endpoint", endpoint.getEndpointName()));
         }
@@ -343,7 +337,8 @@ public class RESTAPI {
         return apiCallResult;
     }
 
-    public static OperationResult getTweetByID(Long tweetID, Account account, Path tweetFolderPath, boolean downloadAndStore) {
+    public static OperationResult getTweetByID(Long tweetID, Account account, Path tweetFolderPath, 
+            boolean mustBeUserAccount, boolean downloadAndStore) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));
         OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_SHOW, account);
@@ -353,6 +348,11 @@ public class RESTAPI {
         Gson gson = new Gson();
         JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         StatusJSON status = gson.fromJson(responseJSON, StatusJSON.class);
+        if (!status.getUser().getId().equals(account.getTwitterID())) {
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DOWNLOAD_ERROR, 
+                    "You can only download tweets from your own account."));
+            return apiCallResult;
+        }
         apiCallResult.getTwitterResponse().setReturnedObject(status);
         if (downloadAndStore) {
             OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);

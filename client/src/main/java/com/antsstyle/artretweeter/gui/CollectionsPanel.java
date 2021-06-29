@@ -19,19 +19,13 @@ import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
-import com.antsstyle.artretweeter.tools.ImageTools;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
 import com.antsstyle.artretweeter.tools.SwingTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
-import com.google.gson.Gson;
 import java.awt.Desktop;
-import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,22 +34,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
-import javax.imageio.ImageIO;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -244,7 +232,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         selectCollectionComboBox = new javax.swing.JComboBox<>();
-        addTweetToCurrentlySelectedCollectionButton = new javax.swing.JButton();
+        addTweetsToCurrentlySelectedCollectionButton = new javax.swing.JButton();
         deleteTweetsFromCollectionButton = new javax.swing.JButton();
         createNewCollectionButton = new javax.swing.JButton();
         deleteCollectionButton = new javax.swing.JButton();
@@ -450,12 +438,12 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
             }
         });
 
-        addTweetToCurrentlySelectedCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        addTweetToCurrentlySelectedCollectionButton.setText("Add tweets to currently selected collection");
-        addTweetToCurrentlySelectedCollectionButton.setToolTipText("");
-        addTweetToCurrentlySelectedCollectionButton.addActionListener(new java.awt.event.ActionListener() {
+        addTweetsToCurrentlySelectedCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        addTweetsToCurrentlySelectedCollectionButton.setText("Add tweets to currently selected collection");
+        addTweetsToCurrentlySelectedCollectionButton.setToolTipText("");
+        addTweetsToCurrentlySelectedCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addTweetToCurrentlySelectedCollectionButtonActionPerformed(evt);
+                addTweetsToCurrentlySelectedCollectionButtonActionPerformed(evt);
             }
         });
 
@@ -582,7 +570,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                                 .addComponent(jLabel2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(addTweetToCurrentlySelectedCollectionButton)
+                            .addComponent(addTweetsToCurrentlySelectedCollectionButton)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 625, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -643,7 +631,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                         .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addGap(6, 6, 6)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(addTweetToCurrentlySelectedCollectionButton)
+                    .addComponent(addTweetsToCurrentlySelectedCollectionButton)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(deleteTweetsFromCollectionButton)
                         .addComponent(createNewCollectionButton)
@@ -712,11 +700,11 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         deleteCollectionButton.setEnabled(true);
     }//GEN-LAST:event_deleteCollectionButtonActionPerformed
 
-    private void addTweetToCurrentlySelectedCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addTweetToCurrentlySelectedCollectionButtonActionPerformed
-        addTweetToCurrentlySelectedCollectionButton.setEnabled(false);
-        addTweetToCollection();
-        addTweetToCurrentlySelectedCollectionButton.setEnabled(true);
-    }//GEN-LAST:event_addTweetToCurrentlySelectedCollectionButtonActionPerformed
+    private void addTweetsToCurrentlySelectedCollectionButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addTweetsToCurrentlySelectedCollectionButtonActionPerformed
+        addTweetsToCurrentlySelectedCollectionButton.setEnabled(false);
+        addTweetsToCollection();
+        addTweetsToCurrentlySelectedCollectionButton.setEnabled(true);
+    }//GEN-LAST:event_addTweetsToCurrentlySelectedCollectionButtonActionPerformed
 
     private void viewCollectionOnTwitterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_viewCollectionOnTwitterButtonActionPerformed
         viewCollectionOnTwitterButton.setEnabled(false);
@@ -817,7 +805,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         }
     }
 
-    private void addTweetToCollection() {
+    private void addTweetsToCollection() {
         if (currentlySelectedCollection.equals(NO_COLLECTIONS)) {
             String msg = "Select a collection to add this tweet to first.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
@@ -896,11 +884,11 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+        DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
         ArrayList<Object[]> insertParams = new ArrayList<>();
         if (validTweets.size() == 1) {
             ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
-            DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
+
             dtm.addRow(new Object[]{validTweets.get(keys.get(0)).getId(), validTweets.get(keys.get(0)).getFullTweetText()});
             insertParams.add(new Object[]{validTweets.get(keys.get(0)).getTweetID(), currentlySelectedCollection.getTwitterID()});
             CoreDB.parameterisedCollectionTweetsMergeBatch(insertParams);
@@ -920,6 +908,10 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 if (!failedEntryKeys.contains(tweetID)) {
                     insertParams.add(new Object[]{tweetID, currentlySelectedCollection.getTwitterID()});
                 }
+            }
+            ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
+            for (Long k : keys) {
+                dtm.addRow(new Object[]{validTweets.get(k).getId(), validTweets.get(k).getFullTweetText()});
             }
             if (!insertParams.isEmpty()) {
                 CoreDB.parameterisedCollectionTweetsMergeBatch(insertParams);
@@ -959,9 +951,14 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 return;
             }
             Long tweetID = Long.valueOf(url.substring(url.lastIndexOf("/") + 1));
-            OperationResult res = RESTAPI.getTweetByID(tweetID, currentlySelectedAccount, tweetFolderPath, true);
+            OperationResult res = RESTAPI.getTweetByID(tweetID, currentlySelectedAccount, tweetFolderPath, true, true);
             if (res.wasSuccessful()) {
                 StatusJSON status = (StatusJSON) res.getTwitterResponse().getReturnedObject();
+                if (!status.getUser().getId().equals(currentlySelectedAccount.getTwitterID())) {
+                    String statusMessage = "Failed to get tweet image directory information from database!";
+                    JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
                 dtm.addRow(new Object[]{status.getInternalDatabaseID(), status.getText(),
                     status.getRetweet_count(), status.getFavorite_count()});
@@ -1242,7 +1239,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
     private javax.swing.JButton addTweetManuallyButton;
     private javax.swing.JLabel addTweetManuallyStatusLabel;
     private javax.swing.JTextField addTweetManuallyTextField;
-    private javax.swing.JButton addTweetToCurrentlySelectedCollectionButton;
+    private javax.swing.JButton addTweetsToCurrentlySelectedCollectionButton;
     protected javax.swing.JTable collectionTweetsTable;
     private javax.swing.JButton createNewCollectionButton;
     private javax.swing.JButton deleteCollectionButton;

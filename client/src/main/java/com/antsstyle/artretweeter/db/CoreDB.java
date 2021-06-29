@@ -6,10 +6,7 @@
 package com.antsstyle.artretweeter.db;
 
 import com.antsstyle.artretweeter.datastructures.Account;
-import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
-import com.antsstyle.artretweeter.gui.GUI;
 import com.antsstyle.artretweeter.tools.PathTools;
-import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,7 +20,6 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import javax.swing.JOptionPane;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbutils.DbUtils;
 import org.apache.logging.log4j.LogManager;

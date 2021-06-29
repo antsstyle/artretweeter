@@ -18,7 +18,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,9 +123,6 @@ public class ServerAPI {
         Gson gson = new Gson();
         try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
-            PrintWriter pw = new PrintWriter("I:/zzz222testoutput.txt");
-            pw.println(jsonString);
-            pw.close();
             JsonObject responseJSON = gson.fromJson(jsonString, JsonObject.class);
             ServerResponse result = processArtRetweeterServerErrorResponse(responseJSON);
             EntityUtils.consume(entity);

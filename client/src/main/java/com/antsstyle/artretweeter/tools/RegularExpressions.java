@@ -5,20 +5,15 @@
  */
 package com.antsstyle.artretweeter.tools;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  *
  * @author Ant
  */
 public abstract class RegularExpressions {
-    
-    final String whatever = "https://twitter.com/i/web/status/1400004661852078084";
+
 
     public static final String TWITTER_STATUS_REGEX
             = "^(http:\\/\\/|https:\\/\\/)?(www\\.)?(twitter\\.com\\/){1}"
