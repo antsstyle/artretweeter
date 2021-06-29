@@ -9,4 +9,4 @@ The client application is written in Java and requires the Java Runtime Environm
 
 You will need the JRE (Java Runtime Environment) installed.
 
-Download the latest release from the Releases tab on the right, unzip it into a directory of your choice, and run ArtRetweeter.jar.
+Download the latest release from the Releases tab on the right, unzip it into a directory of your choice, and run the .jar file.
