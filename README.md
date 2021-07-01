@@ -3,13 +3,13 @@ A tool for artists to use, focused on the Twitter collections feature and retwee
 
 The server-side part is written in PHP and uses TwitterOAuth (https://twitteroauth.com/).
 
-The client application is written in Java and requires the Java Runtime Environment (https://www.java.com/en/download/manual.jsp).
+The client application is written in Java and uses the Java Runtime Environment.
 
-## Using ArtRetweeter
+## Downloading and using ArtRetweeter
 
-You will need the JRE (Java Runtime Environment) installed.
+If you're using 64-bit Windows, you can download ArtRetweeter-v1.0-with-Java-for-Win-64.zip from the latest release (see the right side of this page for the releases tab). Simply unzip and run ArtRetweeter v1.0.exe.
 
-Download the latest release from the Releases tab on the right, unzip it into a directory of your choice, and run the .jar file
+If you're using another operating system, download ArtRetweeter-v1.0.zip, unzip it and run ArtRetweeter-1.0.jar. You will need to install Java before you can run it (https://jdk.java.net/16/)
 
 ## What are Twitter Collections?
 
