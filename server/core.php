@@ -213,7 +213,7 @@ function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $echoAndExit 
     $date24HoursBeforeRTTime = date("Y-m-d H:i:s", strtotime('-24 hours', $retweetTime));
     $date1HourBeforeRTTime = date("Y-m-d H:i:s", strtotime('-1 hour', $retweetTime));
     $date24HoursAfterRTTime = date("Y-m-d H:i:s", strtotime('+24 hours', $retweetTime));
-    $Date1HourAfterRTTime = date("Y-m-d H:i:s", strtotime('+1 hour', $retweetTime));
+    $date1HourAfterRTTime = date("Y-m-d H:i:s", strtotime('+1 hour', $retweetTime));
     $RTTime = date("Y-m-d H:i:s", $retweetTime);
     $perDayLimit = 10;
     $perHourLimit = 2;
@@ -260,110 +260,233 @@ function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $echoAndExit 
         return false;
     }
 
-    $recordsHourStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? AND retweettime >= ? 
-                  ORDER BY retweettime DESC LIMIT ?");
-    $recordsHourStmt->bindValue(1, $userTwitterID);
-    $recordsHourStmt->bindValue(2, $date1HourBeforeRTTime);
-    $recordsHourStmt->bindValue(3, $perHourLimit, \PDO::PARAM_INT);
-    $recordsHourSuccess = $recordsHourStmt->execute();
-    if (!$recordsHourSuccess) {
+    $recordsHourBeforeStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $recordsHourBeforeStmt->bindValue(1, $userTwitterID);
+    $recordsHourBeforeStmt->bindValue(2, $date1HourBeforeRTTime);
+    $recordsHourBeforeStmt->bindValue(3, $RTTime);
+    $recordsHourBeforeStmt->bindValue(4, $perHourLimit, \PDO::PARAM_INT);
+    $recordsHourBeforeSuccess = $recordsHourBeforeStmt->execute();
+    if (!$recordsHourBeforeSuccess) {
         error_log("Failed to get retweet records to check hour limits.");
         if ($echoAndExit) {
-            echo encodeDBResponseInformation($recordsHourStmt->errorInfo());
+            echo encodeDBResponseInformation($recordsHourBeforeStmt->errorInfo());
             exit();
         }
         return false;
     }
-    $recordsHourResults = $recordsHourStmt->fetchAll();
+    $recordsHourBeforeResults = $recordsHourBeforeStmt->fetchAll();
 
-    if ($recordsHourResults && (count($recordsHourResults) >= $perHourLimit)) {
+    if ($recordsHourBeforeResults && (count($recordsHourBeforeResults) >= $perHourLimit)) {
         if ($echoAndExit) {
-            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourResults[($perHourLimit - 1)]['retweettime']);
+            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourBeforeResults[($perHourLimit - 1)]['retweettime']);
             echo encodeErrorInformation("Too many retweets in 1 hour period.", $timeToResetSeconds);
             exit();
         }
         return false;
     }
 
-    $queueHourStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE retweetingusertwitterid=? 
-        AND retweettime <= ?
+    $queueHourBeforeStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE retweetingusertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
         ORDER BY retweettime DESC LIMIT ?");
-    $queueHourStmt->bindValue(1, $userTwitterID);
-    $queueHourStmt->bindValue(2, $Date1HourAfterRTTime);
-    $queueHourStmt->bindValue(3, $perHourLimit, \PDO::PARAM_INT);
-    $queueHourSuccess = $queueHourStmt->execute();
-    if (!$queueHourSuccess) {
+    $queueHourBeforeStmt->bindValue(1, $userTwitterID);
+    $queueHourBeforeStmt->bindValue(2, $date1HourBeforeRTTime);
+    $queueHourBeforeStmt->bindValue(3, $RTTime);
+    $queueHourBeforeStmt->bindValue(4, $perHourLimit, \PDO::PARAM_INT);
+    $queueHourBeforeSuccess = $queueHourBeforeStmt->execute();
+    if (!$queueHourBeforeSuccess) {
         error_log("Failed to get scheduled retweets to check hour limits.");
         if ($echoAndExit) {
-            echo encodeDBResponseInformation($queueHourStmt->errorInfo());
+            echo encodeDBResponseInformation($queueHourBeforeStmt->errorInfo());
             exit();
         }
         return false;
     }
-    $queueHourResults = $queueHourStmt->fetchAll();
-    if (!$recordsHourResults) {
-        $totalCountForHour = count($queueHourResults);
-    } else if (!$queueHourResults) {
-        $totalCountForHour = count($recordsHourResults);
+    $queueHourBeforeResults = $queueHourBeforeStmt->fetchAll();
+    if (!$recordsHourBeforeResults) {
+        $totalCountForHourBefore = count($queueHourBeforeResults);
+    } else if (!$queueHourBeforeResults) {
+        $totalCountForHourBefore = count($recordsHourBeforeResults);
     } else {
-        $totalCountForHour = count($recordsHourResults) + count($queueHourResults);
+        $totalCountForHourBefore = count($recordsHourBeforeResults) + count($queueHourBeforeResults);
     }
 
-    if ($totalCountForHour >= $perHourLimit) {
+    if ($totalCountForHourBefore >= $perHourLimit) {
         if ($echoAndExit) {
-            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourResults[($perHourLimit - 1)]['retweettime']);
+            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourBeforeResults[($perHourLimit - 1)]['retweettime']);
             echo encodeErrorInformation("Too many retweets in 1 hour period.", $timeToResetSeconds);
             exit();
         }
         return false;
     }
 
-    $recordsDayStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? AND retweettime >= ?
-              ORDER BY retweettime DESC LIMIT ?");
-    $recordsDayStmt->bindValue(1, $userTwitterID);
-    $recordsDayStmt->bindValue(2, $date24HoursBeforeRTTime);
-    $recordsDayStmt->bindValue(3, $perDayLimit, \PDO::PARAM_INT);
-    $recordsDaySuccess = $recordsDayStmt->execute();
-    if (!$recordsDaySuccess) {
+    $recordsHourAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $recordsHourAfterStmt->bindValue(1, $userTwitterID);
+    $recordsHourAfterStmt->bindValue(2, $RTTime);
+    $recordsHourAfterStmt->bindValue(3, $date1HourAfterRTTime);
+    $recordsHourAfterStmt->bindValue(4, $perHourLimit, \PDO::PARAM_INT);
+    $recordsHourAfterSuccess = $recordsHourAfterStmt->execute();
+    if (!$recordsHourAfterSuccess) {
+        error_log("Failed to get retweet records to check hour limits.");
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($recordsHourAfterStmt->errorInfo());
+            exit();
+        }
+        return false;
+    }
+    $recordsHourAfterResults = $recordsHourAfterStmt->fetchAll();
+
+    if ($recordsHourAfterResults && (count($recordsHourAfterResults) >= $perHourLimit)) {
+        if ($echoAndExit) {
+            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourAfterResults[($perHourLimit - 1)]['retweettime']);
+            echo encodeErrorInformation("Too many retweets in 1 hour period.", $timeToResetSeconds);
+            exit();
+        }
+        return false;
+    }
+
+    $queueHourAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE retweetingusertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $queueHourAfterStmt->bindValue(1, $userTwitterID);
+    $queueHourAfterStmt->bindValue(2, $RTTime);
+    $queueHourAfterStmt->bindValue(3, $date1HourAfterRTTime);
+    $queueHourAfterStmt->bindValue(4, $perHourLimit, \PDO::PARAM_INT);
+    $queueHourAfterSuccess = $queueHourAfterStmt->execute();
+    if (!$queueHourAfterSuccess) {
+        error_log("Failed to get scheduled retweets to check hour limits.");
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($queueHourAfterStmt->errorInfo());
+            exit();
+        }
+        return false;
+    }
+    $queueHourAfterResults = $queueHourAfterStmt->fetchAll();
+    if (!$recordsHourAfterResults) {
+        $totalCountForHourAfter = count($queueHourAfterResults);
+    } else if (!$queueHourAfterResults) {
+        $totalCountForHourAfter = count($recordsHourAfterResults);
+    } else {
+        $totalCountForHourAfter = count($recordsHourAfterResults) + count($queueHourAfterResults);
+    }
+
+    if ($totalCountForHourAfter >= $perHourLimit) {
+        if ($echoAndExit) {
+            $timeToResetSeconds = (60 * 60) - (time() - $recordsHourAfterResults[($perHourLimit - 1)]['retweettime']);
+            echo encodeErrorInformation("Too many retweets in 1 hour period.", $timeToResetSeconds);
+            exit();
+        }
+        return false;
+    }
+
+    $recordsDayBeforeStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $recordsDayBeforeStmt->bindValue(1, $userTwitterID);
+    $recordsDayBeforeStmt->bindValue(2, $date24HoursBeforeRTTime);
+    $recordsDayBeforeStmt->bindValue(3, $RTTime);
+    $recordsDayBeforeStmt->bindValue(4, $perDayLimit, \PDO::PARAM_INT);
+    $recordsDayBeforeSuccess = $recordsDayBeforeStmt->execute();
+    if (!$recordsDayBeforeSuccess) {
         error_log("Failed to get retweet records to check day limits.");
         if ($echoAndExit) {
-            echo encodeDBResponseInformation($recordsDayStmt->errorInfo());
+            echo encodeDBResponseInformation($recordsDayBeforeStmt->errorInfo());
             exit();
         }
         return false;
     }
-    $recordsDayResults = $recordsDayStmt->fetchAll();
-    $queueDayStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE 
-        retweetingusertwitterid=? AND retweettime <= ? 
+    $recordsDayBeforeResults = $recordsDayBeforeStmt->fetchAll();
+    $queueDayBeforeStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE 
+        retweetingusertwitterid=? AND retweettime >= ? AND retweettime <= ?
         ORDER BY retweettime DESC LIMIT ?");
-    $queueDayStmt->bindValue(1, $userTwitterID);
-    $queueDayStmt->bindValue(2, $date24HoursAfterRTTime);
-    $queueDayStmt->bindValue(3, $perDayLimit, \PDO::PARAM_INT);
-    $queueDaySuccess = $queueDayStmt->execute();
-    if (!$queueDaySuccess) {
+    $queueDayBeforeStmt->bindValue(1, $userTwitterID);
+    $queueDayBeforeStmt->bindValue(2, $date24HoursBeforeRTTime);
+    $queueDayBeforeStmt->bindValue(3, $RTTime);
+    $queueDayBeforeStmt->bindValue(4, $perDayLimit, \PDO::PARAM_INT);
+    $queueDayBeforeSuccess = $queueDayBeforeStmt->execute();
+    if (!$queueDayBeforeSuccess) {
         error_log("Failed to get scheduled retweets to check day limits.");
         if ($echoAndExit) {
-            echo encodeDBResponseInformation($queueDayStmt->errorInfo());
+            echo encodeDBResponseInformation($queueDayBeforeStmt->errorInfo());
             exit();
         }
         return false;
     }
-    $queueDayResults = $queueDayStmt->fetchAll();
+    $queueDayBeforeResults = $queueDayBeforeStmt->fetchAll();
 
-    if (!$recordsDayResults && !$queueDayResults) {
+    if (!$recordsDayBeforeResults && !$queueDayBeforeResults) {
         return true;
-    } else if (!$recordsDayResults) {
-        $totalCountForDay = count($queueDayResults);
-    } else if ($queueDayResults) {
-        $totalCountForDay = count($recordsDayResults);
+    } else if (!$recordsDayBeforeResults) {
+        $totalCountForDayBefore = count($queueDayBeforeResults);
+    } else if ($queueDayBeforeResults) {
+        $totalCountForDayBefore = count($recordsDayBeforeResults);
     } else {
-        $totalCountForDay = count($recordsDayResults) + count($queueDayResults);
+        $totalCountForDayBefore = count($recordsDayBeforeResults) + count($queueDayBeforeResults);
     }
 
-    if ($totalCountForDay < $perDayLimit) {
+    if ($totalCountForDayBefore < $perDayLimit) {
         return true;
-    } else if ($totalCountForDay >= $perDayLimit) {
-        $timeToResetSeconds = (60 * 60 * 24) - (time() - $recordsDayResults[($perDayLimit - 1)]['retweettime']);
+    } else if ($totalCountForDayBefore >= $perDayLimit) {
+        $timeToResetSeconds = (60 * 60 * 24) - (time() - $recordsDayBeforeResults[($perDayLimit - 1)]['retweettime']);
+        if ($echoAndExit) {
+            echo encodeErrorInformation("Too many retweets scheduled in 24 hour period.", $timeToResetSeconds);
+            exit();
+        }
+        return false;
+    }
+    
+        $recordsDayAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
+        AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $recordsDayAfterStmt->bindValue(1, $userTwitterID);
+    $recordsDayAfterStmt->bindValue(2, $RTTime);
+    $recordsDayAfterStmt->bindValue(3, $date24HoursAfterRTTime);
+    $recordsDayAfterStmt->bindValue(4, $perDayLimit, \PDO::PARAM_INT);
+    $recordsDayAfterSuccess = $recordsDayAfterStmt->execute();
+    if (!$recordsDayAfterSuccess) {
+        error_log("Failed to get retweet records to check day limits.");
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($recordsDayAfterStmt->errorInfo());
+            exit();
+        }
+        return false;
+    }
+    $recordsDayAfterResults = $recordsDayAfterStmt->fetchAll();
+    $queueDayAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM scheduledretweets WHERE 
+        retweetingusertwitterid=? AND retweettime >= ? AND retweettime <= ?
+        ORDER BY retweettime DESC LIMIT ?");
+    $queueDayAfterStmt->bindValue(1, $userTwitterID);
+    $queueDayAfterStmt->bindValue(2, $RTTime);
+    $queueDayAfterStmt->bindValue(3, $date24HoursAfterRTTime);
+    $queueDayAfterStmt->bindValue(4, $perDayLimit, \PDO::PARAM_INT);
+    $queueDayAfterSuccess = $queueDayAfterStmt->execute();
+    if (!$queueDayAfterSuccess) {
+        error_log("Failed to get scheduled retweets to check day limits.");
+        if ($echoAndExit) {
+            echo encodeDBResponseInformation($queueDayAfterStmt->errorInfo());
+            exit();
+        }
+        return false;
+    }
+    $queueDayAfterResults = $queueDayAfterStmt->fetchAll();
+
+    if (!$recordsDayAfterResults && !$queueDayAfterResults) {
+        return true;
+    } else if (!$recordsDayAfterResults) {
+        $totalCountForDayAfter = count($queueDayAfterResults);
+    } else if ($queueDayAfterResults) {
+        $totalCountForDayAfter = count($recordsDayAfterResults);
+    } else {
+        $totalCountForDayAfter = count($recordsDayAfterResults) + count($queueDayAfterResults);
+    }
+
+    if ($totalCountForDayAfter < $perDayLimit) {
+        return true;
+    } else if ($totalCountForDayAfter >= $perDayLimit) {
+        $timeToResetSeconds = (60 * 60 * 24) - (time() - $recordsDayAfterResults[($perDayLimit - 1)]['retweettime']);
         if ($echoAndExit) {
             echo encodeErrorInformation("Too many retweets scheduled in 24 hour period.", $timeToResetSeconds);
             exit();
