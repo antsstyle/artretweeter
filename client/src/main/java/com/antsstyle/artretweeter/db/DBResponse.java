@@ -7,7 +7,6 @@ package com.antsstyle.artretweeter.db;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashMap;
 
 /**
  * Container class, that wraps all the different parts of a database query result into one object.

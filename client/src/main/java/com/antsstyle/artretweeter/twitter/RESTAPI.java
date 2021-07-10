@@ -5,6 +5,7 @@
  */
 package com.antsstyle.artretweeter.twitter;
 
+import com.antsstyle.artretweeter.configuration.MiscConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.CollectionCurateParamsJSON;
@@ -15,22 +16,32 @@ import com.antsstyle.artretweeter.datastructures.TwitterResponse;
 import com.antsstyle.artretweeter.datastructures.RequestToken;
 import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
+import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
+import com.antsstyle.artretweeter.db.CollectionsDB;
+import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
+import com.antsstyle.artretweeter.db.RateLimitsDB;
+import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.main.ArtRetweeterMain;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import org.apache.commons.io.IOUtils;
@@ -91,6 +102,15 @@ public class RESTAPI {
         Gson gson = new Gson();
         try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
+            if (MiscConfig.DEBUG_MODE) {
+                try ( PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString())) {
+                    Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+                    JsonObject obj = prettyGson.fromJson(jsonString, JsonObject.class);
+                    prettyGson.toJson(obj, pw);
+                } catch (Exception e1) {
+                    LOGGER.error("Failed to write debug file correctly!", e1);
+                }
+            }
             JsonObject responseJSON = gson.fromJson(jsonString, JsonObject.class);
             if (responseJSON.keySet().contains("headers")) {
                 try {
@@ -134,7 +154,7 @@ public class RESTAPI {
             return null;
         }
 
-        JsonArray errorObj = responseJSON.get("errors").getAsJsonArray();
+        JsonArray errorObj = responseObj.get("errors").getAsJsonArray();
         // Use first error only
         TwitterResponse result = new TwitterResponse(StatusCode.TWITTER_API_ERROR);
         result.setTwitterErrorCode(errorObj.get(0).getAsJsonObject().get("code").getAsInt());
@@ -162,9 +182,9 @@ public class RESTAPI {
             return;
         }
         if (userTwitterID == null) {
-            CoreDB.mergeAppRateLimitInfo(endpoint, rateLimitTotal, rateLimitRemaining, rateLimitReset);
+            RateLimitsDB.mergeAppRateLimitInfo(endpoint, rateLimitTotal, rateLimitRemaining, rateLimitReset);
         } else {
-            CoreDB.mergeUserRateLimitInfo(userTwitterID, endpoint, rateLimitTotal, rateLimitRemaining, rateLimitReset);
+            RateLimitsDB.mergeUserRateLimitInfo(userTwitterID, endpoint, rateLimitTotal, rateLimitRemaining, rateLimitReset);
         }
     }
 
@@ -327,7 +347,7 @@ public class RESTAPI {
             statuses.add(status);
         }
         if (!params.isEmpty()) {
-            if (!CoreDB.parameterisedTweetMergeBatch(params)) {
+            if (!TweetsDB.parameterisedTweetMergeBatch(params)) {
                 apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
                 apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
                 return apiCallResult;
@@ -337,7 +357,7 @@ public class RESTAPI {
         return apiCallResult;
     }
 
-    public static OperationResult getTweetByID(Long tweetID, Account account, Path tweetFolderPath, 
+    public static OperationResult getTweetByID(Long tweetID, Account account, Path tweetFolderPath,
             boolean mustBeUserAccount, boolean downloadAndStore) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));
@@ -349,7 +369,7 @@ public class RESTAPI {
         JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         StatusJSON status = gson.fromJson(responseJSON, StatusJSON.class);
         if (!status.getUser().getId().equals(account.getTwitterID())) {
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DOWNLOAD_ERROR, 
+            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DOWNLOAD_ERROR,
                     "You can only download tweets from your own account."));
             return apiCallResult;
         }
@@ -358,7 +378,7 @@ public class RESTAPI {
             OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);
             if (tweetParamsResult.wasSuccessful()) {
                 Object[] tweetParams = (Object[]) tweetParamsResult.getClientResponse().getReturnedObject();
-                CoreDB.insertTweet(tweetParams);
+                TweetsDB.insertTweet(tweetParams);
             }
         }
         return apiCallResult;
@@ -470,7 +490,7 @@ public class RESTAPI {
         }
         return apiCallResult;
     }
-    
+
     public static OperationResult oauthRequestToken() {
         List<NameValuePair> nvps = new ArrayList<>();
         String requestParameters = "['oauth_callback' => 'oob']";
@@ -544,8 +564,14 @@ public class RESTAPI {
                     params.add(new Object[]{account.getTwitterID(), s, holder.getCollectionURL(), holder.getName(),
                         holder.getDescription(), holder.getOrdering().getParameterName()});
                 }
+                String query = "DELETE FROM collectiontweets WHERE collectionid IN "
+                        + "(SELECT collectionid FROM collections WHERE usertwitterid=?)";
+                CoreDB.runCustomUpdate(query, new Object[]{account.getTwitterID()});
+                CoreDB.deleteFromTable(DBTable.COLLECTIONS,
+                        new String[]{"usertwitterid"},
+                        new Object[]{account.getTwitterID()});
                 if (!params.isEmpty()) {
-                    if (!CoreDB.parameterisedCollectionMergeBatch(params)) {
+                    if (!CollectionsDB.parameterisedCollectionMergeBatch(params)) {
 
                     }
                 }
@@ -608,7 +634,7 @@ public class RESTAPI {
      */
     public static OperationResult getFullyHydratedCollectionByID(String collectionID, Account account) {
         OperationResult apiCallResult = new OperationResult();
-        Path tweetFolderPath = CoreDB.getTweetFolderPath(account);
+        Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
             apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
             apiCallResult.getClientResponse().setExtraStatusMessage("Unable to retrieve tweet folder path from DB!");
@@ -658,8 +684,8 @@ public class RESTAPI {
                 CoreDB.deleteFromTable(DBTable.COLLECTIONTWEETS,
                         new String[]{"collectionid"},
                         new Object[]{collectionID});
-                CoreDB.parameterisedTweetMergeBatch(tweetMergeParams);
-                CoreDB.parameterisedCollectionTweetsMergeBatch(collectionTweetsMergeParams);
+                TweetsDB.parameterisedTweetMergeBatch(tweetMergeParams);
+                CollectionsDB.parameterisedCollectionTweetsMergeBatch(collectionTweetsMergeParams);
             }
         } else {
             apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
@@ -670,14 +696,18 @@ public class RESTAPI {
         return apiCallResult;
     }
 
-    public static Pair<OperationResult, ArrayList<StatusJSON>> getAllUnrecordedUserTweetsByDate(CloseableHttpClient httpclient,
-            Account account, Long historicalMaxID, Long latestMaxID, Path tweetFolderPath, Long highestIDInDB) {
+    public static Pair<OperationResult, ArrayList<StatusJSON>> getUnrecordedUserTweetsByDate(CloseableHttpClient httpclient,
+            Account account, Long maxID, Long sinceID, Path tweetFolderPath) {
         List<NameValuePair> nvps = new ArrayList<>();
+        ArrayList<StatusJSON> statuses = new ArrayList<>();
         nvps.add(new BasicNameValuePair("screen_name", account.getScreenName()));
-        if (!historicalMaxID.equals(Long.MAX_VALUE) && !historicalMaxID.equals(0L)) {
-            nvps.add(new BasicNameValuePair("max_id", String.valueOf(historicalMaxID)));
-        } else if (latestMaxID != null && !latestMaxID.equals(Long.MAX_VALUE)) {
-            nvps.add(new BasicNameValuePair("max_id", String.valueOf(latestMaxID)));
+        boolean maxIDSet = false;
+        if (!maxID.equals(Long.MAX_VALUE) && !maxID.equals(0L)) {
+            nvps.add(new BasicNameValuePair("max_id", String.valueOf(maxID)));
+            maxIDSet = true;
+        }
+        if (!maxIDSet && !sinceID.equals(0L)) {
+            nvps.add(new BasicNameValuePair("since_id", String.valueOf(sinceID)));
         }
         OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.USER_TIMELINE, account);
         if (!apiCallResult.wasSuccessful()) {
@@ -686,8 +716,6 @@ public class RESTAPI {
         JsonArray responseJSON = apiCallResult.getTwitterResponse().getResponseJSONArray();
         ArrayList<Object[]> params = new ArrayList<>();
         Gson gson = new Gson();
-        ArrayList<StatusJSON> statuses = new ArrayList<>();
-        Long highestID = 0L;
 
         StatusJSON[] receivedStatuses;
         try {
@@ -700,14 +728,11 @@ public class RESTAPI {
         }
         LOGGER.debug("Number of statuses received: " + receivedStatuses.length);
         for (StatusJSON status : receivedStatuses) {
-            if (historicalMaxID > status.getId() && !historicalMaxID.equals(0L)) {
-                historicalMaxID = status.getId();
+            if (maxID > status.getId() && !maxID.equals(0L)) {
+                maxID = status.getId();
             }
-            if (highestID < status.getId() && historicalMaxID.equals(0L)) {
-                highestID = status.getId();
-            }
-            if (latestMaxID != null && status.getId() <= highestIDInDB) {
-                break;
+            if (sinceID < status.getId()) {
+                sinceID = status.getId();
             }
             if (status.getIn_reply_to_screen_name() != null
                     && !status.getIn_reply_to_screen_name().equals(account.getScreenName())) {
@@ -725,7 +750,7 @@ public class RESTAPI {
             if (status.getRetweeted_status() != null) {
                 continue;
             }
-            OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath);
+            OperationResult tweetParamsResult = status.downloadAndGetDBParams(tweetFolderPath, account);
             if (tweetParamsResult.wasSuccessful()) {
                 params.add((Object[]) tweetParamsResult.getClientResponse().getReturnedObject());
             } else {
@@ -735,19 +760,92 @@ public class RESTAPI {
 
             statuses.add(status);
         }
-        historicalMaxID--;
-        highestID++;
+        if (receivedStatuses.length != 0) {
+            maxID--;
+        }
         if (!params.isEmpty()) {
-            if (!CoreDB.parameterisedTweetMergeBatch(params)) {
+            if (!TweetsDB.parameterisedTweetMergeBatch(params)) {
                 apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
                 apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
                 return Pair.of(apiCallResult, statuses);
             }
         }
-        apiCallResult.getTwitterResponse().setReturnedObject(Pair.of(historicalMaxID, highestID));
+        apiCallResult.getTwitterResponse().setReturnedObject(Pair.of(maxID, sinceID));
         apiCallResult.getTwitterResponse().setReceivedTweetCount(receivedStatuses.length);
         apiCallResult.getTwitterResponse().setStoredTweetCount(statuses.size());
         return Pair.of(apiCallResult, statuses);
+    }
+
+    public static void validateStoredTweets() {
+        DBResponse accountsResp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
+        if (!accountsResp.wasSuccessful()) {
+            LOGGER.error("Failed to get accounts from DB - aborting tweet validation.");
+            return;
+        }
+        ArrayList<HashMap<String, Object>> rows = accountsResp.getReturnedRows();
+        for (HashMap<String, Object> row : rows) {
+            Account account = ResultSetConversion.getAccount(row);
+            validateStoredTweets(account);
+        }
+
+    }
+
+    public static void validateStoredTweets(Account account) {
+        Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
+        String query = "SELECT * FROM tweets WHERE usertwitterid=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, account.getTwitterID());
+        if (!resp.wasSuccessful()) {
+            LOGGER.error("Failed to get tweets from DB - aborting tweet validation.");
+            return;
+        }
+        if (resp.getReturnedRows().isEmpty()) {
+            return;
+        }
+        ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
+        HashMap<Long, TweetHolder> fullTweetMap = new HashMap<>();
+        ArrayList<Long> allReturnedIDs = new ArrayList<>();
+        ArrayList<ArrayList<Long>> tweetIDLists = new ArrayList<>();
+        ArrayList<Long> currentList = new ArrayList<>();
+        for (HashMap<String, Object> row : rows) {
+            TweetHolder tweet = ResultSetConversion.getTweet(row);
+            fullTweetMap.put(tweet.getTweetID(), tweet);
+            currentList.add(tweet.getTweetID());
+            // Maximum number of statuses requestable via statuses/lookup endpoint
+            if (currentList.size() == 100) {
+                tweetIDLists.add(currentList);
+                currentList = new ArrayList<>();
+            }
+        }
+        if (!currentList.isEmpty()) {
+            tweetIDLists.add(currentList);
+        }
+        for (ArrayList<Long> tweetIDList : tweetIDLists) {
+            OperationResult result = getTweetsByIDs(tweetIDList, account, tweetFolderPath);
+            if (!result.wasSuccessful()) {
+                LOGGER.error("Failed to retrieve tweets from API for account: " + account.getScreenName());
+                LOGGER.error("Number of tweets in request: " + tweetIDList.size());
+                return;
+            }
+            ArrayList<StatusJSON> statuses = (ArrayList<StatusJSON>) result.getTwitterResponse().getReturnedObject();
+            for (StatusJSON status : statuses) {
+                allReturnedIDs.add(status.getId());
+            }
+        }
+
+        Set<Long> fullTweetList = fullTweetMap.keySet();
+
+        if (fullTweetList.size() == allReturnedIDs.size()) {
+            // No action needed: all tweets are accounted for
+            return;
+        }
+        ArrayList<Long> deleteParams = new ArrayList<>();
+        for (Long tweetID : fullTweetList) {
+            if (!allReturnedIDs.contains(tweetID)) {
+                // Tweet is deleted or otherwise inaccessible: remove it and images associated with it
+                deleteParams.add(tweetID);
+            }
+        }
+        TweetsDB.deleteTweets(deleteParams, true);
     }
 
 }

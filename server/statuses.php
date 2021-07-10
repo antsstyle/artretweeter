@@ -15,6 +15,15 @@ function getQueueStatus($userAuth) {
     getQueueStatusInDB($userAuth['twitter_id']);
 }
 
+function tweetRetweetStatus($userAuth) {
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    validateUserAuth($userAuth);
+    getTweetRetweetStatusInDB($userAuth['twitter_id']);
+}
+
 function statusesShow($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
@@ -33,6 +42,7 @@ function statusesShow($userAuth) {
 function statusesUserTimeline($userAuth) {
     $screen_name = filter_input(INPUT_POST, 'screen_name', FILTER_SANITIZE_STRING);
     $max_id = filter_input(INPUT_POST, 'max_id', FILTER_SANITIZE_NUMBER_INT);
+    $since_id = filter_input(INPUT_POST, 'since_id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$screen_name || !$userAuth['twitter_id']) {
         echo encodeErrorInformation("Parameters are not set correctly.");
         exit;
@@ -40,9 +50,14 @@ function statusesUserTimeline($userAuth) {
 
     $params['count'] = 200;
     $params['screen_name'] = $screen_name;
+    $params['include_rts'] = "false";
+    $params['trim_user'] = "true";
 
     if (!is_null($max_id)) {
         $params['max_id'] = $max_id;
+    }
+    if (!is_null($since_id)) {
+        $params['since_id'] = $since_id;
     }
 
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],

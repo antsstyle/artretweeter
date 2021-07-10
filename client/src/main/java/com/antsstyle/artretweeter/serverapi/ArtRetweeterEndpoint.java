@@ -10,10 +10,11 @@ package com.antsstyle.artretweeter.serverapi;
  * @author antss
  */
 public enum ArtRetweeterEndpoint {
-    
+
     QUEUE_STATUS("retweets/queuestatus"),
     QUEUE_RETWEET("retweets/queue"),
     REMOVE_ACCOUNT("accounts/remove"),
+    TWEET_RETWEET_STATUS("retweets/tweetretweetstatus"),
     UNQUEUE_RETWEET("retweets/unqueue");
 
     private final String endpointName;

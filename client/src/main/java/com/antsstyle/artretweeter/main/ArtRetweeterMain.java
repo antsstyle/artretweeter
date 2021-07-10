@@ -5,9 +5,12 @@
  */
 package com.antsstyle.artretweeter.main;
 
+import com.antsstyle.artretweeter.configuration.MiscConfig;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.gui.GUI;
-import com.antsstyle.artretweeter.queues.StatusRefreshQueue;
+import com.antsstyle.artretweeter.gui.GUIHelperMethods;
+import com.antsstyle.artretweeter.queues.ClientRefreshQueue;
+import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.io.FileReader;
 import java.util.Properties;
 import javax.swing.JOptionPane;
@@ -32,27 +35,39 @@ public class ArtRetweeterMain {
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
             LOGGER.warn("Could not initialise UI look and feel - reverting to default look and feel.");
         }
-        try (FileReader reader = new FileReader("artretweeter.properties")) {
+        try ( FileReader reader = new FileReader("artretweeter.properties")) {
             prop.load(reader);
         } catch (Exception e) {
             LOGGER.error("Failed to load properties file!", e);
-            String msg = "<html>ArtRetweeter was unable to find the properties file. Check that 'artretweeter.properties' exists in the same"
+            String msg = "<html>ArtRetweeter was unable to find the properties file. <br/><br/>Check that 'artretweeter.properties' exists in the same"
                     + " directory as the JAR file.</html>";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
+        }
+        String debugModeString = prop.getProperty("debugmode");
+        if (debugModeString == null) {
+            MiscConfig.DEBUG_MODE = false;
+        } else {
+            MiscConfig.DEBUG_MODE = Boolean.valueOf(debugModeString);
+        }
+        String serverURL = prop.getProperty("serverurl");
+        if (serverURL == null) {
+            LOGGER.error("Server URL missing from properties file.");
+            String msg = "<html>ArtRetweeter was unable to find the Server URL within the properties file. "
+                    + "<br/>br</>Check that it contains a 'serverurl' line.</html>";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             System.exit(0);
         }
 
         CoreDB.initialise();
-        if (!CoreDB.doesDBExist()) {
-            CoreDB.initialiseTables();
-        }
         GUI.preInitialisation();
         java.awt.EventQueue.invokeLater(() -> {
             GUI.getInstance()
                     .setVisible(true);
         });
-        StatusRefreshQueue queue = new StatusRefreshQueue();
-        queue.run();
+
+        Thread queue = new Thread(new ClientRefreshQueue());
+        queue.start();
     }
 
 }

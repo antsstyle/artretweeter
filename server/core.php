@@ -109,6 +109,19 @@ function getQueueStatusInDB($userAuthTwitterID) {
     echo encodeDBResponseInformation($returnArray);
 }
 
+function getTweetRetweetStatusInDB($userAuthTwitterID) {
+    $recordsStmt = $GLOBALS['databaseConnection']->prepare("SELECT tweetid,UNIX_TIMESTAMP(retweettime) AS rttime FROM retweetrecords "
+            . "WHERE usertwitterid=?");
+    $recordsSuccess = $recordsStmt->execute([$userAuthTwitterID]);
+    if (!$recordsSuccess) {
+        $returnArray['retweetrecords'] = false;
+    } else {
+        $returnArray['retweetrecords'] = $recordsStmt->fetchAll();
+    }
+
+    echo encodeDBResponseInformation($returnArray);
+}
+
 function queueRetweetInDB($userAuthTwitterID, $tweetID, $retweetTime) {
     checkUserCanQueueNewRetweet($userAuthTwitterID, $retweetTime);
     checkUserCanRetweetOldTweet($userAuthTwitterID, $retweetTime, $tweetID);
@@ -437,8 +450,8 @@ function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $echoAndExit 
         }
         return false;
     }
-    
-        $recordsDayAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
+
+    $recordsDayAfterStmt = $GLOBALS['databaseConnection']->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? 
         AND retweettime >= ? AND retweettime <= ?
         ORDER BY retweettime DESC LIMIT ?");
     $recordsDayAfterStmt->bindValue(1, $userTwitterID);

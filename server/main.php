@@ -38,6 +38,9 @@ if ($artretweeter_endpoint) {
         case "retweets/queue":
             ArtRetweeter\queueRetweet($userAuth);
             break;
+        case "retweets/tweetretweetstatus":
+            ArtRetweeter\tweetRetweetStatus($userAuth);
+            break;
         case "retweets/unqueue":
             ArtRetweeter\unqueueRetweet($userAuth);
             break;

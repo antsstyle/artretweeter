@@ -15,6 +15,8 @@ import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
+import com.antsstyle.artretweeter.db.CollectionsDB;
+import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
@@ -385,6 +387,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
         addTweetManuallyButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         addTweetManuallyButton.setText("Add");
+        addTweetManuallyButton.setMaximumSize(new java.awt.Dimension(69, 33));
+        addTweetManuallyButton.setMinimumSize(new java.awt.Dimension(69, 33));
+        addTweetManuallyButton.setPreferredSize(new java.awt.Dimension(69, 33));
         addTweetManuallyButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 addTweetManuallyButtonActionPerformed(evt);
@@ -398,23 +403,22 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel3)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(addTweetManuallyStatusLabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(addTweetManuallyTextField, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 288, Short.MAX_VALUE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(addTweetManuallyButton)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(addTweetManuallyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 276, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(addTweetManuallyButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jLabel3)
+                    .addComponent(addTweetManuallyStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 288, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(7, 7, 7))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(addTweetManuallyTextField, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(addTweetManuallyButton, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(addTweetManuallyTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(addTweetManuallyButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(addTweetManuallyStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(102, Short.MAX_VALUE))
@@ -441,6 +445,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         addTweetsToCurrentlySelectedCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         addTweetsToCurrentlySelectedCollectionButton.setText("Add tweets to currently selected collection");
         addTweetsToCurrentlySelectedCollectionButton.setToolTipText("");
+        addTweetsToCurrentlySelectedCollectionButton.setMaximumSize(new java.awt.Dimension(323, 33));
+        addTweetsToCurrentlySelectedCollectionButton.setMinimumSize(new java.awt.Dimension(323, 33));
+        addTweetsToCurrentlySelectedCollectionButton.setPreferredSize(new java.awt.Dimension(323, 33));
         addTweetsToCurrentlySelectedCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 addTweetsToCurrentlySelectedCollectionButtonActionPerformed(evt);
@@ -449,6 +456,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
         deleteTweetsFromCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         deleteTweetsFromCollectionButton.setText("Delete tweets from collection");
+        deleteTweetsFromCollectionButton.setMaximumSize(new java.awt.Dimension(230, 33));
+        deleteTweetsFromCollectionButton.setMinimumSize(new java.awt.Dimension(230, 33));
+        deleteTweetsFromCollectionButton.setPreferredSize(new java.awt.Dimension(230, 33));
         deleteTweetsFromCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 deleteTweetsFromCollectionButtonActionPerformed(evt);
@@ -457,6 +467,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
         createNewCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         createNewCollectionButton.setText("Create new collection");
+        createNewCollectionButton.setMaximumSize(new java.awt.Dimension(178, 33));
+        createNewCollectionButton.setMinimumSize(new java.awt.Dimension(178, 33));
+        createNewCollectionButton.setPreferredSize(new java.awt.Dimension(178, 33));
         createNewCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 createNewCollectionButtonActionPerformed(evt);
@@ -465,6 +478,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
         deleteCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         deleteCollectionButton.setText("Delete collection");
+        deleteCollectionButton.setMaximumSize(new java.awt.Dimension(142, 33));
+        deleteCollectionButton.setMinimumSize(new java.awt.Dimension(142, 33));
+        deleteCollectionButton.setPreferredSize(new java.awt.Dimension(142, 33));
         deleteCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 deleteCollectionButtonActionPerformed(evt);
@@ -570,7 +586,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                                 .addComponent(jLabel2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(addTweetsToCurrentlySelectedCollectionButton)
+                            .addComponent(addTweetsToCurrentlySelectedCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 625, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -585,9 +601,9 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                                     .addGroup(layout.createSequentialGroup()
                                         .addComponent(createNewCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(deleteTweetsFromCollectionButton)
+                                        .addComponent(deleteTweetsFromCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(deleteCollectionButton))
+                                        .addComponent(deleteCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                     .addGroup(layout.createSequentialGroup()
                                         .addComponent(jLabel4)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -595,7 +611,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(selectCollectionComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 232, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(viewCollectionOnTwitterButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addComponent(viewCollectionOnTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addGap(0, 0, Short.MAX_VALUE))))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(tweetImageScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -631,11 +647,11 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                         .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addGap(6, 6, 6)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(addTweetsToCurrentlySelectedCollectionButton)
+                    .addComponent(addTweetsToCurrentlySelectedCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(deleteTweetsFromCollectionButton)
-                        .addComponent(createNewCollectionButton)
-                        .addComponent(deleteCollectionButton)))
+                        .addComponent(deleteTweetsFromCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(createNewCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(deleteCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(tweetImageScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -891,7 +907,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
 
             dtm.addRow(new Object[]{validTweets.get(keys.get(0)).getId(), validTweets.get(keys.get(0)).getFullTweetText()});
             insertParams.add(new Object[]{validTweets.get(keys.get(0)).getTweetID(), currentlySelectedCollection.getTwitterID()});
-            CoreDB.parameterisedCollectionTweetsMergeBatch(insertParams);
+            CollectionsDB.parameterisedCollectionTweetsMergeBatch(insertParams);
         } else {
             CollectionCurateRespJSON json = (CollectionCurateRespJSON) result.getTwitterResponse().getReturnedObject();
             CollectionCurateEntry[] entries = json.getResponse().getEntries();
@@ -914,7 +930,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
                 dtm.addRow(new Object[]{validTweets.get(k).getId(), validTweets.get(k).getFullTweetText()});
             }
             if (!insertParams.isEmpty()) {
-                CoreDB.parameterisedCollectionTweetsMergeBatch(insertParams);
+                CollectionsDB.parameterisedCollectionTweetsMergeBatch(insertParams);
             }
             if (!failedEntries.isEmpty()) {
                 StringBuilder msg = new StringBuilder("<html>One or more entries were not added successfully.<br/><br/>");
@@ -944,7 +960,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
     private void addTweetManually() {
         String url = addTweetManuallyTextField.getText().trim();
         if (RegularExpressions.matchesRegex(url, RegularExpressions.TWITTER_STATUS_REGEX)) {
-            Path tweetFolderPath = CoreDB.getTweetFolderPath(currentlySelectedAccount);
+            Path tweetFolderPath = ConfigDB.getTweetFolderPath(currentlySelectedAccount);
             if (tweetFolderPath == null) {
                 String statusMessage = "Failed to get tweet image directory information from database!";
                 JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
@@ -1163,7 +1179,7 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
             TwitterCollectionHolder holder = (TwitterCollectionHolder) res.getTwitterResponse().getReturnedObject();
             Object[] params = new Object[]{currentlySelectedAccount.getTwitterID(), holder.getTwitterID(),
                 holder.getCollectionURL(), holder.getName(), holder.getDescription(), holder.getOrdering().getParameterName()};
-            CoreDB.insertCollection(params);
+            CollectionsDB.insertCollection(params);
             String msg = "Collection added successfully!";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Success", JOptionPane.INFORMATION_MESSAGE);
             refreshCollectionBoxModel(false);
@@ -1233,7 +1249,6 @@ public class CollectionsPanel extends TweetDisplayBasePanel {
         tweetImageLabel3.setIcon(null);
         tweetImageLabel4.setIcon(null);
     }
-
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addTweetManuallyButton;

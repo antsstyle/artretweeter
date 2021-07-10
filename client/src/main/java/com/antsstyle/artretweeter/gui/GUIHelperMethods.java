@@ -8,14 +8,13 @@ package com.antsstyle.artretweeter.gui;
 import com.antsstyle.artretweeter.configuration.GUIConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
-import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
-import com.antsstyle.artretweeter.datastructures.TwitterResponse;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBResponseCode;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.ImageTools;
 import java.awt.Color;
@@ -37,6 +36,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -52,6 +52,7 @@ import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.table.DefaultTableModel;
@@ -67,6 +68,8 @@ import org.apache.logging.log4j.Logger;
 public class GUIHelperMethods {
 
     private static final Logger LOGGER = LogManager.getLogger(GUIHelperMethods.class);
+
+    private static final HashMap<JComponent, Timer> timerMap = new HashMap<>();
 
     public static void setAllGUIColours() {
         UIManager.put("ScrollBar.shadow", GUIConfig.JBUTTON_BG_COLOUR);
@@ -507,7 +510,7 @@ public class GUIHelperMethods {
         if (success) {
             DBResponse updateResp;
             if (changeTime) {
-                if (!CoreDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), account.getTwitterID(), time})) {
+                if (!TweetsDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), account.getTwitterID(), time})) {
                     String msg = "<html>Time changed successfully, but an error occurred updating this queue entry "
                             + "<br/>in the ArtRetweeter client.</html>";
                     JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
@@ -568,6 +571,84 @@ public class GUIHelperMethods {
             LOGGER.error(msg);
             return false;
         }
+    }
+
+    public static void setTemporaryButtonText(JButton button, String message) {
+        setTemporaryButtonText(button, GUIConfig.JBUTTON_FONT_COLOUR, message);
+    }
+
+    public static void setTemporaryButtonText(JButton button, Color color, String message) {
+        setTemporaryButtonText(button, color, message, 3000);
+    }
+
+    public static void setTemporaryButtonText(JButton button, Color color, String message, int time) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            setTemporaryButtonTextSW(button, color, message, time);
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                setTemporaryButtonTextSW(button, color, message, time);
+            });
+        }
+    }
+
+    private static void setTemporaryButtonTextSW(JButton button, Color color, String message, int time) {
+        String buttonText = button.getText();
+        if (color != null) {
+            button.setForeground(color);
+        }
+        button.setText(message);
+        Timer timer = timerMap.get(button);
+        if (timer == null) {
+            timer = new Timer(time, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    button.setText(buttonText);
+                }
+            });
+            timer.setRepeats(false);
+            timerMap.put(button, timer);
+            timer.start();
+        } else {
+            timer.restart();
+        }
+    }
+
+    public static void setTemporaryLabelText(JLabel label, String message) {
+        setTemporaryLabelText(label, GUIConfig.JLABEL_FONT_COLOUR, message);
+    }
+
+    public static void setTemporaryLabelText(JLabel label, Color color, String message) {
+        setTemporaryLabelText(label, color, message, 5000);
+    }
+
+    /**
+     * Sets the colour and text of the given JLabel.
+     *
+     * @param label The JLabel whose colour and text to set.
+     * @param color The colour to set the JLabel's text to.
+     * @param message The text to set on the JLabel.
+     */
+    public static void setTemporaryLabelText(JLabel label, Color color, String message, int time) {
+        SwingUtilities.invokeLater(() -> {
+            if (color != null) {
+                label.setForeground(color);
+            }
+            label.setText(message);
+            Timer timer = timerMap.get(label);
+            if (timer == null) {
+                timer = new Timer(time, new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        label.setText("");
+                    }
+                });
+                timer.setRepeats(false);
+                timerMap.put(label, timer);
+                timer.start();
+            } else {
+                timer.restart();
+            }
+        });
     }
 
 }

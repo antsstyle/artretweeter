@@ -48,198 +48,12 @@ public class CoreDB {
      */
     public static final int INPUT_ERROR = -3;
 
-    private static final String CREATE_CONFIG_TABLE = "CREATE TABLE configuration ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "name VARCHAR(255) NOT NULL, "
-            + "value VARCHAR(255) NOT NULL)";
-
-    private static final String CREATE_ACCOUNTS_TABLE = "CREATE TABLE accounts ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "twitterid BIGINT NOT NULL, "
-            + "token VARCHAR(256) NOT NULL, "
-            + "tokensecret VARCHAR(256) NOT NULL, "
-            + "screen_name VARCHAR(256) NOT NULL, "
-            + "historicalmaxid BIGINT, "
-            + "latestmaxid BIGINT, "
-            + "retrievedoldtweetslimit VARCHAR(1) DEFAULT 'N' NOT NULL)";
-
-    private static final String CREATE_TWEETS_TABLE = "CREATE TABLE tweets ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "tweetid BIGINT NOT NULL, "
-            + "usertwitterid BIGINT NOT NULL, "
-            + "screen_name VARCHAR(255) NOT NULL, "
-            + "fulltweettext VARCHAR(500) NOT NULL, "
-            + "filepath1 VARCHAR(255) NOT NULL,"
-            + "filepath2 VARCHAR(255), "
-            + "filepath3 VARCHAR(255), "
-            + "filepath4 VARCHAR(255), "
-            + "url1 VARCHAR(255) NOT NULL, "
-            + "url2 VARCHAR(255), "
-            + "url3 VARCHAR(255), "
-            + "url4 VARCHAR(255), "
-            + "created_at TIMESTAMP NOT NULL, "
-            + "likecount INTEGER NOT NULL, "
-            + "retweetcount INTEGER NOT NULL, "
-            + "source VARCHAR(500) NOT NULL)";
-
-    private static final String CREATE_COLLECTIONS_TABLE = "CREATE TABLE collections ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "usertwitterid BIGINT NOT NULL, "
-            + "collectionid VARCHAR(255) NOT NULL,"
-            + "collectionurl VARCHAR(255) NOT NULL, "
-            + "name VARCHAR(256) NOT NULL, "
-            + "description VARCHAR(256), "
-            + "ordering VARCHAR(50) NOT NULL)";
-
-    private static final String CREATE_COLLECTION_TWEETS_TABLE = "CREATE TABLE collectiontweets ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "tweetid BIGINT NOT NULL, "
-            + "collectionid VARCHAR(255) NOT NULL, "
-            + "ordernumber INTEGER)";
-
-    private static final String CREATE_USER_RATELIMITS_TABLE = "CREATE TABLE userratelimits ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "usertwitterid BIGINT NOT NULL, "
-            + "endpoint VARCHAR(255) NOT NULL, "
-            + "maxlimit INTEGER NOT NULL, "
-            + "remaininglimit INTEGER NOT NULL, "
-            + "resettime TIMESTAMP NOT NULL)";
-
-    private static final String CREATE_APP_RATELIMITS_TABLE = "CREATE TABLE appratelimits ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "endpoint VARCHAR(255) NOT NULL, "
-            + "maxlimit INTEGER NOT NULL, "
-            + "remaininglimit INTEGER NOT NULL, "
-            + "resettime TIMESTAMP NOT NULL)";
-
-    private static final String CREATE_RETWEET_QUEUE_TABLE = "CREATE TABLE retweetqueue ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "tweetid BIGINT NOT NULL, "
-            + "retweetingusertwitterid BIGINT NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL)";
-
-    private static final String CREATE_FAILED_RETWEETS_TABLE = "CREATE TABLE failedretweets ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "tweetid BIGINT NOT NULL, "
-            + "retweetingusertwitterid BIGINT NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL, "
-            + "errorcode INTEGER NOT NULL, "
-            + "failreason VARCHAR(255) NOT NULL)";
-
-    private static final String CREATE_RETWEETS_TABLE = "CREATE TABLE retweets ("
-            + "id INTEGER IDENTITY PRIMARY KEY, "
-            + "retweetingusertwitterid BIGINT NOT NULL, "
-            + "originaltweetid BIGINT NOT NULL, "
-            + "retweetid BIGINT NOT NULL, "
-            + "originaltweettime TIMESTAMP NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL)";
-
-    private static final String TWEETS_TABLE_ADD_UNIQUE
-            = "ALTER TABLE tweets ADD UNIQUE (tweetid)";
-
-    private static final String ACCOUNTS_TABLE_ADD_UNIQUE
-            = "ALTER TABLE accounts ADD UNIQUE (twitterid)";
-
-    private static final String CONFIG_TABLE_ADD_UNIQUE
-            = "ALTER TABLE configuration ADD UNIQUE (name)";
-
-    private static final String COLLECTIONS_TABLE_ADD_UNIQUE
-            = "ALTER TABLE collections ADD UNIQUE (collectionid)";
-
-    private static final String COLLECTION_TWEETS_TABLE_ADD_UNIQUE
-            = "ALTER TABLE collectiontweets ADD UNIQUE (tweetid,collectionid)";
-
-    private static final String USER_RATELIMITS_TABLE_ADD_UNIQUE
-            = " ALTER TABLE userratelimits ADD UNIQUE (usertwitterid,endpoint)";
-
-    private static final String APP_RATELIMITS_TABLE_ADD_UNIQUE
-            = " ALTER TABLE appratelimits ADD UNIQUE (endpoint)";
-
-    private static final String RETWEET_QUEUE_TABLE_ADD_UNIQUE
-            = "ALTER TABLE retweetqueue ADD UNIQUE (tweetid,retweetingusertwitterid)";
-
-    private static final String USER_RATELIMITS_MERGE_QUERY = "MERGE INTO userratelimits USING (VALUES(?,?,?,?,?))"
-            + " AS vals(usertwitterid,endpoint,maxlimit,remaininglimit,resettime) ON "
-            + "(userratelimits.usertwitterid = vals.usertwitterid AND userratelimits.endpoint=vals.endpoint) "
-            + "WHEN MATCHED THEN UPDATE SET userratelimits.usertwitterid=vals.usertwitterid,userratelimits.endpoint=vals.endpoint,"
-            + "userratelimits.maxlimit=vals.maxlimit,userratelimits.remaininglimit=vals.remaininglimit,"
-            + "userratelimits.resettime=vals.resettime "
-            + "WHEN NOT MATCHED THEN INSERT (usertwitterid,endpoint,maxlimit,remaininglimit,resettime) VALUES "
-            + "(vals.usertwitterid,vals.endpoint,vals.maxlimit,vals.remaininglimit,vals.resettime) ";
-
-    private static final String APP_RATELIMITS_MERGE_QUERY = "MERGE INTO appratelimits USING (VALUES(?,?,?,?))"
-            + " AS vals(endpoint,maxlimit,remaininglimit,resettime) ON "
-            + "(appratelimits.endpoint=vals.endpoint) "
-            + "WHEN MATCHED THEN UPDATE SET appratelimits.endpoint=vals.endpoint,"
-            + "appratelimits.maxlimit=vals.maxlimit,appratelimits.remaininglimit=vals.remaininglimit,"
-            + "appratelimits.resettime=vals.resettime "
-            + "WHEN NOT MATCHED THEN INSERT (endpoint,maxlimit,remaininglimit,resettime) VALUES "
-            + "(vals.endpoint,vals.maxlimit,vals.remaininglimit,vals.resettime) ";
-
-    private static final String COLLECTION_MERGE_QUERY = "MERGE INTO collections USING (VALUES(?,?,?,?,?,?))"
-            + " AS vals(usertwitterid,collectionid,collectionurl,name,description,ordering) ON "
-            + "(collections.collectionid = vals.collectionid) "
-            + "WHEN MATCHED THEN UPDATE SET collections.usertwitterid=vals.usertwitterid,collections.collectionid=vals.collectionid,"
-            + "collections.collectionurl=vals.collectionurl,collections.name=vals.name,"
-            + "collections.description=vals.description,collections.ordering=vals.ordering "
-            + "WHEN NOT MATCHED THEN INSERT (usertwitterid,collectionid,collectionurl,name,description,ordering) VALUES "
-            + "(vals.usertwitterid,vals.collectionid,vals.collectionurl,vals.name,vals.description,vals.ordering) ";
-
-    private static final String TWEET_MERGE_QUERY = "MERGE INTO tweets USING (VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?))"
-            + "    AS vals(tweetid,usertwitterid,screen_name,filepath1,filepath2,filepath3,filepath4,url1,"
-            + "url2,url3,url4,created_at,likecount,retweetcount,fulltweettext,source) ON (tweets.tweetid = vals.tweetid) "
-            + "WHEN MATCHED THEN UPDATE SET tweets.tweetid=vals.tweetid,tweets.usertwitterid=vals.usertwitterid,"
-            + "tweets.screen_name=vals.screen_name,tweets.filepath1=vals.filepath1,"
-            + "tweets.filepath2=vals.filepath2,tweets.filepath3=vals.filepath3,tweets.filepath4=vals.filepath4,"
-            + "tweets.url1=vals.url1,tweets.url2=vals.url2,tweets.url3=vals.url3,tweets.url4=vals.url4,"
-            + "tweets.created_at=vals.created_at,tweets.likecount=vals.likecount,tweets.retweetcount=vals.retweetcount,"
-            + "tweets.fulltweettext=vals.fulltweettext,tweets.source=vals.source "
-            + "WHEN NOT MATCHED THEN INSERT (tweetid,usertwitterid,screen_name,filepath1,filepath2,filepath3,filepath4,url1,"
-            + "url2,url3,url4,created_at,likecount,retweetcount,fulltweettext,source) VALUES "
-            + "(vals.tweetid,vals.usertwitterid,vals.screen_name,vals.filepath1,"
-            + "vals.filepath2,vals.filepath3,vals.filepath4,vals.url1,vals.url2,vals.url3,vals.url4,vals.created_at,"
-            + "vals.likecount,vals.retweetcount,vals.fulltweettext,vals.source) ";
-
-    private static final String COLLECTION_TWEET_MERGE_QUERY = "MERGE INTO collectiontweets USING (VALUES (?,?))"
-            + " AS vals(tweetid,collectionid) ON (collectiontweets.tweetid = vals.tweetid AND collectiontweets.collectionid = vals.collectionid)"
-            + " WHEN MATCHED THEN UPDATE SET collectiontweets.tweetid=vals.tweetid,collectiontweets.collectionid=vals.collectionid"
-            + " WHEN NOT MATCHED THEN INSERT (tweetid,collectionid) VALUES (vals.tweetid, vals.collectionid)";
-
-    private static final String RETWEET_QUEUE_MERGE_QUERY = "MERGE INTO retweetqueue USING (VALUES (?,?,?))"
-            + " AS vals(tweetid,retweetingusertwitterid,retweettime) ON (retweetqueue.tweetid = vals.tweetid"
-            + " AND retweetqueue.retweetingusertwitterid = vals.retweetingusertwitterid)"
-            + " WHEN MATCHED THEN UPDATE SET retweetqueue.tweetid=vals.tweetid,retweetqueue.retweetingusertwitterid=vals.retweetingusertwitterid,"
-            + " retweetqueue.retweettime=vals.retweettime"
-            + " WHEN NOT MATCHED THEN INSERT (tweetid,retweetingusertwitterid,retweettime) VALUES (vals.tweetid, vals.retweetingusertwitterid, vals.retweettime)";
-
-    private static final String RETWEETS_INSERT_QUERY = "INSERT INTO retweets (retweetingusertwitterid,originaltweetid,retweetid,originaltweettime,retweettime)"
-            + " VALUES(?,?,?,?,?)";
-
     /**
      *
      * @return @throws SQLException
      */
     protected static synchronized Connection getPoolConnection() throws SQLException {
         return connectionPool.getConnection();
-    }
-
-    public static Path getTweetFolderPath(Account account) {
-        Path tweetFolderPath;
-        DBResponse resp = selectFromTable(DBTable.CONFIGURATION,
-                new String[]{"name"},
-                new Object[]{"tweetsavedirectory"});
-        if (!resp.wasSuccessful()) {
-            return null;
-        } else if (resp.getReturnedRows().isEmpty()) {
-            tweetFolderPath = Paths.get(System.getProperty("user.dir")).resolve("tweetimages/")
-                    .resolve(account.getScreenName().concat("/"));
-            CoreDB.insertIntoTable(DBTable.CONFIGURATION,
-                    new String[]{"name", "value"},
-                    new Object[]{"tweetsavedirectory", PathTools.convertPathToString(tweetFolderPath)});
-        } else {
-            tweetFolderPath = Paths.get((String) resp.getReturnedRows().get(0).get("VALUE"));
-        }
-        return tweetFolderPath;
     }
 
     /**
@@ -309,22 +123,6 @@ public class CoreDB {
         }
     }
 
-    public static boolean insertCollection(Object[] params) {
-        return runCustomUpdate(COLLECTION_MERGE_QUERY, params);
-    }
-
-    public static boolean insertTweet(Object[] params) {
-        return runCustomUpdate(TWEET_MERGE_QUERY, params);
-    }
-
-    public static boolean insertRetweetQueueEntry(Object[] params) {
-        return runCustomUpdate(RETWEET_QUEUE_MERGE_QUERY, params);
-    }
-
-    public static boolean insertRetweetEntry(Object[] params) {
-        return runCustomUpdate(RETWEETS_INSERT_QUERY, params);
-    }
-
     public static boolean runCustomUpdate(String query, Object[] params) {
         Connection connection = null;
         PreparedStatement stmt = null;
@@ -343,30 +141,6 @@ public class CoreDB {
             DbUtils.closeQuietly(stmt);
             DbUtils.closeQuietly(connection);
         }
-    }
-
-    public static boolean mergeUserRateLimitInfo(Long userTwitterID, String endpoint, Integer maxLimit, Integer remainingLimit,
-            Timestamp resetTimestamp) {
-        Object[] params = new Object[]{userTwitterID, endpoint, maxLimit, remainingLimit, resetTimestamp};
-        return runCustomUpdate(USER_RATELIMITS_MERGE_QUERY, params);
-    }
-
-    public static boolean mergeAppRateLimitInfo(String endpoint, Integer maxLimit, Integer remainingLimit,
-            Timestamp resetTimestamp) {
-        Object[] params = new Object[]{endpoint, maxLimit, remainingLimit, resetTimestamp};
-        return runCustomUpdate(APP_RATELIMITS_MERGE_QUERY, params);
-    }
-
-    public static boolean parameterisedCollectionMergeBatch(ArrayList<Object[]> params) {
-        return runParameterisedUpdateBatch(COLLECTION_MERGE_QUERY, params);
-    }
-
-    public static boolean parameterisedTweetMergeBatch(ArrayList<Object[]> params) {
-        return runParameterisedUpdateBatch(TWEET_MERGE_QUERY, params);
-    }
-
-    public static boolean parameterisedCollectionTweetsMergeBatch(ArrayList<Object[]> params) {
-        return runParameterisedUpdateBatch(COLLECTION_TWEET_MERGE_QUERY, params);
     }
 
     public static boolean runParameterisedUpdateBatch(String query, ArrayList<Object[]> params) {
@@ -463,6 +237,7 @@ public class CoreDB {
         connectionPool.setMaxOpenPreparedStatements(10);
         connectionPool.setMaxConnLifetimeMillis(1000 * 60 * 5);
         connectionPool.setMaxTotal(10);
+        initialiseTables();
     }
 
     public static void shutDown() {
@@ -483,44 +258,17 @@ public class CoreDB {
     public static void initialiseTables() {
         Connection conn = null;
         PreparedStatement stmt = null;
+        DBTable[] tables = DBTable.values();
         try {
             conn = connectionPool.getConnection();
-            stmt = conn.prepareStatement(CREATE_ACCOUNTS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(ACCOUNTS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_TWEETS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(TWEETS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_CONFIG_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CONFIG_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_COLLECTIONS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(COLLECTIONS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_USER_RATELIMITS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(USER_RATELIMITS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_APP_RATELIMITS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(APP_RATELIMITS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_COLLECTION_TWEETS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(COLLECTION_TWEETS_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_RETWEET_QUEUE_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(RETWEET_QUEUE_TABLE_ADD_UNIQUE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_RETWEETS_TABLE);
-            stmt.executeUpdate();
-            stmt = conn.prepareStatement(CREATE_FAILED_RETWEETS_TABLE);
-            stmt.executeUpdate();
+            for (DBTable table : tables) {
+                try {
+                    stmt = conn.prepareStatement(table.getCreateTableQuery());
+                    stmt.executeUpdate();
+                } catch (Exception e) {
+                    break;
+                }
+            }
         } catch (Exception e) {
             LOGGER.error(e);
         } finally {

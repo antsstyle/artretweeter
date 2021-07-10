@@ -253,6 +253,9 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
         requeueFailedRetweetButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         requeueFailedRetweetButton.setText("Requeue retweet");
+        requeueFailedRetweetButton.setMaximumSize(new java.awt.Dimension(150, 33));
+        requeueFailedRetweetButton.setMinimumSize(new java.awt.Dimension(150, 33));
+        requeueFailedRetweetButton.setPreferredSize(new java.awt.Dimension(150, 33));
         requeueFailedRetweetButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 requeueFailedRetweetButtonActionPerformed(evt);
@@ -261,6 +264,9 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
         clearFailedRetweetButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         clearFailedRetweetButton.setText("Clear retweet from table");
+        clearFailedRetweetButton.setMaximumSize(new java.awt.Dimension(199, 33));
+        clearFailedRetweetButton.setMinimumSize(new java.awt.Dimension(199, 33));
+        clearFailedRetweetButton.setPreferredSize(new java.awt.Dimension(199, 33));
         clearFailedRetweetButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 clearFailedRetweetButtonActionPerformed(evt);
@@ -269,6 +275,9 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
         clearAllFailedRetweetsButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         clearAllFailedRetweetsButton.setText("Clear all");
+        clearAllFailedRetweetsButton.setMaximumSize(new java.awt.Dimension(84, 33));
+        clearAllFailedRetweetsButton.setMinimumSize(new java.awt.Dimension(84, 33));
+        clearAllFailedRetweetsButton.setPreferredSize(new java.awt.Dimension(84, 33));
         clearAllFailedRetweetsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 clearAllFailedRetweetsButtonActionPerformed(evt);
@@ -300,11 +309,11 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
                         .addGap(4, 4, 4)
                         .addComponent(tweetImageScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(requeueFailedRetweetButton)
+                        .addComponent(requeueFailedRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(clearFailedRetweetButton)
+                        .addComponent(clearFailedRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(clearAllFailedRetweetsButton)))
+                        .addComponent(clearAllFailedRetweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -319,9 +328,9 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
                 .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(requeueFailedRetweetButton)
-                    .addComponent(clearFailedRetweetButton)
-                    .addComponent(clearAllFailedRetweetsButton))
+                    .addComponent(requeueFailedRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(clearFailedRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(clearAllFailedRetweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(tweetImageScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)

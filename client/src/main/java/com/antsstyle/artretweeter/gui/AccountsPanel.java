@@ -13,6 +13,7 @@ import com.antsstyle.artretweeter.datastructures.RequestToken;
 import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
+import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
@@ -134,6 +135,9 @@ public class AccountsPanel extends javax.swing.JPanel {
 
         addAccountButton.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         addAccountButton.setText("Add Account");
+        addAccountButton.setMaximumSize(new java.awt.Dimension(115, 31));
+        addAccountButton.setMinimumSize(new java.awt.Dimension(115, 31));
+        addAccountButton.setPreferredSize(new java.awt.Dimension(115, 31));
         addAccountButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 addAccountButtonActionPerformed(evt);
@@ -142,6 +146,9 @@ public class AccountsPanel extends javax.swing.JPanel {
 
         removeAccountButton.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         removeAccountButton.setText("Remove Account");
+        removeAccountButton.setMaximumSize(new java.awt.Dimension(135, 31));
+        removeAccountButton.setMinimumSize(new java.awt.Dimension(135, 31));
+        removeAccountButton.setPreferredSize(new java.awt.Dimension(135, 31));
         removeAccountButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 removeAccountButtonActionPerformed(evt);
@@ -150,6 +157,9 @@ public class AccountsPanel extends javax.swing.JPanel {
 
         retrieveTweetsButton.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         retrieveTweetsButton.setText("Retrieve Tweets");
+        retrieveTweetsButton.setMaximumSize(new java.awt.Dimension(130, 31));
+        retrieveTweetsButton.setMinimumSize(new java.awt.Dimension(130, 31));
+        retrieveTweetsButton.setPreferredSize(new java.awt.Dimension(130, 31));
         retrieveTweetsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 retrieveTweetsButtonActionPerformed(evt);
@@ -170,6 +180,9 @@ public class AccountsPanel extends javax.swing.JPanel {
 
         retrieveCollectionsButton.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         retrieveCollectionsButton.setText("Retrieve Collections");
+        retrieveCollectionsButton.setMaximumSize(new java.awt.Dimension(152, 31));
+        retrieveCollectionsButton.setMinimumSize(new java.awt.Dimension(152, 31));
+        retrieveCollectionsButton.setPreferredSize(new java.awt.Dimension(152, 31));
         retrieveCollectionsButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 retrieveCollectionsButtonActionPerformed(evt);
@@ -183,18 +196,20 @@ public class AccountsPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(addAccountButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(removeAccountButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(retrieveTweetsButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(retrieveCollectionsButton))
-                    .addComponent(jScrollPane1)
                     .addComponent(tweetDownloadProgressLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(addAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(removeAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(retrieveTweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(retrieveCollectionsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -206,10 +221,10 @@ public class AccountsPanel extends javax.swing.JPanel {
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(addAccountButton)
-                    .addComponent(removeAccountButton)
-                    .addComponent(retrieveTweetsButton)
-                    .addComponent(retrieveCollectionsButton))
+                    .addComponent(addAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(removeAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(retrieveTweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(retrieveCollectionsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(42, 42, 42)
                 .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -287,7 +302,7 @@ public class AccountsPanel extends javax.swing.JPanel {
             return;
         }
         account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
-        Path tweetFolderPath = CoreDB.getTweetFolderPath(account);
+        Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
             String statusMessage = "Failed to get tweet image directory information from database!";
             JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
@@ -435,25 +450,12 @@ public class AccountsPanel extends javax.swing.JPanel {
             return;
         }
         account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
-        Path tweetFolderPath = CoreDB.getTweetFolderPath(account);
+        Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
             String statusMessage = "Failed to get tweet image directory information from database!";
             JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
             enableAllAccountButtons();
             return;
-        }
-        Long highestIDInDB;
-        String highestIDQuery = "SELECT MAX(tweetid) AS maxtweetid FROM tweets WHERE usertwitterid=?";
-        DBResponse highestIDInDBResp = CoreDB.customQuerySelect(highestIDQuery, account.getTwitterID());
-        if (!highestIDInDBResp.wasSuccessful()) {
-            String statusMessage = "Failed to get highest tweet information from DB for this account!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
-            enableAllAccountButtons();
-            return;
-        } else if (highestIDInDBResp.getReturnedRows().isEmpty()) {
-            highestIDInDB = 0L;
-        } else {
-            highestIDInDB = (Long) highestIDInDBResp.getReturnedRows().get(0).get("MAXTWEETID");
         }
         try {
             Files.createDirectories(tweetFolderPath);
@@ -465,21 +467,20 @@ public class AccountsPanel extends javax.swing.JPanel {
             return;
         }
         LOGGER.debug("Tweet folder path: " + tweetFolderPath);
-        Long historicalMaxID = account.getHistoricalMaxID();
-        Long latestMaxID = null;
-        Long finalHistoricalMaxID;
-        if (historicalMaxID == null) {
-            finalHistoricalMaxID = Long.MAX_VALUE;
+        Long maxID = account.getMaxID();
+        Long sinceID = account.getSinceID();
+        Long finalMaxID;
+        Long finalSinceID;
+        if (maxID == null) {
+            finalMaxID = Long.MAX_VALUE;
         } else {
-            finalHistoricalMaxID = historicalMaxID;
+            finalMaxID = maxID;
         }
-        if (finalHistoricalMaxID.equals(0L)) {
-            latestMaxID = account.getLatestMaxID();
-            if (latestMaxID == null) {
-                latestMaxID = Long.MAX_VALUE;
-            }
+        if (sinceID == null) {
+            finalSinceID = 0L;
+        } else {
+            finalSinceID = sinceID;
         }
-        Long finalLatestMaxID = latestMaxID;
         Long count;
         String cQuery = "SELECT COUNT(*) AS C FROM tweets WHERE usertwitterid=?";
         DBResponse countResp = CoreDB.customQuerySelect(cQuery, account.getTwitterID());
@@ -515,17 +516,17 @@ public class AccountsPanel extends javax.swing.JPanel {
                 CURRENTLY_PROCESSING = true;
                 Pair<OperationResult, ArrayList<StatusJSON>> returnResults;
                 ArrayList<StatusJSON> statuses = new ArrayList<>();
-                Long historicalMaxID = finalHistoricalMaxID;
-                Long latestMaxID = finalLatestMaxID;
+                Long maxID = finalMaxID;
+                Long sinceID = finalSinceID;
                 Boolean finished = false;
                 OperationResult finalResult = new OperationResult();
                 int consecutiveErrors = 0;
                 try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
                     while (!finished) {
                         try {
-                            LOGGER.debug("Params: " + historicalMaxID + " -- " + latestMaxID + " -- " + highestIDInDB);
-                            returnResults = RESTAPI.getAllUnrecordedUserTweetsByDate(httpclient, account,
-                                    historicalMaxID, latestMaxID, tweetFolderPath, highestIDInDB);
+                            LOGGER.debug("Params: Max ID: " + maxID + " Since ID: " + sinceID);
+                            returnResults = RESTAPI.getUnrecordedUserTweetsByDate(httpclient, account,
+                                    maxID, sinceID, tweetFolderPath);
                             OperationResult lastResult = returnResults.getLeft();
                             finalResult = lastResult;
                             if (lastResult.wasSuccessful()) {
@@ -537,29 +538,41 @@ public class AccountsPanel extends javax.swing.JPanel {
                                     finished = true;
                                     LOGGER.debug("No more statuses to retrieve.");
                                     if (resultPair != null) {
-                                        if (!historicalMaxID.equals(0L) && latestMaxID == null) {
-                                            historicalMaxID = 0L;
+                                        if (!maxID.equals(0L)) {
+                                            maxID = 0L;
                                             CoreDB.updateTable(DBTable.ACCOUNTS,
-                                                    new String[]{"historicalmaxid"},
-                                                    new Object[]{historicalMaxID},
+                                                    new String[]{"max_id"},
+                                                    new Object[]{maxID},
                                                     new String[]{"twitterid"},
                                                     new Object[]{account.getTwitterID()});
-                                        } else if (historicalMaxID.equals(0L) && latestMaxID != null) {
-                                            latestMaxID = resultPair.getRight();
+                                        }
+
+                                        Long newSinceID = resultPair.getRight();
+                                        if (newSinceID > sinceID) {
+                                            sinceID = newSinceID;
                                             CoreDB.updateTable(DBTable.ACCOUNTS,
-                                                    new String[]{"latestmaxid"},
-                                                    new Object[]{latestMaxID},
+                                                    new String[]{"since_id"},
+                                                    new Object[]{newSinceID},
                                                     new String[]{"twitterid"},
                                                     new Object[]{account.getTwitterID()});
                                         }
                                     }
                                 } else {
-                                    historicalMaxID = resultPair.getLeft();
+                                    maxID = resultPair.getLeft();
                                     CoreDB.updateTable(DBTable.ACCOUNTS,
-                                            new String[]{"historicalmaxid"},
-                                            new Object[]{historicalMaxID},
+                                            new String[]{"max_id"},
+                                            new Object[]{maxID},
                                             new String[]{"twitterid"},
                                             new Object[]{account.getTwitterID()});
+                                    Long newSinceID = resultPair.getRight();
+                                    if (newSinceID > sinceID) {
+                                        sinceID = newSinceID;
+                                        CoreDB.updateTable(DBTable.ACCOUNTS,
+                                                new String[]{"since_id"},
+                                                new Object[]{newSinceID},
+                                                new String[]{"twitterid"},
+                                                new Object[]{account.getTwitterID()});
+                                    }
                                 }
 
                                 storedTweetCount += lastResult.getTwitterResponse().getStoredTweetCount();
@@ -587,12 +600,13 @@ public class AccountsPanel extends javax.swing.JPanel {
                             CURRENTLY_PROCESSING = false;
                             return Pair.of(finalResult, statuses);
                         }
-
-                        try {
-                            Thread.sleep(5 * 1000);
-                        } catch (Exception e) {
-                            LOGGER.info("Interrupted while waiting - aborting tweet download.");
-                            break;
+                        if (!finished) {
+                            try {
+                                Thread.sleep(5 * 1000);
+                            } catch (Exception e) {
+                                LOGGER.info("Interrupted while waiting - aborting tweet download.");
+                                break;
+                            }
                         }
                     }
 

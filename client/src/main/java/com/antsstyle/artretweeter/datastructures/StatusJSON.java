@@ -65,7 +65,15 @@ public class StatusJSON {
     private User user;
     private Integer internalDatabaseID;
 
+    public OperationResult downloadAndGetDBParams(Path tweetFolderPath, Account account) {
+        return downloadTweetAndGetDBParams(tweetFolderPath, account);
+    }
+
     public OperationResult downloadAndGetDBParams(Path tweetFolderPath) {
+        return downloadTweetAndGetDBParams(tweetFolderPath, null);
+    }
+
+    private OperationResult downloadTweetAndGetDBParams(Path tweetFolderPath, Account account) {
         OperationResult result = new OperationResult();
         Path filepath1, filepath2 = null, filepath3 = null, filepath4 = null;
         String url1, url2 = null, url3 = null, url4 = null;
@@ -160,11 +168,20 @@ public class StatusJSON {
         } else {
             textParam = StringUtils.replace(text, "&amp;", "&");
         }
-        Object[] params = new Object[]{id, user.getId(), user.getScreen_name(),
-            PathTools.convertPathToString(filepath1), PathTools.convertPathToString(filepath2),
-            PathTools.convertPathToString(filepath3), PathTools.convertPathToString(filepath4), url1, url2, url3, url4,
-            createdAtTimestamp, favorite_count, retweet_count,
-            textParam, source};
+        Object[] params;
+        if (account != null) {
+            params = new Object[]{id, account.getTwitterID(), account.getScreenName(),
+                PathTools.convertPathToString(filepath1), PathTools.convertPathToString(filepath2),
+                PathTools.convertPathToString(filepath3), PathTools.convertPathToString(filepath4), url1, url2, url3, url4,
+                createdAtTimestamp, favorite_count, retweet_count,
+                textParam, source};
+        } else {
+            params = new Object[]{id, user.getId(), user.getScreen_name(),
+                PathTools.convertPathToString(filepath1), PathTools.convertPathToString(filepath2),
+                PathTools.convertPathToString(filepath3), PathTools.convertPathToString(filepath4), url1, url2, url3, url4,
+                createdAtTimestamp, favorite_count, retweet_count,
+                textParam, source};
+        }
         result.setClientResponse(new ClientResponse(StatusCode.SUCCESS));
         result.getClientResponse().setReturnedObject(params);
         return result;

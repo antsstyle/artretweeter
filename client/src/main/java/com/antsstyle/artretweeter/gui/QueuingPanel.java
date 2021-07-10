@@ -13,6 +13,7 @@ import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import java.awt.Dimension;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -183,9 +184,11 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         jLabel2 = new javax.swing.JLabel();
         jScrollPane26 = new javax.swing.JScrollPane();
         tweetsTable = new javax.swing.JTable();
-        queueRetweetButton = new javax.swing.JButton();
         selectAccountComboBox = new javax.swing.JComboBox<>();
         jLabel1 = new javax.swing.JLabel();
+        deleteTweetsFromTwitterButton = new javax.swing.JButton();
+        deleteTweetsFromArtRetweeterButton = new javax.swing.JButton();
+        queueRetweetButton = new javax.swing.JButton();
 
         tweetImageScrollPane1.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         tweetImageScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
@@ -264,6 +267,9 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
         changeRetweetTimeButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         changeRetweetTimeButton.setText("Change retweet time");
+        changeRetweetTimeButton.setMaximumSize(new java.awt.Dimension(176, 33));
+        changeRetweetTimeButton.setMinimumSize(new java.awt.Dimension(176, 33));
+        changeRetweetTimeButton.setPreferredSize(new java.awt.Dimension(176, 33));
         changeRetweetTimeButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 changeRetweetTimeButtonActionPerformed(evt);
@@ -272,6 +278,9 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
         unqueueRetweetButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         unqueueRetweetButton.setText("Unqueue retweet");
+        unqueueRetweetButton.setMaximumSize(new java.awt.Dimension(151, 33));
+        unqueueRetweetButton.setMinimumSize(new java.awt.Dimension(151, 33));
+        unqueueRetweetButton.setPreferredSize(new java.awt.Dimension(151, 33));
         unqueueRetweetButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 unqueueRetweetButtonActionPerformed(evt);
@@ -293,10 +302,10 @@ public class QueuingPanel extends TweetDisplayBasePanel {
                 .addGap(0, 0, 0)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(unqueueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(unqueueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(changeRetweetTimeButton)
-                        .addContainerGap(275, Short.MAX_VALUE))
+                        .addComponent(changeRetweetTimeButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(273, Short.MAX_VALUE))
                     .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jScrollPane27, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)))
         );
@@ -309,8 +318,8 @@ public class QueuingPanel extends TweetDisplayBasePanel {
                 .addComponent(jScrollPane27, javax.swing.GroupLayout.PREFERRED_SIZE, 217, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(unqueueRetweetButton)
-                    .addComponent(changeRetweetTimeButton)))
+                    .addComponent(unqueueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(changeRetweetTimeButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
         );
 
         jPanel2.setMaximumSize(new java.awt.Dimension(601, 288));
@@ -368,15 +377,6 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             tweetsTable.getColumnModel().getColumn(5).setMaxWidth(40);
         }
 
-        queueRetweetButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        queueRetweetButton.setText("Queue retweet");
-        queueRetweetButton.setToolTipText("");
-        queueRetweetButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                queueRetweetButtonActionPerformed(evt);
-            }
-        });
-
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         selectAccountComboBox.setModel(selectAccountBoxModel);
         selectAccountComboBox.setMaximumSize(new java.awt.Dimension(250, 26));
@@ -391,38 +391,75 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         jLabel1.setText("Retweet Queuing");
 
+        deleteTweetsFromTwitterButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        deleteTweetsFromTwitterButton.setText("Delete tweets from Twitter");
+        deleteTweetsFromTwitterButton.setMaximumSize(new java.awt.Dimension(259, 33));
+        deleteTweetsFromTwitterButton.setMinimumSize(new java.awt.Dimension(259, 33));
+        deleteTweetsFromTwitterButton.setPreferredSize(new java.awt.Dimension(259, 33));
+        deleteTweetsFromTwitterButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteTweetsFromTwitterButtonActionPerformed(evt);
+            }
+        });
+
+        deleteTweetsFromArtRetweeterButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        deleteTweetsFromArtRetweeterButton.setText("Delete tweets from ArtRetweeter");
+        deleteTweetsFromArtRetweeterButton.setMaximumSize(new java.awt.Dimension(265, 33));
+        deleteTweetsFromArtRetweeterButton.setMinimumSize(new java.awt.Dimension(265, 33));
+        deleteTweetsFromArtRetweeterButton.setPreferredSize(new java.awt.Dimension(265, 33));
+        deleteTweetsFromArtRetweeterButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteTweetsFromArtRetweeterButtonActionPerformed(evt);
+            }
+        });
+
+        queueRetweetButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        queueRetweetButton.setText("Queue Retweet");
+        queueRetweetButton.setMaximumSize(new java.awt.Dimension(147, 33));
+        queueRetweetButton.setMinimumSize(new java.awt.Dimension(147, 33));
+        queueRetweetButton.setPreferredSize(new java.awt.Dimension(147, 33));
+        queueRetweetButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                queueRetweetButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(0, 0, 0)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane26, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 598, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel2Layout.createSequentialGroup()
-                                .addComponent(jLabel1)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jLabel2)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(queueRetweetButton))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 77, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(0, 0, 0))
+                        .addComponent(jLabel1)
+                        .addGap(12, 12, 12)
+                        .addComponent(jLabel2)
+                        .addGap(6, 6, 6)
+                        .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGap(0, 0, 0)
+                        .addComponent(queueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 265, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 696, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(62, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(0, 0, 0)
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(selectAccountComboBox, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(6, 6, 6)
                 .addComponent(jScrollPane26, javax.swing.GroupLayout.PREFERRED_SIZE, 217, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(queueRetweetButton))
+                .addGap(6, 6, 6)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(queueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
@@ -431,7 +468,7 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(tweetImageScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(2, 2, 2)
@@ -440,11 +477,11 @@ public class QueuingPanel extends TweetDisplayBasePanel {
                         .addComponent(tweetImageScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(4, 4, 4)
                         .addComponent(tweetImageScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(layout.createSequentialGroup()
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(481, 481, 481)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(7, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -469,15 +506,10 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             if (!acc.equals(currentlySelectedAccount)) {
                 currentlySelectedAccount = acc;
                 refreshTweetsTable();
+                refreshQueueTable();
             }
         }
     }//GEN-LAST:event_selectAccountComboBoxActionPerformed
-
-    private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
-        queueRetweetButton.setEnabled(false);
-        GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount, false);
-        queueRetweetButton.setEnabled(true);
-    }//GEN-LAST:event_queueRetweetButtonActionPerformed
 
     private void unqueueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_unqueueRetweetButtonActionPerformed
         unqueueRetweetButton.setEnabled(false);
@@ -490,6 +522,22 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         changeRetweetTime();
         changeRetweetTimeButton.setEnabled(true);
     }//GEN-LAST:event_changeRetweetTimeButtonActionPerformed
+
+    private void deleteTweetsFromTwitterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetsFromTwitterButtonActionPerformed
+        deleteTweetsFromTwitterButton.setEnabled(false);
+        deleteTweetsFromTwitterButton.setEnabled(true);
+    }//GEN-LAST:event_deleteTweetsFromTwitterButtonActionPerformed
+
+    private void deleteTweetsFromArtRetweeterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetsFromArtRetweeterButtonActionPerformed
+        deleteTweetsFromArtRetweeterButton.setEnabled(false);
+        deleteTweetsFromArtRetweeterButton.setEnabled(true);
+    }//GEN-LAST:event_deleteTweetsFromArtRetweeterButtonActionPerformed
+
+    private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
+        queueRetweetButton.setEnabled(false);
+        GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount, false);
+        queueRetweetButton.setEnabled(true);
+    }//GEN-LAST:event_queueRetweetButtonActionPerformed
 
     private void changeRetweetTime() {
         GUIHelperMethods.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
@@ -538,8 +586,9 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        String query = "SELECT tweets.*,(SELECT COUNT(id) FROM retweets WHERE tweets.usertwitterid=retweets.retweetingusertwitterid) AS c "
-                + "FROM tweets WHERE usertwitterid=?";
+        String query = "SELECT tweets.*,(SELECT COUNT(id) FROM retweetrecords WHERE "
+                + "tweets.tweetid=retweetrecords.tweetid AND tweets.usertwitterid=retweetrecords.usertwitterid) AS numretweets"
+                + " FROM tweets WHERE tweets.usertwitterid=?";
         DBResponse resp = CoreDB.customQuerySelect(query, currentlySelectedAccount.getTwitterID());
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweets for this user from DB!";
@@ -552,7 +601,7 @@ public class QueuingPanel extends TweetDisplayBasePanel {
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
-            Long retweetCount = (Long) row.get("C");
+            Long retweetCount = (Long) row.get("NUMRETWEETS");
             String dateString = DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
             dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount(),
                 retweetCount});
@@ -561,6 +610,8 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton changeRetweetTimeButton;
+    private javax.swing.JButton deleteTweetsFromArtRetweeterButton;
+    private javax.swing.JButton deleteTweetsFromTwitterButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;

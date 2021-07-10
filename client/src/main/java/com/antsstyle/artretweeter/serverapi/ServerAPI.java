@@ -5,19 +5,23 @@
  */
 package com.antsstyle.artretweeter.serverapi;
 
+import com.antsstyle.artretweeter.configuration.MiscConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
+import com.antsstyle.artretweeter.datastructures.RetweetRecord;
 import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.main.ArtRetweeterMain;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +66,7 @@ public class ServerAPI {
                 RetweetQueueEntry entry = new RetweetQueueEntry()
                         .setTweetID(obj.get("tweetid").getAsLong())
                         .setRetweetingUserTwitterID(obj.get("retweetingusertwitterid").getAsLong())
-                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong()*1000));
+                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong() * 1000));
                 scheduledEntries.add(entry);
             }
         } else {
@@ -74,7 +78,7 @@ public class ServerAPI {
                 JsonObject obj = arr.get(i).getAsJsonObject();
                 RetweetQueueEntry entry = new RetweetQueueEntry()
                         .setTweetID(obj.get("tweetid").getAsLong())
-                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong()*1000))
+                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong() * 1000))
                         .setRetweetingUserTwitterID(obj.get("retweetingusertwitterid").getAsLong())
                         .setErrorCode(obj.get("errorcode").getAsInt())
                         .setFailReason(obj.get("failreason").getAsString());
@@ -84,6 +88,32 @@ public class ServerAPI {
             apiCallResult.getServerResponse().setStatusCode(StatusCode.ARTRETWEETER_SERVER_ERROR);
         }
         apiCallResult.getServerResponse().setReturnedObject(Pair.of(scheduledEntries, failedEntries));
+        return apiCallResult;
+    }
+
+    public static OperationResult getTweetRetweetStatus(Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.TWEET_RETWEET_STATUS, account);
+        if (!apiCallResult.wasSuccessful()) {
+            return apiCallResult;
+        }
+        ArrayList<RetweetRecord> retweetRecordsOnServer = new ArrayList<>();
+        JsonObject resp = apiCallResult.getServerResponse().getResponseJSONObject().get("dbresult").getAsJsonObject();
+        JsonElement retweetRecords = resp.get("retweetrecords");
+        if (retweetRecords.isJsonArray()) {
+            JsonArray arr = retweetRecords.getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonObject obj = arr.get(i).getAsJsonObject();
+                RetweetRecord record = new RetweetRecord()
+                        .setTweetID(obj.get("tweetid").getAsLong())
+                        .setUserTwitterID(account.getTwitterID())
+                        .setRetweetTime(new Timestamp(obj.get("rttime").getAsLong() * 1000));
+                retweetRecordsOnServer.add(record);
+            }
+        } else {
+            apiCallResult.getServerResponse().setStatusCode(StatusCode.ARTRETWEETER_SERVER_ERROR);
+        }
+        apiCallResult.getServerResponse().setReturnedObject(retweetRecordsOnServer);
         return apiCallResult;
     }
 
@@ -123,6 +153,13 @@ public class ServerAPI {
         Gson gson = new Gson();
         try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
+            if (MiscConfig.DEBUG_MODE) {
+                try ( PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString())) {
+                    Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+                    JsonObject obj = prettyGson.fromJson(jsonString, JsonObject.class);
+                    prettyGson.toJson(obj, pw);
+                }
+            }
             JsonObject responseJSON = gson.fromJson(jsonString, JsonObject.class);
             ServerResponse result = processArtRetweeterServerErrorResponse(responseJSON);
             EntityUtils.consume(entity);
@@ -150,7 +187,6 @@ public class ServerAPI {
         nameValuePairs.add(new BasicNameValuePair("user_auth_twitter_id", String.valueOf(account.getTwitterID())));
         nameValuePairs.add(new BasicNameValuePair("artretweeter_endpoint", endpoint.getEndpointName()));
         String url = ArtRetweeterMain.prop.getProperty("serverurl");
-        LOGGER.debug("URL: " + url);
         try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));

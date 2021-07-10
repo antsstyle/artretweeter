@@ -25,24 +25,24 @@ public class Account {
     private String tokenSecret;
     private Long twitterID;
     private String screenName;
-    private Long historicalMaxID;
-    private Long latestMaxID;
+    private Long maxID;
+    private Long sinceID;
 
-    public Long getLatestMaxID() {
-        return latestMaxID;
+    public Long getSinceID() {
+        return sinceID;
     }
 
-    public Account setLatestMaxID(Long latestMaxID) {
-        this.latestMaxID = latestMaxID;
+    public Account setSinceID(Long sinceID) {
+        this.sinceID = sinceID;
         return this;
     }
 
-    public Long getHistoricalMaxID() {
-        return historicalMaxID;
+    public Long getMaxID() {
+        return maxID;
     }
 
-    public Account setHistoricalMaxID(Long historicalMaxID) {
-        this.historicalMaxID = historicalMaxID;
+    public Account setMaxID(Long maxID) {
+        this.maxID = maxID;
         return this;
     }
 
