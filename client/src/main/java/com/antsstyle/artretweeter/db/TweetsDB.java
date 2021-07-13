@@ -71,6 +71,41 @@ public class TweetsDB {
         return CoreDB.runParameterisedUpdateBatch(TWEET_MERGE_QUERY, params);
     }
 
+    public static ArrayList<Long> getTweetIDsByDatabaseIDs(ArrayList<Integer> tweetDatabaseIDs) {
+        if (tweetDatabaseIDs.isEmpty()) {
+            return new ArrayList<>();
+        }
+        ArrayList<Object> params = new ArrayList<>(tweetDatabaseIDs);
+        Object[] paramsArray = params.toArray(new Object[params.size()]);
+        StringBuilder query = new StringBuilder("SELECT tweetid FROM tweets WHERE id IN (?");
+        for (int i = 0; i < params.size() - 1; i++) {
+            query = query.append(",?");
+        }
+        query.setLength(query.length() - 1);
+        query = query.append(")");
+        DBResponse resp = CoreDB.customQuerySelect(query.toString(), paramsArray);
+        if (!resp.wasSuccessful()) {
+            return null;
+        }
+        ArrayList<Long> tweetIDs = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
+        for (HashMap<String, Object> row : rows) {
+            tweetIDs.add((Long) row.get("TWEETID"));
+        }
+        return tweetIDs;
+    }
+
+    public static boolean deleteTweetsUsingDatabaseIDs(ArrayList<Integer> tweetDatabaseIDs, boolean deletedFromTwitter) {
+        if (tweetDatabaseIDs.isEmpty()) {
+            return true;
+        }
+        ArrayList<Long> tweetIDs = getTweetIDsByDatabaseIDs(tweetDatabaseIDs);
+        if (tweetIDs == null) {
+            return false;
+        }
+        return deleteTweets(tweetIDs, deletedFromTwitter);
+    }
+
     public static boolean deleteTweets(ArrayList<Long> tweetIDs, boolean deletedFromTwitter) {
         if (tweetIDs.isEmpty()) {
             return true;

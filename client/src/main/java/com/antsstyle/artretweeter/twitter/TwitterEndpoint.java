@@ -23,6 +23,7 @@ public enum TwitterEndpoint {
     OAUTH_ACCESS_TOKEN("oauth/access_token", "POST", false),
     OAUTH_INVALIDATE_TOKEN("oauth/invalidate_token", "POST", true),
     OAUTH_REQUEST_TOKEN("oauth/request_token", "POST", false),
+    STATUSES_DESTROY("statuses/destroy", "POST", true),
     STATUSES_LOOKUP("statuses/lookup", "GET", true),
     STATUSES_RETWEET("statuses/retweet", "POST", true),
     STATUSES_SHOW("statuses/show", "GET", true),

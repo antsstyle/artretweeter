@@ -44,12 +44,43 @@ public class ClientRefreshQueue implements Runnable {
 
     private static final Logger LOGGER = LogManager.getLogger(ClientRefreshQueue.class);
 
+    private static final ClientRefreshQueue queue = new ClientRefreshQueue();
+    private static Thread queueThread;
+    private boolean keepRunning = true;
+
+    private Calendar nextTweetScheduleCal;
+    private Calendar nextTweetValidationCal;
+    private Calendar nextTweetRetweetRecordRefreshCal;
+    private Calendar nextTweetRetrievalCal;
+
+    public static ClientRefreshQueue getInstance() {
+        return queue;
+    }
+
+    public void startQueue() {
+        queueThread = new Thread(queue);
+        queueThread.start();
+    }
+
+    public void refreshTimers() {
+        nextTweetScheduleCal = Calendar.getInstance();
+        nextTweetValidationCal = Calendar.getInstance();
+        nextTweetRetweetRecordRefreshCal = Calendar.getInstance();
+        nextTweetRetrievalCal = Calendar.getInstance();
+        queueThread.interrupt();
+    }
+
+    public void shutDown() {
+        keepRunning = false;
+        queueThread.interrupt();
+    }
+
     @Override
     public void run() {
-        Calendar nextTweetScheduleCal = getNextTweetScheduleStatusRefreshTime();
-        Calendar nextTweetValidationCal = getNextTweetValidationRefreshTime();
-        Calendar nextTweetRetweetRecordRefreshCal = getNextTweetRetweetRecordRefreshTime();
-        Calendar nextTweetRetrievalCal = getNextTweetRetrievalTime();
+        nextTweetScheduleCal = Calendar.getInstance();
+        nextTweetValidationCal = Calendar.getInstance();
+        nextTweetRetweetRecordRefreshCal = Calendar.getInstance();
+        nextTweetRetrievalCal = Calendar.getInstance();
         CachedVariable nextRefreshStatusTime = CachedVariableDB.getCachedVariableByName("artretweeter.nextstatusrefreshtime");
         if (nextRefreshStatusTime == null) {
             CachedVariableDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
@@ -80,7 +111,7 @@ public class ClientRefreshQueue implements Runnable {
             nextTweetRetrievalCal.setTimeInMillis(Long.valueOf(nextTweetRetrievalTime.getValue()));
         }
 
-        while (true) {
+        while (keepRunning) {
             if (nextTweetScheduleCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 refreshTweetScheduleStatus();
                 nextTweetScheduleCal = getNextTweetScheduleStatusRefreshTime();
@@ -99,14 +130,14 @@ public class ClientRefreshQueue implements Runnable {
             }
             if (nextTweetRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
                 GUI.getAccountsPanel().retrieveTweets(false);
-                nextTweetRetrievalCal = getNextTweetRetweetRecordRefreshTime();
+                nextTweetRetrievalCal = getNextTweetRetrievalTime();
                 CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
                         String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
             }
             try {
                 Thread.sleep(60 * 1000);
             } catch (Exception e) {
-                return;
+
             }
         }
     }
@@ -314,9 +345,4 @@ public class ClientRefreshQueue implements Runnable {
             GUI.getQueuingPanel().refreshTweetsTable();
         });
     }
-
-    private void getNewTweets() {
-
-    }
-
 }

@@ -39,16 +39,19 @@ public class HelpPanel extends javax.swing.JPanel {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         jLabel1.setText("Help & Information");
 
-        jLabel2.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel2.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel2.setText("User Limits - Retweeting");
 
+        jLabel3.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel3.setText("<html>The following limits apply to retweeting via this app:<br/><br/>       \n\n- You cannot schedule two retweets to be performed at the exact same time<br/>\n\n - You can retweet a maximum of two tweets in a 1 hour period <br/>      - You can retweet a maximum of ten tweets in a 24 hour period</html>");
 
+        jLabel4.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel4.setText("<html>The following limits apply to re-retweeting a tweet via this app (i.e. retweeting a tweet you've already retweeted before via this app)<br/><br/>\n \n     - You can only re-retweet a tweet once every 30 days <br/>\n     - You can only re-retweet a tweet three times per year</html>");
 
-        jLabel5.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel5.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel5.setText("User Limits - Re-retweeting a specific tweet");
 
+        jLabel6.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel6.setText("Attempting to queue a retweet that exceeds the above limits will result in the app showing an error.");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
@@ -83,6 +86,7 @@ public class HelpPanel extends javax.swing.JPanel {
                 .addContainerGap())
         );
 
+        jLabel8.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel8.setText("<html> Due to the limits set by the standard Twitter API, ArtRetweeter can only retrieve your last 3,200 tweets. \n<br/><br/>\nThis includes all tweets, whether they include images or not - so if you tweet a lot, you may find it can only retrieve a limited number of your art tweets.\n<br/><br/>\nIf that's the case for you, you can use the manual tweet addition button in the Collections panel to add older tweets from your account manually.\n\n</html>");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
@@ -95,11 +99,11 @@ public class HelpPanel extends javax.swing.JPanel {
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, 117, Short.MAX_VALUE)
+                .addComponent(jLabel8, javax.swing.GroupLayout.DEFAULT_SIZE, 133, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
-        jLabel7.setFont(new java.awt.Font("Dialog", 1, 14)); // NOI18N
+        jLabel7.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel7.setText("Twitter API Limits");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);

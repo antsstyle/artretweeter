@@ -276,6 +276,13 @@ public class RESTAPI {
         return opResult;
     }
 
+    public static OperationResult statusesDestroy(Long tweetID, Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));
+        OperationResult apiCallResult = apiCall(nvps, TwitterEndpoint.STATUSES_DESTROY, account);
+        return apiCallResult;
+    }
+
     public static OperationResult statusesRetweet(Long tweetID, Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("id", String.valueOf(tweetID)));

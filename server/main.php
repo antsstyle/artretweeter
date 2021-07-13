@@ -88,6 +88,9 @@ switch ($twitter_endpoint) {
     case "oauth/request_token":
         ArtRetweeter\oauthRequestToken();
         break;
+    case "statuses/destroy":
+        ArtRetweeter\statusesDestroy($userAuth);
+        break;
     case "statuses/lookup":
         ArtRetweeter\statusesLookup($userAuth);
         break;

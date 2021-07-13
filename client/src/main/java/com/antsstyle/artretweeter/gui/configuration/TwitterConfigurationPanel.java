@@ -40,20 +40,25 @@ public class TwitterConfigurationPanel extends ConfigurationSubPanel {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel1.setText("Automatic Tweet Retrieval");
 
+        jLabel2.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel2.setText("<html>ArtRetweeter can automatically check for new tweets from your accounts and download them at set intervals.</html>");
 
+        downloadTweetsAutomaticallyCheckBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         downloadTweetsAutomaticallyCheckBox.setText("Download tweets automatically");
         downloadTweetsAutomaticallyCheckBox.setToolTipText("");
         downloadTweetsAutomaticallyCheckBox.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         downloadTweetsAutomaticallyCheckBox.setHorizontalTextPosition(javax.swing.SwingConstants.RIGHT);
 
+        jLabel55.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel55.setText("Check for new tweets every:");
         jLabel55.setToolTipText("");
 
+        checkForNewTweetsFrequencyField.setFont(new java.awt.Font("Tahoma", 0, 12)); // NOI18N
         checkForNewTweetsFrequencyField.setMaximumSize(new java.awt.Dimension(99, 24));
         checkForNewTweetsFrequencyField.setMinimumSize(new java.awt.Dimension(99, 24));
         checkForNewTweetsFrequencyField.setPreferredSize(new java.awt.Dimension(99, 24));
 
+        checkForNewTweetsFrequencyCheckBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         checkForNewTweetsFrequencyCheckBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Minutes", "Hours", "Days" }));
         checkForNewTweetsFrequencyCheckBox.setMaximumSize(new java.awt.Dimension(97, 24));
         checkForNewTweetsFrequencyCheckBox.setMinimumSize(new java.awt.Dimension(97, 24));
@@ -67,17 +72,15 @@ public class TwitterConfigurationPanel extends ConfigurationSubPanel {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel1)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                                .addComponent(jLabel55)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(checkForNewTweetsFrequencyField, javax.swing.GroupLayout.PREFERRED_SIZE, 1, Short.MAX_VALUE))
-                            .addComponent(downloadTweetsAutomaticallyCheckBox, javax.swing.GroupLayout.Alignment.LEADING))
+                        .addComponent(jLabel55)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(checkForNewTweetsFrequencyCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(31, Short.MAX_VALUE))
+                        .addComponent(checkForNewTweetsFrequencyField, javax.swing.GroupLayout.PREFERRED_SIZE, 56, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(checkForNewTweetsFrequencyCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 629, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(downloadTweetsAutomaticallyCheckBox))
+                .addContainerGap(62, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -86,9 +89,9 @@ public class TwitterConfigurationPanel extends ConfigurationSubPanel {
                 .addComponent(jLabel1)
                 .addGap(12, 12, 12)
                 .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(downloadTweetsAutomaticallyCheckBox)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(12, 12, 12)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(checkForNewTweetsFrequencyField, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -111,7 +114,7 @@ public class TwitterConfigurationPanel extends ConfigurationSubPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(242, Short.MAX_VALUE))
+                .addContainerGap(241, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 

@@ -24,6 +24,10 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
     public MiscConfigurationPanel() {
         super(Config.miscConfig);
         initComponents();
+        chooseServerRequestDirectoryLabel.setText(
+                "Current path: ".concat(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString()));
+        chooseTwitterAPIRequestDirectoryLabel.setText(
+                "Current path: ".concat(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString()));
     }
 
     /**
@@ -37,17 +41,20 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
         enableDebugModeCheckBox = new javax.swing.JCheckBox();
         jLabel1 = new javax.swing.JLabel();
         chooseLastServerRequestFilePathButton = new javax.swing.JButton();
-        chooseDirectoryLabel = new javax.swing.JLabel();
+        chooseServerRequestDirectoryLabel = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         chooseLastTwitterAPIRequestFilePathButton = new javax.swing.JButton();
-        chooseDirectoryLabel1 = new javax.swing.JLabel();
+        chooseTwitterAPIRequestDirectoryLabel = new javax.swing.JLabel();
+        jLabel4 = new javax.swing.JLabel();
 
+        enableDebugModeCheckBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         enableDebugModeCheckBox.setText("Enable Debug Mode");
         enableDebugModeCheckBox.setToolTipText("");
         enableDebugModeCheckBox.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         enableDebugModeCheckBox.setHorizontalTextPosition(javax.swing.SwingConstants.RIGHT);
 
+        jLabel1.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel1.setText("Debug Mode");
 
         chooseLastServerRequestFilePathButton.setIcon(UIManager.getIcon("FileView.directoryIcon"));
@@ -60,12 +67,23 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
             }
         });
 
-        chooseDirectoryLabel.setText("Current path: none");
-        chooseDirectoryLabel.setPreferredSize(new java.awt.Dimension(400, 23));
+        chooseServerRequestDirectoryLabel.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        chooseServerRequestDirectoryLabel.setText("Current path: none");
+        chooseServerRequestDirectoryLabel.setMaximumSize(new java.awt.Dimension(627, 31));
+        chooseServerRequestDirectoryLabel.setMinimumSize(new java.awt.Dimension(627, 31));
+        chooseServerRequestDirectoryLabel.setPreferredSize(new java.awt.Dimension(627, 31));
 
-        jLabel2.setText("Set path for last server request file:");
+        jLabel2.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        jLabel2.setText("Set path for last server request file");
+        jLabel2.setMaximumSize(new java.awt.Dimension(266, 32));
+        jLabel2.setMinimumSize(new java.awt.Dimension(266, 32));
+        jLabel2.setPreferredSize(new java.awt.Dimension(266, 32));
 
-        jLabel3.setText("Set path for last Twitter API request file:");
+        jLabel3.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        jLabel3.setText("Set path for last Twitter API request file");
+        jLabel3.setMaximumSize(new java.awt.Dimension(266, 32));
+        jLabel3.setMinimumSize(new java.awt.Dimension(266, 32));
+        jLabel3.setPreferredSize(new java.awt.Dimension(266, 32));
 
         chooseLastTwitterAPIRequestFilePathButton.setIcon(UIManager.getIcon("FileView.directoryIcon"));
         chooseLastTwitterAPIRequestFilePathButton.setMaximumSize(new java.awt.Dimension(23, 23));
@@ -77,8 +95,14 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
             }
         });
 
-        chooseDirectoryLabel1.setText("Current path: none");
-        chooseDirectoryLabel1.setPreferredSize(new java.awt.Dimension(400, 23));
+        chooseTwitterAPIRequestDirectoryLabel.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        chooseTwitterAPIRequestDirectoryLabel.setText("Current path: none");
+        chooseTwitterAPIRequestDirectoryLabel.setMaximumSize(new java.awt.Dimension(627, 31));
+        chooseTwitterAPIRequestDirectoryLabel.setMinimumSize(new java.awt.Dimension(627, 31));
+        chooseTwitterAPIRequestDirectoryLabel.setPreferredSize(new java.awt.Dimension(627, 31));
+
+        jLabel4.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        jLabel4.setText("<html>When debug mode is enabled, the last requests made to the ArtRetweeter server and the Twitter API are logged to file.<html>");
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -89,43 +113,49 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(enableDebugModeCheckBox)
-                            .addComponent(jLabel1))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 239, Short.MAX_VALUE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(chooseLastTwitterAPIRequestFilePathButton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(chooseDirectoryLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 344, Short.MAX_VALUE))
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addComponent(chooseLastServerRequestFilePathButton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(chooseDirectoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)))))
-                .addContainerGap())
+                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(chooseLastTwitterAPIRequestFilePathButton, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(329, 329, 329))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel1)
+                                    .addComponent(enableDebugModeCheckBox))
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                            .addComponent(chooseServerRequestDirectoryLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(chooseTwitterAPIRequestDirectoryLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap())))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel1)
-                .addGap(15, 15, 15)
-                .addComponent(enableDebugModeCheckBox)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, 47, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(enableDebugModeCheckBox)
+                .addGap(27, 27, 27)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(chooseDirectoryLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(chooseLastServerRequestFilePathButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chooseServerRequestDirectoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(chooseDirectoryLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(chooseLastTwitterAPIRequestFilePathButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(84, Short.MAX_VALUE))
+                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chooseTwitterAPIRequestDirectoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 33, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
@@ -142,7 +172,7 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(222, Short.MAX_VALUE))
+                .addContainerGap(157, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
@@ -153,7 +183,8 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
         int result = fc.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath();
-            chooseDirectoryLabel.setText("Selected directory: ".concat(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString()));
+            chooseServerRequestDirectoryLabel.setText(
+                    "Current path: ".concat(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString()));
         }
     }//GEN-LAST:event_chooseLastServerRequestFilePathButtonActionPerformed
 
@@ -164,20 +195,22 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
         int result = fc.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath();
-            chooseDirectoryLabel.setText("Selected directory: ".concat(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString()));
+            chooseTwitterAPIRequestDirectoryLabel.setText(
+                    "Current path: ".concat(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString()));
         }
     }//GEN-LAST:event_chooseLastTwitterAPIRequestFilePathButtonActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JLabel chooseDirectoryLabel;
-    private javax.swing.JLabel chooseDirectoryLabel1;
     private javax.swing.JButton chooseLastServerRequestFilePathButton;
     private javax.swing.JButton chooseLastTwitterAPIRequestFilePathButton;
+    private javax.swing.JLabel chooseServerRequestDirectoryLabel;
+    private javax.swing.JLabel chooseTwitterAPIRequestDirectoryLabel;
     private javax.swing.JCheckBox enableDebugModeCheckBox;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPanel jPanel1;
     // End of variables declaration//GEN-END:variables
 

@@ -122,3 +122,17 @@ function statusesLookup($userAuth) {
             $userAuth['access_token'], $userAuth['access_token_secret']);
     queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth);
 }
+
+function statusesDestroy($userAuth) {
+    $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+
+    $params['id'] = $id;
+
+    $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
+            $userAuth['access_token'], $userAuth['access_token_secret']);
+    queryTwitterUserAuth($connection, "statuses/destroy", "POST", $params, $userAuth);
+}

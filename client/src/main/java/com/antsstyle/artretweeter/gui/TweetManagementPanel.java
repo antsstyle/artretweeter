@@ -9,9 +9,14 @@ import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.db.ConfigDB;
+import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.DefaultTableModel;
@@ -83,6 +88,7 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
         addTweetManuallyButton = new javax.swing.JButton();
         addTweetManuallyStatusLabel = new javax.swing.JLabel();
         deleteTweetsFromArtRetweeterButton = new javax.swing.JButton();
+        deleteTweetsFromTwitterButton = new javax.swing.JButton();
 
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         jLabel1.setText("Tweet Management");
@@ -118,6 +124,20 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
         tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         jScrollPane26.setViewportView(tweetsTable);
+        if (tweetsTable.getColumnModel().getColumnCount() > 0) {
+            tweetsTable.getColumnModel().getColumn(0).setMinWidth(50);
+            tweetsTable.getColumnModel().getColumn(0).setPreferredWidth(50);
+            tweetsTable.getColumnModel().getColumn(0).setMaxWidth(50);
+            tweetsTable.getColumnModel().getColumn(2).setMinWidth(120);
+            tweetsTable.getColumnModel().getColumn(2).setPreferredWidth(120);
+            tweetsTable.getColumnModel().getColumn(2).setMaxWidth(120);
+            tweetsTable.getColumnModel().getColumn(3).setMinWidth(70);
+            tweetsTable.getColumnModel().getColumn(3).setPreferredWidth(70);
+            tweetsTable.getColumnModel().getColumn(3).setMaxWidth(70);
+            tweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
+            tweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
+            tweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
+        }
 
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         selectAccountComboBox.setModel(selectAccountBoxModel);
@@ -221,6 +241,18 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
             }
         });
 
+        deleteTweetsFromTwitterButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        deleteTweetsFromTwitterButton.setText("Delete tweets from Twitter");
+        deleteTweetsFromTwitterButton.setToolTipText("");
+        deleteTweetsFromTwitterButton.setMaximumSize(new java.awt.Dimension(278, 33));
+        deleteTweetsFromTwitterButton.setMinimumSize(new java.awt.Dimension(278, 33));
+        deleteTweetsFromTwitterButton.setPreferredSize(new java.awt.Dimension(278, 33));
+        deleteTweetsFromTwitterButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteTweetsFromTwitterButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -246,7 +278,10 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
                         .addComponent(tweetImageScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(4, 4, 4)
                         .addComponent(tweetImageScrollPane4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -262,7 +297,9 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
                     .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addGap(6, 6, 6)
-                .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(tweetImageScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -325,16 +362,76 @@ public class TweetManagementPanel extends TweetDisplayBasePanel {
 
     private void deleteTweetsFromArtRetweeterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetsFromArtRetweeterButtonActionPerformed
         deleteTweetsFromArtRetweeterButton.setEnabled(false);
-
+        deleteTweetsFromArtRetweeter();
         deleteTweetsFromArtRetweeterButton.setEnabled(true);
     }//GEN-LAST:event_deleteTweetsFromArtRetweeterButtonActionPerformed
 
+    private void deleteTweetsFromTwitterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteTweetsFromTwitterButtonActionPerformed
+        deleteTweetsFromTwitterButton.setEnabled(false);
+        deleteTweetsFromTwitter();
+        deleteTweetsFromTwitterButton.setEnabled(true);
+    }//GEN-LAST:event_deleteTweetsFromTwitterButtonActionPerformed
+
+    private void deleteTweetsFromArtRetweeter() {
+        int[] rows = tweetsTable.getSelectedRows();
+        if (rows.length == 0) {
+            return;
+        }
+        Integer[] modelRows = new Integer[rows.length];
+        for (int i = 0; i < rows.length; i++) {
+            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+        }
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        ArrayList<Integer> ids = new ArrayList<>();
+        for (int modelRow : modelRows) {
+            ids.add((Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
+        }
+        TweetsDB.deleteTweetsUsingDatabaseIDs(ids, false);
+        refreshTweetsTable();
+    }
+
+    private void deleteTweetsFromTwitter() {
+        int[] rows = tweetsTable.getSelectedRows();
+        if (rows.length == 0) {
+            return;
+        }
+        Integer[] modelRows = new Integer[rows.length];
+        for (int i = 0; i < rows.length; i++) {
+            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+        }
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        ArrayList<Integer> ids = new ArrayList<>();
+        for (int modelRow : modelRows) {
+            ids.add((Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
+        }
+        ArrayList<Long> tweetIDs = TweetsDB.getTweetIDsByDatabaseIDs(ids);
+        if (tweetIDs == null) {
+            String msg = "Error converting internal database IDs.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+            return;
+        }
+        int errorCount = 0;
+        for (Long tweetID : tweetIDs) {
+            OperationResult res = RESTAPI.statusesDestroy(tweetID, currentlySelectedAccount);
+            if (!res.wasSuccessful()) {
+                errorCount++;
+            }
+        }
+        if (errorCount > 0) {
+            String msg = String.valueOf(errorCount) + " tweets failed to delete correctly.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            LOGGER.error(msg);
+        }
+        refreshTweetsTable();
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addTweetManuallyButton;
     private javax.swing.JLabel addTweetManuallyStatusLabel;
     private javax.swing.JTextField addTweetManuallyTextField;
     private javax.swing.JButton deleteTweetsFromArtRetweeterButton;
+    private javax.swing.JButton deleteTweetsFromTwitterButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;

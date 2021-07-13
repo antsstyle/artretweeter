@@ -65,8 +65,7 @@ public class ArtRetweeterMain {
             GUI.getInstance()
                     .setVisible(true);
         });
-        Thread queue = new Thread(new ClientRefreshQueue());
-        queue.start();
+        ClientRefreshQueue.getInstance().startQueue();
     }
 
 }
