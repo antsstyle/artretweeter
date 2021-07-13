@@ -97,7 +97,7 @@ function getQueueStatusInDB($userAuthTwitterID) {
         $returnArray['scheduledretweets'] = $scheduledRetweetsStmt->fetchAll();
     }
     $failedRetweetsStmt = $GLOBALS['databaseConnection']->prepare("SELECT retweetingusertwitterid,"
-            . "tweetid,UNIX_TIMESTAMP(retweettime) AS rttime FROM failedretweets WHERE retweetingusertwitterid=?");
+            . "tweetid,UNIX_TIMESTAMP(retweettime) AS rttime,errorcode,failreason FROM failedretweets WHERE retweetingusertwitterid=?");
     $failTableSuccess = $failedRetweetsStmt->execute([$userAuthTwitterID]);
     if (!$failTableSuccess) {
         $returnArray['failedretweets'] = false;

@@ -26,14 +26,14 @@ public class APComboBoxUI extends BasicComboBoxUI {
         super();
         this.box = box;
         box.setOpaque(true);
-        box.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-        box.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+        box.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+        box.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
     }
 
     protected ComboBoxEditor createEditor() {
         ComboBoxEditor editor = super.createEditor();
-        editor.getEditorComponent().setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-        editor.getEditorComponent().setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+        editor.getEditorComponent().setBackground(GUIConfig.WINDOW_BG_COLOUR);
+        editor.getEditorComponent().setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         return editor;
     }
 
@@ -41,8 +41,8 @@ public class APComboBoxUI extends BasicComboBoxUI {
     protected JButton createArrowButton() {
         return new BasicArrowButton(
                 BasicArrowButton.SOUTH,
-                GUIConfig.JBUTTON_BG_COLOUR, GUIConfig.JLABEL_BG_COLOUR,
-                GUIConfig.JLABEL_BG_COLOUR, GUIConfig.JLABEL_BG_COLOUR);
+                GUIConfig.JBUTTON_BG_COLOUR, GUIConfig.WINDOW_BG_COLOUR,
+                GUIConfig.WINDOW_BG_COLOUR, GUIConfig.WINDOW_BG_COLOUR);
     }
 
 }

@@ -15,6 +15,7 @@ import com.antsstyle.artretweeter.db.DBResponseCode;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.db.TweetsDB;
+import com.antsstyle.artretweeter.gui.configuration.ColourPreviewLabel;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.ImageTools;
 import java.awt.Color;
@@ -71,6 +72,20 @@ public class GUIHelperMethods {
 
     private static final HashMap<JComponent, Timer> timerMap = new HashMap<>();
 
+    public static void setOppositeColourDashedBorder(JLabel label) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            Color color = label.getBackground();
+            Color opposite = new Color(255 - color.getRed(), 255 - color.getGreen(), 255 - color.getBlue());
+            label.setBorder(BorderFactory.createDashedBorder(opposite));
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                Color color = label.getBackground();
+                Color opposite = new Color(255 - color.getRed(), 255 - color.getGreen(), 255 - color.getBlue());
+                label.setBorder(BorderFactory.createDashedBorder(opposite));
+            });
+        }
+    }
+
     public static void setAllGUIColours() {
         UIManager.put("ScrollBar.shadow", GUIConfig.JBUTTON_BG_COLOUR);
         UIManager.put("ScrollBar.thumb", GUIConfig.JBUTTON_BG_COLOUR);
@@ -124,9 +139,9 @@ public class GUIHelperMethods {
     public static void setComponentColour(Component c) {
         if (c instanceof JScrollPane) {
             JScrollPane scrollPane = (JScrollPane) c;
-            scrollPane.setBackground(GUIConfig.JLABEL_BG_COLOUR);
+            scrollPane.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             scrollPane.getVerticalScrollBar().setOpaque(true);
-            scrollPane.getVerticalScrollBar().setBackground(GUIConfig.JLABEL_BG_COLOUR);
+            scrollPane.getVerticalScrollBar().setBackground(GUIConfig.WINDOW_BG_COLOUR);
             scrollPane.getVerticalScrollBar().setUI(new BasicScrollBarUI() {
                 @Override
                 protected void configureScrollBarColors() {
@@ -135,34 +150,34 @@ public class GUIHelperMethods {
             });
         } else if (c instanceof JComboBox) {
             JComboBox comboBox = (JComboBox) c;
-            c.getParent().setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            c.getParent().setBackground(GUIConfig.WINDOW_BG_COLOUR);
             comboBox.setOpaque(true);
             APComboBoxUI ui = new APComboBoxUI(comboBox);
             comboBox.setUI(ui);
         } else if (c instanceof JRadioButton) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             c.setForeground(GUIConfig.JBUTTON_FONT_COLOUR);
         } else if (c instanceof JTable) {
             JTable table = (JTable) c;
-            table.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-            table.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            table.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            table.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
             JViewport parent = (JViewport) table.getParent();
-            parent.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            parent.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             table.getTableHeader().setOpaque(false);
             table.getTableHeader().setBackground(GUIConfig.JBUTTON_BG_COLOUR);
             table.getTableHeader().setForeground(GUIConfig.JBUTTON_FONT_COLOUR);
         } else if (c instanceof JTabbedPane) {
             JTabbedPane tabbedPane = (JTabbedPane) c;
             int count = tabbedPane.getTabCount();
-            tabbedPane.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-            tabbedPane.setForeground(GUIConfig.CONTAINER_BG_COLOUR);
+            tabbedPane.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            tabbedPane.setForeground(GUIConfig.WINDOW_BG_COLOUR);
             for (int i = 0; i < count; i++) {
                 tabbedPane.setBackgroundAt(i, Color.BLUE);
             }
         } else if (c instanceof JPanel) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
         } else if (c instanceof WWButton) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             c.setForeground(GUIConfig.JBUTTON_FONT_COLOUR);
         } else if (c instanceof JButton) {
             c.setBackground(GUIConfig.JBUTTON_BG_COLOUR);
@@ -171,24 +186,24 @@ public class GUIHelperMethods {
             //button.setContentAreaFilled(false);
             button.setUI(new APButtonUI());
             button.setBorder(BorderFactory.createRaisedBevelBorder());
-        } else if (c instanceof JLabel) {
+        } else if (c instanceof JLabel && !(c instanceof ColourPreviewLabel)) {
             JLabel label = (JLabel) c;
-            label.setBackground(GUIConfig.JLABEL_BG_COLOUR);
-            label.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            label.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            label.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
             label.setOpaque(true);
         } else if (c instanceof JToolBar) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
         } else if (c instanceof JCheckBox) {
             JCheckBox checkBox = (JCheckBox) c;
-            checkBox.setBackground(GUIConfig.JLABEL_BG_COLOUR);
-            checkBox.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            checkBox.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            checkBox.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
             checkBox.setOpaque(true);
         } else if (c instanceof JTextArea) {
-            c.setBackground(GUIConfig.JLABEL_BG_COLOUR);
-            c.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         } else if (c instanceof JTextField) {
-            c.setBackground(GUIConfig.JLABEL_BG_COLOUR);
-            c.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         } else if (c instanceof JToggleButton) {
             Color oppositeColor = new Color(255 - GUIConfig.JBUTTON_BG_COLOUR.getRed(),
                     255 - GUIConfig.JBUTTON_BG_COLOUR.getGreen(), 255 - GUIConfig.JBUTTON_BG_COLOUR.getBlue());
@@ -215,14 +230,14 @@ public class GUIHelperMethods {
                 }
             });
         } else if (c instanceof JList) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-            c.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         } else if (c instanceof JDialog) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-            c.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         } else if (c instanceof JOptionPane) {
-            c.setBackground(GUIConfig.CONTAINER_BG_COLOUR);
-            c.setForeground(GUIConfig.JLABEL_FONT_COLOUR);
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         }
     }
 
@@ -614,7 +629,7 @@ public class GUIHelperMethods {
     }
 
     public static void setTemporaryLabelText(JLabel label, String message) {
-        setTemporaryLabelText(label, GUIConfig.JLABEL_FONT_COLOUR, message);
+        setTemporaryLabelText(label, GUIConfig.WINDOW_FONT_COLOUR, message);
     }
 
     public static void setTemporaryLabelText(JLabel label, Color color, String message) {

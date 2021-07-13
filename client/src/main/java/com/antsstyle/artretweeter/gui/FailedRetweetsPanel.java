@@ -6,11 +6,13 @@
 package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -30,24 +32,13 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
     private static final Logger LOGGER = LogManager.getLogger(FailedRetweetsPanel.class);
 
-    private final DefaultComboBoxModel selectAccountBoxModel = new DefaultComboBoxModel();
-    private Account currentlySelectedAccount = null;
-
-    private boolean noAccountsInBoxModel() {
-        if (selectAccountBoxModel.getSize() == 0) {
-            return true;
-        } else if (selectAccountBoxModel.getSize() == 1) {
-            Account account = (Account) selectAccountBoxModel.getSelectedItem();
-            return (account.equals(NO_ACCOUNTS) || account.equals(DB_ERROR_ACCOUNT));
-        }
-        return false;
-    }
-
     /**
      * Creates new form FailedTweetsPanel
      */
     public FailedRetweetsPanel() {
         initComponents();
+        mainSelectAccountComboBox = selectAccountComboBox;
+        mainTweetsTable = tweetsTable;
     }
 
     public void initialise() {
@@ -104,17 +95,23 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         selectAccountComboBox.setEnabled(true);
     }
 
+    @Override
     public void refreshTweetsTable() {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        DBResponse resp = CoreDB.selectFromTable(DBTable.FAILEDRETWEETS,
-                new String[]{"retweetingusertwitterid"},
-                new Object[]{currentlySelectedAccount.getTwitterID()});
+        String query = "SELECT failedretweets.id,failedretweets.retweettime,tweets.fulltweettext,"
+                + "failedretweets.errorcode,failedretweets.failreason,tweets.id AS internaltweetid "
+                + "FROM failedretweets LEFT JOIN tweets ON failedretweets.tweetid = tweets.tweetid "
+                + "WHERE retweetingusertwitterid=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, currentlySelectedAccount.getTwitterID());
         if (!resp.wasSuccessful()) {
             String msg = "Failed to retrieve tweets for this user from DB!";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             LOGGER.error(msg);
+            return;
+        }
+        if (resp.getReturnedRows().isEmpty()) {
             return;
         }
         SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -122,9 +119,15 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         dtm.setRowCount(0);
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
-            TweetHolder tweet = ResultSetConversion.getTweet(row);
-            String dateString = DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
-            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount()});
+            Integer entryID = (Integer) row.get("ID");
+            Integer internalTweetID = (Integer) row.get("INTERNALTWEETID");
+            Timestamp retweetTime = (Timestamp) row.get("RETWEETTIME");
+            String fullTweetText = (String) row.get("FULLTWEETTEXT");
+            Integer errorCode = (Integer) row.get("ERRORCODE");
+            String failReason = (String) row.get("FAILREASON");
+
+            String dateString = DATETIME_FORMAT.format(new Date(retweetTime.getTime()));
+            dtm.addRow(new Object[]{internalTweetID, entryID, fullTweetText, dateString, errorCode, failReason});
         }
     }
 
@@ -169,14 +172,14 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
             },
             new String [] {
-                "ID", "Tweet Text", "Date Posted", "Error Code", "Fail Reason"
+                "ID", "Failed Retweet ID", "Tweet Text", "Date Attempted", "Error Code", "Fail Reason"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Long.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Object.class
+                java.lang.Integer.class, java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Object.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false
+                false, false, false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -191,18 +194,21 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane26.setViewportView(tweetsTable);
         if (tweetsTable.getColumnModel().getColumnCount() > 0) {
-            tweetsTable.getColumnModel().getColumn(0).setMinWidth(50);
-            tweetsTable.getColumnModel().getColumn(0).setPreferredWidth(50);
-            tweetsTable.getColumnModel().getColumn(0).setMaxWidth(50);
-            tweetsTable.getColumnModel().getColumn(1).setMinWidth(300);
-            tweetsTable.getColumnModel().getColumn(1).setPreferredWidth(300);
-            tweetsTable.getColumnModel().getColumn(1).setMaxWidth(300);
-            tweetsTable.getColumnModel().getColumn(2).setMinWidth(120);
-            tweetsTable.getColumnModel().getColumn(2).setPreferredWidth(120);
-            tweetsTable.getColumnModel().getColumn(2).setMaxWidth(120);
-            tweetsTable.getColumnModel().getColumn(3).setMinWidth(70);
-            tweetsTable.getColumnModel().getColumn(3).setPreferredWidth(70);
-            tweetsTable.getColumnModel().getColumn(3).setMaxWidth(70);
+            tweetsTable.getColumnModel().getColumn(0).setMinWidth(60);
+            tweetsTable.getColumnModel().getColumn(0).setPreferredWidth(60);
+            tweetsTable.getColumnModel().getColumn(0).setMaxWidth(60);
+            tweetsTable.getColumnModel().getColumn(1).setMinWidth(120);
+            tweetsTable.getColumnModel().getColumn(1).setPreferredWidth(120);
+            tweetsTable.getColumnModel().getColumn(1).setMaxWidth(120);
+            tweetsTable.getColumnModel().getColumn(2).setMinWidth(300);
+            tweetsTable.getColumnModel().getColumn(2).setPreferredWidth(300);
+            tweetsTable.getColumnModel().getColumn(2).setMaxWidth(300);
+            tweetsTable.getColumnModel().getColumn(3).setMinWidth(120);
+            tweetsTable.getColumnModel().getColumn(3).setPreferredWidth(120);
+            tweetsTable.getColumnModel().getColumn(3).setMaxWidth(120);
+            tweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
+            tweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
+            tweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
         }
 
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
@@ -360,7 +366,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
             return;
         }
         int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Failed Retweet ID");
         Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
         CoreDB.deleteFromTable(DBTable.FAILEDRETWEETS,
                 new String[]{"id"},

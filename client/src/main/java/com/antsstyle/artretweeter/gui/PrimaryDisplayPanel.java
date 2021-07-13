@@ -39,12 +39,16 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         jSeparator3 = new javax.swing.JToolBar.Separator();
         goToAccountsButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator1 = new javax.swing.JToolBar.Separator();
+        goToTweetManagementButton = new com.antsstyle.artretweeter.gui.WWButton();
+        jSeparator7 = new javax.swing.JToolBar.Separator();
         goToTweetsButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator2 = new javax.swing.JToolBar.Separator();
         goToRetweetQueuingButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator4 = new javax.swing.JToolBar.Separator();
         goToFailedRetweetsButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator5 = new javax.swing.JToolBar.Separator();
+        goToConfigurationPanel = new com.antsstyle.artretweeter.gui.WWButton();
+        jSeparator8 = new javax.swing.JToolBar.Separator();
         goToHelpAndInfoButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator6 = new javax.swing.JToolBar.Separator();
 
@@ -78,6 +82,19 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         });
         mainMenuToolBar.add(goToAccountsButton);
         mainMenuToolBar.add(jSeparator1);
+
+        goToTweetManagementButton.setText("Tweet Management");
+        goToTweetManagementButton.setFocusable(false);
+        goToTweetManagementButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        goToTweetManagementButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        goToTweetManagementButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        goToTweetManagementButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                goToTweetManagementButtonActionPerformed(evt);
+            }
+        });
+        mainMenuToolBar.add(goToTweetManagementButton);
+        mainMenuToolBar.add(jSeparator7);
 
         goToTweetsButton.setText("Collections");
         goToTweetsButton.setToolTipText("");
@@ -120,6 +137,20 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         });
         mainMenuToolBar.add(goToFailedRetweetsButton);
         mainMenuToolBar.add(jSeparator5);
+
+        goToConfigurationPanel.setText("Configuration");
+        goToConfigurationPanel.setToolTipText("");
+        goToConfigurationPanel.setFocusable(false);
+        goToConfigurationPanel.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        goToConfigurationPanel.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        goToConfigurationPanel.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        goToConfigurationPanel.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                goToConfigurationPanelActionPerformed(evt);
+            }
+        });
+        mainMenuToolBar.add(goToConfigurationPanel);
+        mainMenuToolBar.add(jSeparator8);
 
         goToHelpAndInfoButton.setText("Help & Info");
         goToHelpAndInfoButton.setToolTipText("");
@@ -171,13 +202,23 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         GUI.getInstance().switchPanels(GUI.getHelpPanel());
     }//GEN-LAST:event_goToHelpAndInfoButtonActionPerformed
 
+    private void goToTweetManagementButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToTweetManagementButtonActionPerformed
+        GUI.getInstance().switchPanels(GUI.getTweetManagementPanel());
+    }//GEN-LAST:event_goToTweetManagementButtonActionPerformed
+
+    private void goToConfigurationPanelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToConfigurationPanelActionPerformed
+        GUI.getInstance().switchPanels(GUI.getConfigurationPanel());
+    }//GEN-LAST:event_goToConfigurationPanelActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel displayAreaPanel;
     private com.antsstyle.artretweeter.gui.WWButton goToAccountsButton;
+    private com.antsstyle.artretweeter.gui.WWButton goToConfigurationPanel;
     private com.antsstyle.artretweeter.gui.WWButton goToFailedRetweetsButton;
     private com.antsstyle.artretweeter.gui.WWButton goToHelpAndInfoButton;
     private com.antsstyle.artretweeter.gui.WWButton goToRetweetQueuingButton;
+    private com.antsstyle.artretweeter.gui.WWButton goToTweetManagementButton;
     private com.antsstyle.artretweeter.gui.WWButton goToTweetsButton;
     private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JToolBar.Separator jSeparator2;
@@ -185,6 +226,8 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
     private javax.swing.JToolBar.Separator jSeparator4;
     private javax.swing.JToolBar.Separator jSeparator5;
     private javax.swing.JToolBar.Separator jSeparator6;
+    private javax.swing.JToolBar.Separator jSeparator7;
+    private javax.swing.JToolBar.Separator jSeparator8;
     protected javax.swing.JToolBar mainMenuToolBar;
     // End of variables declaration//GEN-END:variables
 }

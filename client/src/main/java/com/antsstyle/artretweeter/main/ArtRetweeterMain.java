@@ -5,12 +5,11 @@
  */
 package com.antsstyle.artretweeter.main;
 
+import com.antsstyle.artretweeter.configuration.Config;
 import com.antsstyle.artretweeter.configuration.MiscConfig;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.gui.GUI;
-import com.antsstyle.artretweeter.gui.GUIHelperMethods;
 import com.antsstyle.artretweeter.queues.ClientRefreshQueue;
-import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.io.FileReader;
 import java.util.Properties;
 import javax.swing.JOptionPane;
@@ -60,12 +59,12 @@ public class ArtRetweeterMain {
         }
 
         CoreDB.initialise();
+        Config.initialise();
         GUI.preInitialisation();
         java.awt.EventQueue.invokeLater(() -> {
             GUI.getInstance()
                     .setVisible(true);
         });
-
         Thread queue = new Thread(new ClientRefreshQueue());
         queue.start();
     }

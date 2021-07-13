@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.db;
 
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.CachedVariable;
 import com.antsstyle.artretweeter.datastructures.ConfigItem;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
@@ -21,14 +22,21 @@ import java.util.HashMap;
  * @author antss
  */
 public class ResultSetConversion {
-    
+
     public static ConfigItem getConfigItem(HashMap<String, Object> row) {
         ConfigItem item = new ConfigItem()
                 .setName((String) row.get("NAME"))
                 .setValue((String) row.get("VALUE"));
         return item;
     }
-    
+
+    public static CachedVariable getCachedVariable(HashMap<String, Object> row) {
+        CachedVariable item = new CachedVariable()
+                .setName((String) row.get("NAME"))
+                .setValue((String) row.get("VALUE"));
+        return item;
+    }
+
     public static RetweetQueueEntry getRetweetQueueEntry(HashMap<String, Object> row) {
         RetweetQueueEntry entry = new RetweetQueueEntry()
                 .setId((Integer) row.get("ID"))
@@ -37,7 +45,7 @@ public class ResultSetConversion {
                 .setTweetID((Long) row.get("TWEETID"));
         return entry;
     }
-    
+
     public static RetweetQueueEntry getFailedRetweetQueueEntry(HashMap<String, Object> row) {
         RetweetQueueEntry entry = new RetweetQueueEntry()
                 .setId((Integer) row.get("ID"))
@@ -51,6 +59,7 @@ public class ResultSetConversion {
 
     /**
      * Note this method does not hydrate the tweets list for the collection.
+     *
      * @param row The database result row.
      * @return A TwitterCollectionHolder object representing the collection.
      */

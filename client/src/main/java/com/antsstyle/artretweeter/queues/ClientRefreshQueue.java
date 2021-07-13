@@ -5,7 +5,9 @@
  */
 package com.antsstyle.artretweeter.queues;
 
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.CachedVariable;
 import com.antsstyle.artretweeter.datastructures.ConfigItem;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
@@ -13,6 +15,7 @@ import com.antsstyle.artretweeter.datastructures.RetweetRecord;
 import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
+import com.antsstyle.artretweeter.db.CachedVariableDB;
 import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
@@ -46,44 +49,59 @@ public class ClientRefreshQueue implements Runnable {
         Calendar nextTweetScheduleCal = getNextTweetScheduleStatusRefreshTime();
         Calendar nextTweetValidationCal = getNextTweetValidationRefreshTime();
         Calendar nextTweetRetweetRecordRefreshCal = getNextTweetRetweetRecordRefreshTime();
-        ConfigItem nextRefreshStatusTime = ConfigDB.getConfigItemByName("artretweeter.nextstatusrefreshtime");
+        Calendar nextTweetRetrievalCal = getNextTweetRetrievalTime();
+        CachedVariable nextRefreshStatusTime = CachedVariableDB.getCachedVariableByName("artretweeter.nextstatusrefreshtime");
         if (nextRefreshStatusTime == null) {
-            ConfigDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
+            CachedVariableDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
         } else {
             nextTweetScheduleCal.setTimeInMillis(Long.valueOf(nextRefreshStatusTime.getValue()));
         }
 
-        ConfigItem nextTweetValidationTime = ConfigDB.getConfigItemByName("artretweeter.nexttweetvalidationtime");
+        CachedVariable nextTweetValidationTime = CachedVariableDB.getCachedVariableByName("artretweeter.nexttweetvalidationtime");
         if (nextTweetValidationTime == null) {
-            ConfigDB.updateConfigItem("artretweeter.nexttweetvalidationtime", String.valueOf(nextTweetValidationCal.getTimeInMillis()));
+            CachedVariableDB.updateConfigItem("artretweeter.nexttweetvalidationtime", String.valueOf(nextTweetValidationCal.getTimeInMillis()));
         } else {
             nextTweetValidationCal.setTimeInMillis(Long.valueOf(nextTweetValidationTime.getValue()));
         }
 
-        ConfigItem nextTweetRetweetRecordRefreshTime = ConfigDB.getConfigItemByName("artretweeter.nexttweetretweetrecordrefreshtime");
+        CachedVariable nextTweetRetweetRecordRefreshTime = CachedVariableDB.getCachedVariableByName("artretweeter.nexttweetretweetrecordrefreshtime");
         if (nextTweetRetweetRecordRefreshTime == null) {
-            ConfigDB.updateConfigItem("artretweeter.nexttweetretweetrecordrefreshtime",
+            CachedVariableDB.updateConfigItem("artretweeter.nexttweetretweetrecordrefreshtime",
                     String.valueOf(nextTweetRetweetRecordRefreshCal.getTimeInMillis()));
         } else {
             nextTweetRetweetRecordRefreshCal.setTimeInMillis(Long.valueOf(nextTweetRetweetRecordRefreshTime.getValue()));
+        }
+
+        CachedVariable nextTweetRetrievalTime = CachedVariableDB.getCachedVariableByName("artretweeter.nexttweetretrievaltime");
+        if (nextTweetRetrievalTime == null) {
+            CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
+                    String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
+        } else {
+            nextTweetRetrievalCal.setTimeInMillis(Long.valueOf(nextTweetRetrievalTime.getValue()));
         }
 
         while (true) {
             if (nextTweetScheduleCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 refreshTweetScheduleStatus();
                 nextTweetScheduleCal = getNextTweetScheduleStatusRefreshTime();
-                ConfigDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
+                CachedVariableDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
             }
             if (nextTweetValidationCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 RESTAPI.validateStoredTweets();
                 nextTweetValidationCal = getNextTweetValidationRefreshTime();
-                ConfigDB.updateConfigItem("artretweeter.nexttweetvalidationtime", String.valueOf(nextTweetValidationCal.getTimeInMillis()));
+                CachedVariableDB.updateConfigItem("artretweeter.nexttweetvalidationtime", String.valueOf(nextTweetValidationCal.getTimeInMillis()));
             }
             if (nextTweetRetweetRecordRefreshCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 refreshTweetRetweetCounts();
                 nextTweetRetweetRecordRefreshCal = getNextTweetRetweetRecordRefreshTime();
-                ConfigDB.updateConfigItem("artretweeter.nexttweetretweetrecordrefreshtime",
+                CachedVariableDB.updateConfigItem("artretweeter.nexttweetretweetrecordrefreshtime",
                         String.valueOf(nextTweetRetweetRecordRefreshCal.getTimeInMillis()));
+            }
+            if (nextTweetRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
+                GUI.getAccountsPanel().retrieveTweets(false);
+                nextTweetRetrievalCal = getNextTweetRetweetRecordRefreshTime();
+                CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
+                        String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
             }
             try {
                 Thread.sleep(60 * 1000);
@@ -91,6 +109,19 @@ public class ClientRefreshQueue implements Runnable {
                 return;
             }
         }
+    }
+
+    private Calendar getNextTweetRetrievalTime() {
+        Calendar cal = Calendar.getInstance();
+        Integer timeFreq = TwitterConfig.CHECK_NEW_TWEETS_FREQUENCY;
+        if (TwitterConfig.CHECK_NEW_TWEETS_FREQUENCY_TIME_UNITS.toLowerCase().equals("minutes")) {
+            cal.add(Calendar.MINUTE, timeFreq);
+        } else if (TwitterConfig.CHECK_NEW_TWEETS_FREQUENCY_TIME_UNITS.toLowerCase().equals("hours")) {
+            cal.add(Calendar.HOUR, timeFreq);
+        } else {
+            cal.add(Calendar.DAY_OF_MONTH, timeFreq);
+        }
+        return cal;
     }
 
     private Calendar getNextTweetValidationRefreshTime() {
@@ -283,9 +314,9 @@ public class ClientRefreshQueue implements Runnable {
             GUI.getQueuingPanel().refreshTweetsTable();
         });
     }
-    
+
     private void getNewTweets() {
-        
+
     }
 
 }

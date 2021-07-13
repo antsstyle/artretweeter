@@ -66,6 +66,12 @@ public enum DBTable {
             + "name VARCHAR(255) NOT NULL, "
             + "value VARCHAR(255) NOT NULL, "
             + "CONSTRAINT uniqueconfigitem UNIQUE (name))"),
+    CACHEDVARIABLES("cachedvariables",
+            "CREATE TABLE IF NOT EXISTS cachedvariables ("
+            + "id INTEGER IDENTITY PRIMARY KEY, "
+            + "name VARCHAR(255) NOT NULL, "
+            + "value VARCHAR(255) NOT NULL, "
+            + "CONSTRAINT uniquecachedvariable UNIQUE (name))"),
     COLLECTIONS("collections",
             "CREATE TABLE IF NOT EXISTS collections ("
             + "id INTEGER IDENTITY PRIMARY KEY, "

@@ -8,9 +8,7 @@ package com.antsstyle.artretweeter.gui;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
-import com.antsstyle.artretweeter.datastructures.TwitterResponse;
 import com.antsstyle.artretweeter.datastructures.RequestToken;
-import com.antsstyle.artretweeter.datastructures.ServerResponse;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
 import com.antsstyle.artretweeter.db.ConfigDB;
@@ -247,7 +245,7 @@ public class AccountsPanel extends javax.swing.JPanel {
 
     private void retrieveTweetsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_retrieveTweetsButtonActionPerformed
         disableAllAccountButtons();
-        retrieveTweets();
+        retrieveTweets(true);
     }//GEN-LAST:event_retrieveTweetsButtonActionPerformed
 
     private void retrieveCollectionsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_retrieveCollectionsButtonActionPerformed
@@ -416,17 +414,25 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
     }
 
-    private void retrieveTweets() {
+    private void showError(String message, boolean showGUI) {
+        if (showGUI) {
+            JOptionPane.showMessageDialog(GUI.getInstance(), message, "Error", JOptionPane.ERROR_MESSAGE);
+        } else {
+            LOGGER.error(message);
+        }
+    }
+
+    public void retrieveTweets(boolean showGUI) {
         if (accountsTable.getRowCount() == 0) {
             String statusMessage = "You must add an account before retrieving tweets.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
         int row = accountsTable.getSelectedRow();
         if (row == -1) {
             String statusMessage = "Select an account in the table to retrieve tweets for.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -440,12 +446,12 @@ public class AccountsPanel extends javax.swing.JPanel {
                 new Object[]{screenName});
         if (!accountResp.wasSuccessful()) {
             String statusMessage = "Failed to query database for access token!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         } else if (accountResp.getReturnedRows().isEmpty()) {
             String statusMessage = "Access token not found in database for this user!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -453,16 +459,16 @@ public class AccountsPanel extends javax.swing.JPanel {
         Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
             String statusMessage = "Failed to get tweet image directory information from database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
         try {
             Files.createDirectories(tweetFolderPath);
         } catch (Exception e) {
-            LOGGER.error("Could not create tweet image base directories!", e);
+            LOGGER.error("Directory creation exception: ", e);
             String statusMessage = "Could not create tweet image base directories!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -486,7 +492,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         DBResponse countResp = CoreDB.customQuerySelect(cQuery, account.getTwitterID());
         if (!countResp.wasSuccessful()) {
             String statusMessage = "Could not retrieve previous tweet count for this user from database!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         } else {
@@ -496,13 +502,15 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
         }
         final Integer countBeforeStart = count.intValue();
-        String msg = "<html>Retrieving tweets may take a few minutes, depending on the size of your tweet history. "
-                + "<br/><br/>Note that this might not retrieve all media tweets from your account, due to limitations of the standard Twitter API."
-                + "<br/><br/>Press OK to proceed.</html>";
-        Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
-        if (result != JOptionPane.OK_OPTION) {
-            enableAllAccountButtons();
-            return;
+        if (showGUI) {
+            String msg = "<html>Retrieving tweets may take a few minutes, depending on the size of your tweet history. "
+                    + "<br/><br/>Note that this might not retrieve all media tweets from your account, due to limitations of the standard Twitter API."
+                    + "<br/><br/>Press OK to proceed.</html>";
+            Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
+            if (result != JOptionPane.OK_OPTION) {
+                enableAllAccountButtons();
+                return;
+            }
         }
         tweetDownloadProgressLabel.setText("Retrieving... ");
         tweetDownloadProgressBar.setVisible(true);
@@ -698,7 +706,6 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
         };
         worker.execute();
-
     }
 
     private void addAccount() {

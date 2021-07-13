@@ -10,6 +10,7 @@ import com.antsstyle.artretweeter.datastructures.ConfigItem;
 import com.antsstyle.artretweeter.tools.PathTools;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,6 +35,10 @@ public class ConfigDB {
             return null;
         }
         return ResultSetConversion.getConfigItem(resp.getReturnedRows().get(0));
+    }
+    
+    public static boolean updateConfigItems(ArrayList<Object[]> params) {
+        return CoreDB.runParameterisedUpdateBatch(CONFIG_MERGE_QUERY, params);
     }
 
     public static boolean updateConfigItem(String configName, String configValue) {
