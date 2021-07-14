@@ -5,6 +5,7 @@
  */
 package com.antsstyle.artretweeter.gui;
 
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
@@ -17,6 +18,7 @@ import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.queues.ClientRefreshQueue;
 import com.antsstyle.artretweeter.tools.SwingTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import static com.antsstyle.artretweeter.twitter.RESTAPI.CURRENTLY_PROCESSING;
@@ -78,6 +80,9 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
 
         }
+        if (TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
+            automaticNoteLabel.setText("");
+        }
     }
 
     /**
@@ -97,7 +102,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         tweetDownloadProgressBar.setVisible(false);
         tweetDownloadProgressLabel = new javax.swing.JLabel();
         retrieveCollectionsButton = new javax.swing.JButton();
-        jLabel3 = new javax.swing.JLabel();
+        automaticNoteLabel = new javax.swing.JLabel();
 
         accountsTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -188,11 +193,11 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
         });
 
-        jLabel3.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        jLabel3.setText("<html>Note: you can make ArtRetweeter download new tweets automatically via the Configuration menu.</html>");
-        jLabel3.setMaximumSize(new java.awt.Dimension(550, 45));
-        jLabel3.setMinimumSize(new java.awt.Dimension(550, 45));
-        jLabel3.setPreferredSize(new java.awt.Dimension(550, 45));
+        automaticNoteLabel.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
+        automaticNoteLabel.setText("<html>Note: you can make ArtRetweeter download new tweets automatically via the Configuration menu.</html>");
+        automaticNoteLabel.setMaximumSize(new java.awt.Dimension(550, 45));
+        automaticNoteLabel.setMinimumSize(new java.awt.Dimension(550, 45));
+        automaticNoteLabel.setPreferredSize(new java.awt.Dimension(550, 45));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -201,21 +206,20 @@ public class AccountsPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(tweetDownloadProgressLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jScrollPane1)
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(addAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(removeAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(retrieveTweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(retrieveCollectionsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                    .addComponent(automaticNoteLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(tweetDownloadProgressLabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 267, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(addAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(removeAccountButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(retrieveTweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(retrieveCollectionsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(10, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -232,7 +236,7 @@ public class AccountsPanel extends javax.swing.JPanel {
                     .addComponent(retrieveTweetsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(retrieveCollectionsButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(automaticNoteLabel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(tweetDownloadProgressBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -254,6 +258,12 @@ public class AccountsPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_addAccountButtonActionPerformed
 
     private void retrieveTweetsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_retrieveTweetsButtonActionPerformed
+        if (TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
+            String statusMessage = "<html>You can't retrieve tweets manually while the automatic setting is on."
+                    + "<br/><br/>You can configure that setting in the Configuration menu.</html>";
+            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         disableAllAccountButtons();
         retrieveTweets(true);
     }//GEN-LAST:event_retrieveTweetsButtonActionPerformed
@@ -272,8 +282,10 @@ public class AccountsPanel extends javax.swing.JPanel {
 
     private void enableAllAccountButtons() {
         retrieveTweetsButton.setEnabled(true);
+        retrieveTweetsButton.setText("Retrieve Tweets");
         addAccountButton.setEnabled(true);
         retrieveCollectionsButton.setEnabled(true);
+        retrieveCollectionsButton.setText("Retrieve Collections");
         removeAccountButton.setEnabled(true);
     }
 
@@ -329,6 +341,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         String msg = "<html>Retrieving collections might take a few minutes, if you have large collections. <br/>Press OK to proceed.</html>";
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
+            retrieveCollectionsButton.setText("Retrieving...");
             tweetDownloadProgressLabel.setText("Retrieving... ");
             tweetDownloadProgressBar.setVisible(true);
             tweetDownloadProgressBar.setIndeterminate(false);
@@ -424,25 +437,18 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
     }
 
-    private void showError(String message, boolean showGUI) {
-        if (showGUI) {
-            JOptionPane.showMessageDialog(GUI.getInstance(), message, "Error", JOptionPane.ERROR_MESSAGE);
-        } else {
-            LOGGER.error(message);
-        }
-    }
 
     public void retrieveTweets(boolean showGUI) {
         if (accountsTable.getRowCount() == 0) {
             String statusMessage = "You must add an account before retrieving tweets.";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
         int row = accountsTable.getSelectedRow();
         if (row == -1) {
             String statusMessage = "Select an account in the table to retrieve tweets for.";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -456,12 +462,12 @@ public class AccountsPanel extends javax.swing.JPanel {
                 new Object[]{screenName});
         if (!accountResp.wasSuccessful()) {
             String statusMessage = "Failed to query database for access token!";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         } else if (accountResp.getReturnedRows().isEmpty()) {
             String statusMessage = "Access token not found in database for this user!";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -469,7 +475,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
             String statusMessage = "Failed to get tweet image directory information from database!";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -478,7 +484,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         } catch (Exception e) {
             LOGGER.error("Directory creation exception: ", e);
             String statusMessage = "Could not create tweet image base directories!";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         }
@@ -502,7 +508,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         DBResponse countResp = CoreDB.customQuerySelect(cQuery, account.getTwitterID());
         if (!countResp.wasSuccessful()) {
             String statusMessage = "Could not retrieve previous tweet count for this user from database!";
-            showError(statusMessage, showGUI);
+            GUIHelperMethods.showError(statusMessage, showGUI);
             enableAllAccountButtons();
             return;
         } else {
@@ -510,6 +516,9 @@ public class AccountsPanel extends javax.swing.JPanel {
             if (count == null) {
                 count = 0L;
             }
+        }
+        if (!GUI.startPerformingQuery(true)) {
+            return;
         }
         final Integer countBeforeStart = count.intValue();
         if (showGUI) {
@@ -522,6 +531,7 @@ public class AccountsPanel extends javax.swing.JPanel {
                 return;
             }
         }
+        retrieveTweetsButton.setText("Retrieving...");
         tweetDownloadProgressLabel.setText("Retrieving... ");
         tweetDownloadProgressBar.setVisible(true);
         SwingWorker worker = new SwingWorker<Object, Pair<Integer, Integer>>() {
@@ -712,6 +722,10 @@ public class AccountsPanel extends javax.swing.JPanel {
                 if (queueSelAcc.getTwitterID().equals(account.getTwitterID())) {
                     GUI.getQueuingPanel().refreshTweetsTable();
                 }
+                Account tweetSelAcc = GUI.getTweetManagementPanel().getCurrentlySelectedAccount();
+                if (tweetSelAcc.getTwitterID().equals(account.getTwitterID())) {
+                    GUI.getTweetManagementPanel().refreshTweetsTable();
+                }
                 enableAllAccountButtons();
             }
         };
@@ -797,6 +811,8 @@ public class AccountsPanel extends javax.swing.JPanel {
         GUI.getCollectionsPanel().refreshAccountBoxModel(false);
         GUI.getQueuingPanel().refreshAccountBoxModel(false);
         GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
+        GUI.getTweetManagementPanel().refreshAccountBoxModel(false);
+        ClientRefreshQueue.getInstance().refreshTimers();
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -865,8 +881,8 @@ public class AccountsPanel extends javax.swing.JPanel {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTable accountsTable;
     private javax.swing.JButton addAccountButton;
+    private javax.swing.JLabel automaticNoteLabel;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel3;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JButton removeAccountButton;
     private javax.swing.JButton retrieveCollectionsButton;

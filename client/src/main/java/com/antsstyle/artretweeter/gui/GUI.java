@@ -14,6 +14,7 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Toolkit;
 import java.util.ArrayList;
+import java.util.concurrent.Semaphore;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -30,6 +31,29 @@ public class GUI extends javax.swing.JFrame {
     private static final Logger LOGGER = LogManager.getLogger(GUI.class);
 
     private static GUI gui;
+
+    private static final Semaphore queryLock = new Semaphore(1);
+
+    public static boolean startPerformingQuery(boolean showError) {
+        synchronized (queryLock) {
+            if (queryLock.availablePermits() == 0) {
+                if (showError) {
+                    String message = "<html>Error: another query to the ArtRetweeter server or Twitter API is being performed. "
+                            + "<br/><br/>Wait until that has finished and then try again.</html>";
+                    GUIHelperMethods.showError(message, showError);
+                }
+                return false;
+            }
+            queryLock.acquireUninterruptibly();
+            return true;
+        }
+    }
+
+    public static void stopPerformingQuery() {
+        synchronized (queryLock) {
+            queryLock.release();
+        }
+    }
 
     /**
      * Creates new form GUI

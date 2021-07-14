@@ -63,6 +63,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         refreshAccountBoxModel(true);
     }
 
+    @Override
     public void refreshAccountBoxModel(boolean initialRefresh) {
         selectAccountComboBox.setEnabled(false);
         boolean noElementsBefore = noAccountsInBoxModel();
@@ -129,10 +130,6 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
             String dateString = DATETIME_FORMAT.format(new Date(retweetTime.getTime()));
             dtm.addRow(new Object[]{internalTweetID, entryID, fullTweetText, dateString, errorCode, failReason});
         }
-    }
-
-    public Integer[] getPanelAttributes() {
-        return new Integer[]{STANDARD_PANEL_WIDTH, STANDARD_PANEL_HEIGHT, STANDARD_PANEL_MARGIN, STANDARD_PANEL_INSET};
     }
 
     /**

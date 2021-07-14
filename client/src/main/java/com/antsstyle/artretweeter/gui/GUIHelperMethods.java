@@ -53,6 +53,7 @@ import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.plaf.basic.BasicScrollBarUI;
@@ -85,6 +86,7 @@ public class GUIHelperMethods {
             });
         }
     }
+
 
     public static void setAllGUIColours() {
         UIManager.put("ScrollBar.shadow", GUIConfig.JBUTTON_BG_COLOUR);
@@ -664,6 +666,14 @@ public class GUIHelperMethods {
                 timer.restart();
             }
         });
+    }
+
+    public static void showError(String message, boolean showGUI) {
+        if (showGUI) {
+            JOptionPane.showMessageDialog(GUI.getInstance(), message, "Error", JOptionPane.ERROR_MESSAGE);
+        } else {
+            LOGGER.error(message);
+        }
     }
 
 }

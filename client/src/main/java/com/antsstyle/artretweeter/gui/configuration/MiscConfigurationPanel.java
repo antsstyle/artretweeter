@@ -182,7 +182,7 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         int result = fc.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath();
+            MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath().resolve("lastserverrequest.txt");
             chooseServerRequestDirectoryLabel.setText(
                     "Current path: ".concat(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString()));
         }
@@ -194,7 +194,7 @@ public class MiscConfigurationPanel extends ConfigurationSubPanel {
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         int result = fc.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath();
+            MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH = fc.getSelectedFile().toPath().resolve("lasttwitterapirequest.txt");
             chooseTwitterAPIRequestDirectoryLabel.setText(
                     "Current path: ".concat(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString()));
         }

@@ -135,11 +135,15 @@ public class ClientRefreshQueue implements Runnable {
                         String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
             }
             try {
-                Thread.sleep(60 * 1000);
-            } catch (Exception e) {
-
+                sleepWithInterrupt();
+            } catch (InterruptedException e) {
+                LOGGER.debug("Interrupted.");
             }
         }
+    }
+    
+    private void sleepWithInterrupt() throws InterruptedException {
+        Thread.sleep(60 * 1000);
     }
 
     private Calendar getNextTweetRetrievalTime() {
