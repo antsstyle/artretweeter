@@ -25,7 +25,7 @@ function removeExpiredRetweets() {
 }
 
 function postScheduledRetweets() {
-    $endpoint = "statuses/retweet";
+    $retweetEndpoint = "statuses/retweet";
     $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-5 minutes', time()));
     $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+5 minutes', time()));
     $selectQuery = "SELECT * FROM scheduledretweets INNER JOIN users ON "
@@ -59,7 +59,7 @@ function postScheduledRetweets() {
         $params['trim_user'] = 1;
         $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'], $accessToken, $accessTokenSecret);
         $connection->setRetries(1, 1);
-        $queryResult = queryTwitterUserAuth($connection, $endpoint, "POST", $params, $userAuth, false, false);
+        $queryResult = queryTwitterUserAuth($connection, $retweetEndpoint, "POST", $params, $userAuth, false, false);
         $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
                 . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
                 . "? FROM scheduledretweets WHERE id=?";
@@ -79,8 +79,9 @@ function postScheduledRetweets() {
                         ->execute([$errorCode, $errorMessage, $databaseID]);
             } else {
                 $originalStatus = $queryResult->retweeted_status;
+                $retweetedStatusID = $queryResult->id;
                 $originalTweetID = $originalStatus->id;
-                updateRetweetRecordsInDB($userAuth['twitter_id'], $originalTweetID);
+                updateRetweetRecordsInDB($userAuth['twitter_id'], $originalTweetID, $retweetedStatusID);
             }
         }
         $GLOBALS['databaseConnection']->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$databaseID]);
@@ -509,11 +510,11 @@ function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $echoAndExit 
     return false;
 }
 
-function updateRetweetRecordsInDB($userTwitterID, $tweetID) {
-    $stmt = $GLOBALS['databaseConnection']->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweettime) 
-	VALUES (?,?,?)");
+function updateRetweetRecordsInDB($userTwitterID, $tweetID, $retweetID) {
+    $stmt = $GLOBALS['databaseConnection']->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweetid,retweettime) 
+	VALUES (?,?,?,?)");
     $currentTime = date("Y-m-d H:i:s", time());
-    $success = $stmt->execute([$userTwitterID, $tweetID, $currentTime]);
+    $success = $stmt->execute([$userTwitterID, $tweetID, $retweetID, $currentTime]);
     return $success;
 }
 

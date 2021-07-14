@@ -41,7 +41,7 @@ public class TwitterConfigurationPanel extends ConfigurationSubPanel {
         jLabel1.setText("Automatic Tweet Retrieval");
 
         jLabel2.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        jLabel2.setText("<html>ArtRetweeter can automatically check for new tweets from your accounts and download them at set intervals.</html>");
+        jLabel2.setText("<html>ArtRetweeter can automatically check for new tweets from your accounts and download them at set intervals. (The most frequent setting allowed is every 30 minutes.)</html>");
 
         downloadTweetsAutomaticallyCheckBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         downloadTweetsAutomaticallyCheckBox.setText("Download tweets automatically");

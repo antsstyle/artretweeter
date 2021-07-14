@@ -23,7 +23,8 @@ $databaseConnection->query("ALTER TABLE ratelimitrecords ADD CONSTRAINT
 $databaseConnection->query("CREATE TABLE IF NOT EXISTS retweetrecords (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		usertwitterid BIGINT NOT NULL,
-		tweetid VARCHAR(255) NOT NULL,
+		tweetid BIGINT NOT NULL,
+                retweetid BIGINT NOT NULL,
 		retweettime TIMESTAMP)");
 
 $databaseConnection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
