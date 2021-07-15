@@ -18,3 +18,5 @@ Twitter Collections are a feature for listing tweets of your choice (rather than
 Collections support three ordering types: tweets sorted by newest-first chronologically, oldest-first chronologically, or reverse curation order (i.e. the tweets are in the order you add them, with the latest one you've added at the top of the list).
 
 Here is an example collection: https://twitter.com/antsstyle/timelines/1410230429718695941
+
+ArtRetweeter doesn't currently support changing the order of tweets in a reverse curation order collection - this will be implemented in a future version.
