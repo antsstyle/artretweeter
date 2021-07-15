@@ -129,6 +129,7 @@ public class ClientRefreshQueue implements Runnable {
                         String.valueOf(nextTweetRetweetRecordRefreshCal.getTimeInMillis()));
             }
             if (nextTweetRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
+                GUI.getAccountsPanel().disableAllAccountButtons();
                 GUI.getAccountsPanel().retrieveTweets(false);
                 nextTweetRetrievalCal = getNextTweetRetrievalTime();
                 CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",

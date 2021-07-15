@@ -273,14 +273,14 @@ public class AccountsPanel extends javax.swing.JPanel {
         retrieveCollections();
     }//GEN-LAST:event_retrieveCollectionsButtonActionPerformed
 
-    private void disableAllAccountButtons() {
+    public void disableAllAccountButtons() {
         retrieveTweetsButton.setEnabled(false);
         removeAccountButton.setEnabled(false);
         addAccountButton.setEnabled(false);
         retrieveCollectionsButton.setEnabled(false);
     }
 
-    private void enableAllAccountButtons() {
+    public void enableAllAccountButtons() {
         retrieveTweetsButton.setEnabled(true);
         retrieveTweetsButton.setText("Retrieve Tweets");
         addAccountButton.setEnabled(true);
