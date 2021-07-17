@@ -437,7 +437,6 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
     }
 
-
     public void retrieveTweets(boolean showGUI) {
         if (accountsTable.getRowCount() == 0) {
             String statusMessage = "You must add an account before retrieving tweets.";
@@ -518,6 +517,7 @@ public class AccountsPanel extends javax.swing.JPanel {
             }
         }
         if (!GUI.startPerformingQuery(true)) {
+            enableAllAccountButtons();
             return;
         }
         final Integer countBeforeStart = count.intValue();
@@ -674,6 +674,7 @@ public class AccountsPanel extends javax.swing.JPanel {
 
             @Override
             public void done() {
+                GUI.stopPerformingQuery();
                 Pair<OperationResult, ArrayList<StatusJSON>> results;
                 try {
                     results = (Pair<OperationResult, ArrayList<StatusJSON>>) get();
@@ -684,7 +685,6 @@ public class AccountsPanel extends javax.swing.JPanel {
                     return;
                 }
                 OperationResult res = results.getLeft();
-
                 TableModel tm = accountsTable.getModel();
                 String query = "SELECT COUNT(*) AS C FROM tweets WHERE usertwitterid=?";
                 DBResponse countResp = CoreDB.customQuerySelect(query, account.getTwitterID());
@@ -726,6 +726,7 @@ public class AccountsPanel extends javax.swing.JPanel {
                 if (tweetSelAcc.getTwitterID().equals(account.getTwitterID())) {
                     GUI.getTweetManagementPanel().refreshTweetsTable();
                 }
+
                 enableAllAccountButtons();
             }
         };
