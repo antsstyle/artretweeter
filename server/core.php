@@ -605,7 +605,10 @@ function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params,
 }
 
 function removeAccountFromDB($twitterID) {
-    $success['queue_cleared'] = $GLOBALS['databaseConnection']
+    $success['failure_queue_cleared'] = $GLOBALS['databaseConnection']
+            ->prepare("DELETE FROM failedretweets WHERE retweetingusertwitterid=?")
+            ->execute([$twitterID]);
+    $success['schedule_queue_cleared'] = $GLOBALS['databaseConnection']
             ->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=?")
             ->execute([$twitterID]);
     $success['user_cleared'] = $GLOBALS['databaseConnection']

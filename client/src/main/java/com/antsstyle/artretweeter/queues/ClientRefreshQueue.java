@@ -25,6 +25,7 @@ import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.gui.GUI;
 import com.antsstyle.artretweeter.gui.RetrieveCollectionsWorker;
 import com.antsstyle.artretweeter.gui.RetrieveTweetsWorker;
+import com.antsstyle.artretweeter.serverapi.APIQueryManager;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
@@ -144,22 +145,26 @@ public class ClientRefreshQueue implements Runnable {
                         String.valueOf(nextTweetRetweetRecordRefreshCal.getTimeInMillis()));
             }
             if (nextTweetRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
-                GUI.getAccountsPanel().disableAllAccountButtons();
-                if (!RetrieveTweetsWorker.retrieveForAllAccounts()) {
-                    LOGGER.error("Errors occurred retrieving tweets from one or more accounts.");
+                if (APIQueryManager.acquireAPILock(false)) {
+                    GUI.getAccountsPanel().disableAllAccountButtons();
+                    if (!RetrieveTweetsWorker.retrieveForAllAccounts()) {
+                        LOGGER.error("Errors occurred retrieving tweets from one or more accounts.");
+                    }
+                    nextTweetRetrievalCal = getNextTweetRetrievalTime();
+                    CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
+                            String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
                 }
-                nextTweetRetrievalCal = getNextTweetRetrievalTime();
-                CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
-                        String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
             }
             if (nextCollectionRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_COLLECTIONS_ENABLED) {
-                GUI.getAccountsPanel().disableAllAccountButtons();
-                if (!RetrieveCollectionsWorker.retrieveForAllAccounts()) {
-                    LOGGER.error("Errors occurred retrieving collections from one or more accounts.");
+                if (APIQueryManager.acquireAPILock(false)) {
+                    GUI.getAccountsPanel().disableAllAccountButtons();
+                    if (!RetrieveCollectionsWorker.retrieveForAllAccounts()) {
+                        LOGGER.error("Errors occurred retrieving collections from one or more accounts.");
+                    }
+                    nextCollectionRetrievalCal = getNextCollectionRetrievalTime();
+                    CachedVariableDB.updateConfigItem("artretweeter.nextcollectionretrievaltime",
+                            String.valueOf(nextCollectionRetrievalCal.getTimeInMillis()));
                 }
-                nextCollectionRetrievalCal = getNextCollectionRetrievalTime();
-                CachedVariableDB.updateConfigItem("artretweeter.nextcollectionretrievaltime",
-                        String.valueOf(nextCollectionRetrievalCal.getTimeInMillis()));
             }
             try {
                 sleepWithInterrupt();

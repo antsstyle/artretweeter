@@ -120,13 +120,13 @@ public class TweetsDB {
             deleteTweetsQuery = deleteTweetsQuery.append(",?");
             deleteCollectionTweetsQuery = deleteCollectionTweetsQuery.append(",?");
         }
-        selectQuery = selectQuery.append(")");
         if (!deletedFromTwitter) {
             selectQuery = selectQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
             deleteTweetsQuery = deleteTweetsQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
         } else {
             deleteCollectionTweetsQuery = deleteCollectionTweetsQuery.append(")");
             deleteTweetsQuery = deleteTweetsQuery.append(")");
+            selectQuery = selectQuery.append(")");
         }
 
         DBResponse selectResp = CoreDB.customQuerySelect(selectQuery.toString(), paramsArray);

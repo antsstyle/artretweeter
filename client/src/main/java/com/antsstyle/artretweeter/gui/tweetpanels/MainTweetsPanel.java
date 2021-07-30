@@ -27,9 +27,6 @@ import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
-import java.awt.Desktop;
-import java.awt.Font;
-import java.net.URI;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -37,7 +34,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Set;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.JEditorPane;
 import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.DefaultTableModel;
@@ -54,8 +50,6 @@ public class MainTweetsPanel extends javax.swing.JPanel {
 
     private Account currentlySelectedAccount;
     private final DefaultComboBoxModel selectAccountBoxModel = new DefaultComboBoxModel();
-    private final DefaultComboBoxModel selectCollectionBoxModel = new DefaultComboBoxModel();
-    private TwitterCollectionHolder currentlySelectedCollection = null;
 
     protected static final Account ALL_TWEETS_ACCOUNT = new Account()
             .setScreenName("<show all tweets>");
@@ -98,10 +92,6 @@ public class MainTweetsPanel extends javax.swing.JPanel {
 
     public Account getSelectedAccount() {
         return currentlySelectedAccount;
-    }
-
-    public TwitterCollectionHolder getSelectedCollection() {
-        return currentlySelectedCollection;
     }
 
     /**
@@ -342,6 +332,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_selectAccountComboBoxActionPerformed
 
     private void addTweetsToCollection() {
+        TwitterCollectionHolder currentlySelectedCollection = GUI.getPrimaryPanel().getSelectedCollection();
         if (currentlySelectedCollection.equals(NO_COLLECTIONS)) {
             String msg = "Select a collection to add this tweet to first.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);

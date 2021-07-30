@@ -19,6 +19,8 @@ import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.queues.ClientRefreshQueue;
+import com.antsstyle.artretweeter.serverapi.APIQueryManager;
+import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.SwingTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.awt.Desktop;
@@ -301,12 +303,6 @@ public class AccountsPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_addAccountButtonActionPerformed
 
     private void retrieveTweetsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_retrieveTweetsButtonActionPerformed
-        if (TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
-            String statusMessage = "<html>You can't retrieve tweets manually while the automatic setting is on."
-                    + "<br/><br/>You can configure that setting in the Configuration menu.</html>";
-            JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
         disableAllAccountButtons();
         retrieveTweets(true);
     }//GEN-LAST:event_retrieveTweetsButtonActionPerformed
@@ -448,15 +444,20 @@ public class AccountsPanel extends javax.swing.JPanel {
             enableAllAccountButtons();
             return;
         }
+        if (!APIQueryManager.acquireAPILock(true)) {
+            return;
+        }
         account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
         String msg = "<html>Retrieving collections might take a few minutes, if you have large collections. <br/>Press OK to proceed.</html>";
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             RetrieveCollectionsWorker worker = new RetrieveCollectionsWorker();
             if (!worker.initialise(account, true)) {
+                APIQueryManager.releaseAPILock();
                 enableAllAccountButtons();
             }
         } else {
+            APIQueryManager.releaseAPILock();
             enableAllAccountButtons();
         }
     }
@@ -492,15 +493,20 @@ public class AccountsPanel extends javax.swing.JPanel {
             enableAllAccountButtons();
             return;
         }
+        if (!APIQueryManager.acquireAPILock(true)) {
+            return;
+        }
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
         String msg = "<html>Retrieving tweets may take a while if you are retrieving them for the first time. <br/>Press OK to proceed.</html>";
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             RetrieveTweetsWorker worker = new RetrieveTweetsWorker();
             if (!worker.initialise(account, showGUI)) {
+                APIQueryManager.releaseAPILock();
                 enableAllAccountButtons();
             }
         } else {
+            APIQueryManager.releaseAPILock();
             enableAllAccountButtons();
         }
 
@@ -631,7 +637,6 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
 
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
-        //RESTAPI.oauthInvalidateToken(account);
         String confirmDelete = "<html>Are you sure you want to delete account '" + screenName
                 + "' from ArtRetweeter? This action cannot be undone.<br/><br/>"
                 + "Note that this method does not revoke access to this application. "
@@ -643,6 +648,22 @@ public class AccountsPanel extends javax.swing.JPanel {
         if (deleteResult != JOptionPane.YES_OPTION) {
             return;
         }
+        OperationResult res = ServerAPI.removeAccount(account);
+        if (!res.wasSuccessful()) {
+            String errorMessage = "An error occurred in deleting the account - check log output.";
+            ArrayList<Boolean> bools = (ArrayList<Boolean>) res.getServerResponse().getReturnedObject();
+            if (bools != null) {
+                Boolean failQueueCleared = bools.get(0);
+                Boolean scheduleQueueCleared = bools.get(1);
+                Boolean userCleared = bools.get(2);
+                LOGGER.error("Failed to delete account from ArtRetweeter server.");
+                LOGGER.error("Failure queue cleared: " + failQueueCleared);
+                LOGGER.error("Schedule queue cleared: " + scheduleQueueCleared);
+                LOGGER.error("User cleared: " + userCleared);
+            }
+            JOptionPane.showMessageDialog(GUI.getInstance(), errorMessage, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         String deleteQuery = "DELETE FROM retweetsqueue WHERE retweetingusertwitterid=?";
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getTwitterID()});
         deleteQuery = "DELETE FROM tweets WHERE usertwitterid=? "
@@ -650,7 +671,8 @@ public class AccountsPanel extends javax.swing.JPanel {
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getTwitterID(), account.getTwitterID()});
         deleteQuery = "DELETE FROM accounts WHERE id=?";
         CoreDB.runCustomUpdate(deleteQuery, new Object[]{account.getId()});
-
+        String statusMessage = "Account removed successfully. All scheduled retweets have been deleted from the server.";
+        JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public void updateAccountsTableForTweets(Integer countBeforeStart, Pair<Integer, Integer> last, String screenName) {

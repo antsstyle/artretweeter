@@ -7,11 +7,8 @@ package com.antsstyle.artretweeter.gui.tweetpanels;
 
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
-import java.awt.Color;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
-import javax.swing.UIManager;
-import javax.swing.plaf.ColorUIResource;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -70,7 +67,7 @@ public class UltimatePanel extends javax.swing.JPanel {
     }
 
     public TwitterCollectionHolder getSelectedCollection() {
-        return mainTweetsPanel.getSelectedCollection();
+        return collectionsSubPanel.getSelectedCollection();
     }
 
     /**

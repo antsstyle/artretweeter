@@ -117,9 +117,6 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                 count = 0L;
             }
         }
-        if (!APIQueryManager.acquireAPILock(true)) {
-            return false;
-        }
         countBeforeStart = count.intValue();
         GUI.getAccountsPanel().setRetrievingTweetsGUIElements();
         this.execute();

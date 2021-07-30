@@ -156,6 +156,17 @@ public class ServerAPI {
     public static OperationResult removeAccount(Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.REMOVE_ACCOUNT, account);
+        Boolean failQueueCleared = apiCallResult.getServerResponse().getResponseJSONObject().get("failure_queue_cleared").getAsBoolean();
+        Boolean scheduleQueueCleared = apiCallResult.getServerResponse().getResponseJSONObject().get("schedule_queue_cleared").getAsBoolean();
+        Boolean userCleared = apiCallResult.getServerResponse().getResponseJSONObject().get("user_cleared").getAsBoolean();
+        if (!failQueueCleared || !scheduleQueueCleared || !userCleared) {
+            apiCallResult.getServerResponse().setStatusCode(StatusCode.ARTRETWEETER_SERVER_ERROR);
+        }
+        ArrayList<Boolean> bools = new ArrayList<>();
+        bools.add(failQueueCleared);
+        bools.add(scheduleQueueCleared);
+        bools.add(userCleared);
+        apiCallResult.getServerResponse().setReturnedObject(bools);
         return apiCallResult;
     }
 
@@ -396,7 +407,7 @@ public class ServerAPI {
                 }
                 return true;
             } else {
-                updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "retweetingusertwitterid", "retweettime"}, 
+                updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "retweetingusertwitterid", "retweettime"},
                         new Object[]{tweet.getTweetID(), account.getTwitterID(), time});
                 if (updateResp.wasSuccessful()) {
                     DefaultTableModel dtm = (DefaultTableModel) GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();

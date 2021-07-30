@@ -13,6 +13,7 @@ import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.serverapi.APIQueryManager;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -87,41 +88,34 @@ public class RetrieveCollectionsWorker extends SwingWorker<Object, Pair<Integer,
 
     @Override
     protected Object doInBackground() {
-        try {
-            OperationResult res;
-            boolean fatalError = false;
-            int errorCount = 0;
-            int successCount = 0;
-            res = RESTAPI.getCollectionsByUserID(account.getTwitterID(), account);
-
-            if (!res.wasSuccessful()) {
-                fatalError = true;
-                errorResults.add(res);
-                return new Object[]{fatalError, errorCount, successCount};
-            }
-            ArrayList<TwitterCollectionHolder> collections
-                    = (ArrayList<TwitterCollectionHolder>) res.getTwitterResponse().getReturnedObject();
-            int count = 1;
-            int total = 1 + collections.size();
-            publish(Pair.of(count, total));
-            for (TwitterCollectionHolder collection : collections) {
-                OperationResult hydrationResult = RESTAPI.getFullyHydratedCollectionByID(collection.getTwitterID(), account);
-                if (!hydrationResult.wasSuccessful()) {
-                    errorCount++;
-                    errorResults.add(hydrationResult);
-                } else {
-                    successCount++;
-                }
-                count++;
-                publish(Pair.of(count, total));
-            }
-            setProgress(100);
+        OperationResult res;
+        boolean fatalError = false;
+        int errorCount = 0;
+        int successCount = 0;
+        res = RESTAPI.getCollectionsByUserID(account.getTwitterID(), account);
+        if (!res.wasSuccessful()) {
+            fatalError = true;
+            errorResults.add(res);
             return new Object[]{fatalError, errorCount, successCount};
-
-        } catch (Exception e) {
-            LOGGER.error("WTF", e);
         }
-        return null;
+        ArrayList<TwitterCollectionHolder> collections
+                = (ArrayList<TwitterCollectionHolder>) res.getTwitterResponse().getReturnedObject();
+        int count = 1;
+        int total = 1 + collections.size();
+        publish(Pair.of(count, total));
+        for (TwitterCollectionHolder collection : collections) {
+            OperationResult hydrationResult = RESTAPI.getFullyHydratedCollectionByID(collection.getTwitterID(), account);
+            if (!hydrationResult.wasSuccessful()) {
+                errorCount++;
+                errorResults.add(hydrationResult);
+            } else {
+                successCount++;
+            }
+            count++;
+            publish(Pair.of(count, total));
+        }
+        setProgress(100);
+        return new Object[]{fatalError, errorCount, successCount};
     }
 
     @Override
@@ -135,6 +129,7 @@ public class RetrieveCollectionsWorker extends SwingWorker<Object, Pair<Integer,
 
     @Override
     public void done() {
+        APIQueryManager.releaseAPILock();
         Object[] results;
         try {
             results = (Object[]) get();
