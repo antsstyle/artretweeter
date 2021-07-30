@@ -391,16 +391,16 @@ public class ServerAPI {
                     LOGGER.error(msg);
                     return false;
                 }
-                int rowCount = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getRowCount();
-                Integer queueTableIDColumnIndex = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                int rowCount = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getRowCount();
+                Integer queueTableIDColumnIndex = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                         .getColumnModel().getColumnIndex("ID");
-                Integer queueTableRTTimeColumnIndex = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                Integer queueTableRTTimeColumnIndex = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                         .getColumnModel().getColumnIndex("Retweet Time");
                 for (int i = 0; i < rowCount; i++) {
-                    Integer tableID = (Integer) GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getModel()
+                    Integer tableID = (Integer) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel()
                             .getValueAt(i, queueTableIDColumnIndex);
                     if (tableID.equals(tweet.getId())) {
-                        GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getModel()
+                        GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel()
                                 .setValueAt(tableTimestamp, i, queueTableRTTimeColumnIndex);
                         break;
                     }
@@ -410,18 +410,18 @@ public class ServerAPI {
                 updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "retweetingusertwitterid", "retweettime"},
                         new Object[]{tweet.getTweetID(), account.getTwitterID(), time});
                 if (updateResp.wasSuccessful()) {
-                    DefaultTableModel dtm = (DefaultTableModel) GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
+                    DefaultTableModel dtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
                     if (changeTime) {
-                        int rowCount = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable().getRowCount();
-                        Integer queueTableIDColumnIndex = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                        int rowCount = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getRowCount();
+                        Integer queueTableIDColumnIndex = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                                 .getColumnModel().getColumnIndex("ID");
-                        Integer queueTableRTTimeColumnIndex = GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                        Integer queueTableRTTimeColumnIndex = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                                 .getColumnModel().getColumnIndex("Retweet Time");
                         for (int i = 0; i < rowCount; i++) {
-                            Integer tableID = (Integer) GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                            Integer tableID = (Integer) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                                     .getModel().getValueAt(i, queueTableIDColumnIndex);
                             if (tableID.equals(tweet.getId())) {
-                                GUI.getPrimaryPanel().getQueueSubPanel().getQueuedTweetsTable()
+                                GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
                                         .getModel().setValueAt(tableTimestamp, i, queueTableRTTimeColumnIndex);
                                 break;
                             }

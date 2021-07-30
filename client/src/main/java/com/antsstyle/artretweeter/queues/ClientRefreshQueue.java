@@ -368,7 +368,7 @@ public class ClientRefreshQueue implements Runnable {
         }
 
         SwingUtilities.invokeLater(() -> {
-            GUI.getPrimaryPanel().getQueueSubPanel().refreshQueueTable();
+            GUI.getMainManagementPanel().getQueueSubPanel().refreshQueueTable();
             GUI.getQueuingPanel().refreshQueueTable();
             GUI.getFailedRetweetsPanel().refreshTweetsTable();
             GUI.getFailedRetweetsPanel().refreshFailureCounter();

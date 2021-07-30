@@ -272,9 +272,9 @@ public class GUIHelperMethods {
     }
 
     public static void showTweetPreview(JTable table) {
-        Integer[] panelAttributes = GUI.getPrimaryPanel().getPanelAttributes();
-        JScrollPane[] panes = GUI.getPrimaryPanel().getScrollPanes();
-        JLabel[] labels = GUI.getPrimaryPanel().getImageLabels();
+        Integer[] panelAttributes = GUI.getMainManagementPanel().getPanelAttributes();
+        JScrollPane[] panes = GUI.getMainManagementPanel().getScrollPanes();
+        JLabel[] labels = GUI.getMainManagementPanel().getImageLabels();
         showTweetPreview(table, panelAttributes, panes, labels);
     }
 

@@ -326,13 +326,13 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             if (!acc.equals(currentlySelectedAccount)) {
                 currentlySelectedAccount = acc;
                 refreshTweetsTable();
-                GUI.getPrimaryPanel().getQueueSubPanel().refreshQueueTable();
+                GUI.getMainManagementPanel().getQueueSubPanel().refreshQueueTable();
             }
         }
     }//GEN-LAST:event_selectAccountComboBoxActionPerformed
 
     private void addTweetsToCollection() {
-        TwitterCollectionHolder currentlySelectedCollection = GUI.getPrimaryPanel().getSelectedCollection();
+        TwitterCollectionHolder currentlySelectedCollection = GUI.getMainManagementPanel().getSelectedCollection();
         if (currentlySelectedCollection.equals(NO_COLLECTIONS)) {
             String msg = "Select a collection to add this tweet to first.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
@@ -362,7 +362,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         HashMap<Integer, Integer> dbIDModelRowMap = new HashMap<>();
         for (int i = 0; i < modelRows.length; i++) {
             Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRows[i], idColumnIndex);
-            if (!GUI.getPrimaryPanel().getCollectionsSubPanel().checkTweetInCollectionTable(id)) {
+            if (!GUI.getMainManagementPanel().getCollectionsSubPanel().checkTweetInCollectionTable(id)) {
                 tweetDBParams.add(id);
                 tweetIDs.add(id);
                 dbIDModelRowMap.put(id, modelRows[i]);
@@ -419,7 +419,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         if (validTweets.size() == 1) {
             ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
             Object[] rowToAdd = new Object[]{validTweets.get(keys.get(0)).getId(), validTweets.get(keys.get(0)).getFullTweetText()};
-            GUI.getPrimaryPanel().getCollectionsSubPanel().addRowToCollectionsTable(rowToAdd);
+            GUI.getMainManagementPanel().getCollectionsSubPanel().addRowToCollectionsTable(rowToAdd);
             insertParams.add(new Object[]{validTweets.get(keys.get(0)).getTweetID(), currentlySelectedCollection.getTwitterID()});
             CollectionsDB.parameterisedCollectionTweetsMergeBatch(insertParams);
         } else {
@@ -442,7 +442,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             ArrayList<Long> keys = new ArrayList<>(validTweets.keySet());
             for (Long k : keys) {
                 Object[] rowToAdd = new Object[]{validTweets.get(k).getId(), validTweets.get(k).getFullTweetText()};
-                GUI.getPrimaryPanel().getCollectionsSubPanel().addRowToCollectionsTable(rowToAdd);
+                GUI.getMainManagementPanel().getCollectionsSubPanel().addRowToCollectionsTable(rowToAdd);
             }
             if (!insertParams.isEmpty()) {
                 CollectionsDB.parameterisedCollectionTweetsMergeBatch(insertParams);
@@ -493,7 +493,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             currentlySelectedAccount = (Account) selectAccountBoxModel.getElementAt(0);
             if (initialRefresh || noElementsBefore) {
                 refreshTweetsTable();
-                GUI.getPrimaryPanel().getCollectionsSubPanel().refreshCollectionBoxModel(false);
+                GUI.getMainManagementPanel().getCollectionsSubPanel().refreshCollectionBoxModel(false);
             }
         } else {
             selectAccountBoxModel.addElement(NO_ACCOUNTS);
@@ -549,13 +549,13 @@ public class MainTweetsPanel extends javax.swing.JPanel {
 
     private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
         queueRetweetButton.setEnabled(false);
-        GUI.getPrimaryPanel().getQueueSubPanel().disableTableListener();
+        GUI.getMainManagementPanel().getQueueSubPanel().disableTableListener();
         try {
             ServerAPI.queueRetweet(tweetsTable, currentlySelectedAccount, false);
         } catch (Exception e) {
             LOGGER.error("Failed to queue retweet", e);
         }
-        GUI.getPrimaryPanel().getQueueSubPanel().enableTableListener();
+        GUI.getMainManagementPanel().getQueueSubPanel().enableTableListener();
         queueRetweetButton.setEnabled(true);
     }//GEN-LAST:event_queueRetweetButtonActionPerformed
 

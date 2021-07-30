@@ -16,9 +16,9 @@ import org.apache.logging.log4j.Logger;
  *
  * @author antss
  */
-public class UltimatePanel extends javax.swing.JPanel {
+public class MainManagementPanel extends javax.swing.JPanel {
 
-    private static final Logger LOGGER = LogManager.getLogger(UltimatePanel.class);
+    private static final Logger LOGGER = LogManager.getLogger(MainManagementPanel.class);
 
     private int STANDARD_PANEL_WIDTH = 420;
     private int STANDARD_PANEL_HEIGHT = 539;
@@ -28,7 +28,7 @@ public class UltimatePanel extends javax.swing.JPanel {
     /**
      * Creates new form UltimatePanel
      */
-    public UltimatePanel() {
+    public MainManagementPanel() {
         initComponents();
     }
 
@@ -167,9 +167,8 @@ public class UltimatePanel extends javax.swing.JPanel {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(mainTweetsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(60, 60, 60)
-                        .addComponent(subPanelTabbedPane, javax.swing.GroupLayout.PREFERRED_SIZE, 662, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
+                        .addComponent(subPanelTabbedPane, javax.swing.GroupLayout.PREFERRED_SIZE, 662, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)

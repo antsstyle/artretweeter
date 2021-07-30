@@ -364,7 +364,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
             TwitterCollectionHolder collection = (TwitterCollectionHolder) selectCollectionComboBox.getSelectedItem();
             if (!collection.equals(currentlySelectedCollection)) {
                 currentlySelectedCollection = collection;
-                GUI.getPrimaryPanel().getCollectionsSubPanel().refreshCollectionTweetsTable();
+                GUI.getMainManagementPanel().getCollectionsSubPanel().refreshCollectionTweetsTable();
             }
         }
     }//GEN-LAST:event_selectCollectionComboBoxActionPerformed
@@ -469,7 +469,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
     }
 
     private void deleteTweetsFromCollection() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         int[] rows = collectionTweetsTable.getSelectedRows();
         if (rows.length == 0) {
             return;
@@ -588,7 +588,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
     }
 
     private void deleteCollection() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         if (currentlySelectedCollection.equals(MainTweetsPanel.NO_COLLECTIONS)
                 || currentlySelectedCollection.equals(MainTweetsPanel.DB_ERROR_COLLECTION)) {
             String msg = "Failed to retrieve tweets for this user from DB!";
@@ -615,7 +615,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
     }
 
     public void refreshCollectionBoxModel(boolean initialRefresh) {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         selectCollectionComboBox.setEnabled(false);
         boolean noElementsBefore = noCollectionsInBoxModel();
         selectCollectionBoxModel.removeAllElements();
@@ -646,7 +646,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
             selectCollectionBoxModel.setSelectedItem(selectCollectionBoxModel.getElementAt(0));
             currentlySelectedCollection = (TwitterCollectionHolder) selectCollectionBoxModel.getElementAt(0);
             if (initialRefresh || noElementsBefore) {
-                GUI.getPrimaryPanel().getCollectionsSubPanel().refreshCollectionTweetsTable();
+                GUI.getMainManagementPanel().getCollectionsSubPanel().refreshCollectionTweetsTable();
             }
         } else {
             selectCollectionBoxModel.addElement(MainTweetsPanel.NO_COLLECTIONS);
@@ -667,7 +667,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
     }
 
     private void createNewCollection() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         if (currentlySelectedAccount.equals(MainTweetsPanel.NO_ACCOUNTS)) {
             String msg = "<html>You cannot add a collection until you have added an account on the Accounts panel.</html>";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
@@ -722,7 +722,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
     }
 
     public void refreshCollectionTweetsTable() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         if (currentlySelectedAccount.equals(MainTweetsPanel.NO_ACCOUNTS) || currentlySelectedCollection.equals(MainTweetsPanel.NO_COLLECTIONS)
                 || currentlySelectedAccount.equals(MainTweetsPanel.DB_ERROR_ACCOUNT)
                 || currentlySelectedCollection.equals(MainTweetsPanel.DB_ERROR_COLLECTION)) {

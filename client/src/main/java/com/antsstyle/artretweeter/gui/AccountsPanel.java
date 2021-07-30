@@ -592,7 +592,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         GUI.getQueuingPanel().refreshAccountBoxModel(false);
         GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
         GUI.getTweetManagementPanel().refreshAccountBoxModel(false);
-        GUI.getPrimaryPanel().getMainTweetsPanel().refreshAccountBoxModel(false);
+        GUI.getMainManagementPanel().getMainTweetsPanel().refreshAccountBoxModel(false);
         ClientRefreshQueue.getInstance().refreshTimers();
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);

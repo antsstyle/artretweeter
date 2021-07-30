@@ -179,7 +179,7 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_goToConfigurationPanelActionPerformed
 
     private void goToPrimaryPanelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToPrimaryPanelButtonActionPerformed
-        GUI.getInstance().switchPanels(GUI.getPrimaryPanel());
+        GUI.getInstance().switchPanels(GUI.getMainManagementPanel());
     }//GEN-LAST:event_goToPrimaryPanelButtonActionPerformed
 
 

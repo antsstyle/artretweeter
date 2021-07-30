@@ -82,7 +82,7 @@ public class QueueSubPanel extends javax.swing.JPanel {
     }
 
     public void refreshQueueTable() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         if (currentlySelectedAccount.equals(MainTweetsPanel.NO_ACCOUNTS)
                 || currentlySelectedAccount.equals(MainTweetsPanel.DB_ERROR_ACCOUNT)) {
             return;
@@ -223,12 +223,12 @@ public class QueueSubPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_unqueueRetweetButtonActionPerformed
 
     private void changeRetweetTime() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         ServerAPI.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
     }
 
     private void unqueueRetweet() {
-        Account currentlySelectedAccount = GUI.getPrimaryPanel().getSelectedAccount();
+        Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
         int row = queuedTweetsTable.getSelectedRow();
         if (row == -1) {
             return;
