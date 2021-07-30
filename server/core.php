@@ -28,7 +28,8 @@ function postScheduledRetweets() {
     $retweetEndpoint = "statuses/retweet";
     $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-5 minutes', time()));
     $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+5 minutes', time()));
-    $selectQuery = "SELECT * FROM scheduledretweets INNER JOIN users ON "
+    $selectQuery = "SELECT scheduledretweets.id,tweetid,retweettime,accesstoken,accesstokensecret,"
+            . "retweetingusertwitterid FROM scheduledretweets INNER JOIN users ON "
             . "scheduledretweets.retweetingusertwitterid = users.twitterid WHERE retweettime >= ? "
             . "AND retweettime <= ?";
     $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);

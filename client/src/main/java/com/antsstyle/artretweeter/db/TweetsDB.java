@@ -122,6 +122,7 @@ public class TweetsDB {
         }
         selectQuery = selectQuery.append(")");
         if (!deletedFromTwitter) {
+            selectQuery = selectQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
             deleteTweetsQuery = deleteTweetsQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
         } else {
             deleteCollectionTweetsQuery = deleteCollectionTweetsQuery.append(")");
@@ -139,7 +140,6 @@ public class TweetsDB {
         }
 
         ArrayList<HashMap<String, Object>> rows = selectResp.getReturnedRows();
-
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
             for (Path p : tweet.getFilePaths()) {

@@ -23,9 +23,13 @@ import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.gui.GUI;
+import com.antsstyle.artretweeter.gui.RetrieveCollectionsWorker;
+import com.antsstyle.artretweeter.gui.RetrieveTweetsWorker;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -52,6 +56,7 @@ public class ClientRefreshQueue implements Runnable {
     private Calendar nextTweetValidationCal;
     private Calendar nextTweetRetweetRecordRefreshCal;
     private Calendar nextTweetRetrievalCal;
+    private Calendar nextCollectionRetrievalCal;
 
     public static ClientRefreshQueue getInstance() {
         return queue;
@@ -67,6 +72,7 @@ public class ClientRefreshQueue implements Runnable {
         nextTweetValidationCal = Calendar.getInstance();
         nextTweetRetweetRecordRefreshCal = Calendar.getInstance();
         nextTweetRetrievalCal = Calendar.getInstance();
+        nextCollectionRetrievalCal = Calendar.getInstance();
         queueThread.interrupt();
     }
 
@@ -81,6 +87,7 @@ public class ClientRefreshQueue implements Runnable {
         nextTweetValidationCal = Calendar.getInstance();
         nextTweetRetweetRecordRefreshCal = Calendar.getInstance();
         nextTweetRetrievalCal = Calendar.getInstance();
+        nextCollectionRetrievalCal = Calendar.getInstance();
         CachedVariable nextRefreshStatusTime = CachedVariableDB.getCachedVariableByName("artretweeter.nextstatusrefreshtime");
         if (nextRefreshStatusTime == null) {
             CachedVariableDB.updateConfigItem("artretweeter.nextstatusrefreshtime", String.valueOf(nextTweetScheduleCal.getTimeInMillis()));
@@ -111,6 +118,14 @@ public class ClientRefreshQueue implements Runnable {
             nextTweetRetrievalCal.setTimeInMillis(Long.valueOf(nextTweetRetrievalTime.getValue()));
         }
 
+        CachedVariable nextCollectionRetrievalTime = CachedVariableDB.getCachedVariableByName("artretweeter.nextcollectionretrievaltime");
+        if (nextCollectionRetrievalTime == null) {
+            CachedVariableDB.updateConfigItem("artretweeter.nextcollectionretrievaltime",
+                    String.valueOf(nextCollectionRetrievalCal.getTimeInMillis()));
+        } else {
+            nextCollectionRetrievalCal.setTimeInMillis(Long.valueOf(nextCollectionRetrievalTime.getValue()));
+        }
+
         while (keepRunning) {
             if (nextTweetScheduleCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 refreshTweetScheduleStatus();
@@ -130,10 +145,21 @@ public class ClientRefreshQueue implements Runnable {
             }
             if (nextTweetRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_TWEETS_ENABLED) {
                 GUI.getAccountsPanel().disableAllAccountButtons();
-                GUI.getAccountsPanel().retrieveTweets(false);
+                if (!RetrieveTweetsWorker.retrieveForAllAccounts()) {
+                    LOGGER.error("Errors occurred retrieving tweets from one or more accounts.");
+                }
                 nextTweetRetrievalCal = getNextTweetRetrievalTime();
                 CachedVariableDB.updateConfigItem("artretweeter.nexttweetretrievaltime",
                         String.valueOf(nextTweetRetrievalCal.getTimeInMillis()));
+            }
+            if (nextCollectionRetrievalCal.getTime().before(new Date(System.currentTimeMillis())) && TwitterConfig.CHECK_NEW_COLLECTIONS_ENABLED) {
+                GUI.getAccountsPanel().disableAllAccountButtons();
+                if (!RetrieveCollectionsWorker.retrieveForAllAccounts()) {
+                    LOGGER.error("Errors occurred retrieving collections from one or more accounts.");
+                }
+                nextCollectionRetrievalCal = getNextCollectionRetrievalTime();
+                CachedVariableDB.updateConfigItem("artretweeter.nextcollectionretrievaltime",
+                        String.valueOf(nextCollectionRetrievalCal.getTimeInMillis()));
             }
             try {
                 sleepWithInterrupt();
@@ -142,9 +168,22 @@ public class ClientRefreshQueue implements Runnable {
             }
         }
     }
-    
+
     private void sleepWithInterrupt() throws InterruptedException {
         Thread.sleep(60 * 1000);
+    }
+
+    private Calendar getNextCollectionRetrievalTime() {
+        Calendar cal = Calendar.getInstance();
+        Integer timeFreq = TwitterConfig.CHECK_NEW_COLLECTIONS_FREQUENCY;
+        if (TwitterConfig.CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS.toLowerCase().equals("minutes")) {
+            cal.add(Calendar.MINUTE, timeFreq);
+        } else if (TwitterConfig.CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS.toLowerCase().equals("hours")) {
+            cal.add(Calendar.HOUR, timeFreq);
+        } else {
+            cal.add(Calendar.DAY_OF_MONTH, timeFreq);
+        }
+        return cal;
     }
 
     private Calendar getNextTweetRetrievalTime() {
@@ -211,7 +250,7 @@ public class ClientRefreshQueue implements Runnable {
         }
         ArrayList<HashMap<String, Object>> rows = accountsResp.getReturnedRows();
         ArrayList<Object[]> deleteScheduledRetweetParams = new ArrayList<>();
-        ArrayList<Object[]> insertFailedRetweetParams = new ArrayList<>();
+        ArrayList<RetweetQueueEntry> insertFailedRetweetParams = new ArrayList<>();
         ArrayList<Object[]> insertScheduledRetweetParams = new ArrayList<>();
         for (HashMap<String, Object> row : rows) {
             deleteScheduledRetweetParams.clear();
@@ -246,8 +285,6 @@ public class ClientRefreshQueue implements Runnable {
             }
             for (RetweetQueueEntry entry : scheduledRetweetsOnClient) {
                 if (failedRetweetsOnServer.contains(entry)) {
-                    insertFailedRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
-                        entry.getErrorCode(), entry.getFailReason()});
                     deleteScheduledRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
                 } else if (!scheduledRetweetsOnServer.contains(entry)) {
                     deleteScheduledRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID()});
@@ -263,8 +300,7 @@ public class ClientRefreshQueue implements Runnable {
                 }
             }
             for (RetweetQueueEntry entry : failedRetweetsOnServer) {
-                insertFailedRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(), entry.getRetweetTime(),
-                    entry.getErrorCode(), entry.getFailReason()});
+                insertFailedRetweetParams.add(entry);
                 if (!tweetsMapKeyset.contains(entry.getTweetID())) {
                     tweetIDsToRetrieve.add(entry.getTweetID());
                 }
@@ -289,9 +325,13 @@ public class ClientRefreshQueue implements Runnable {
                     if (res.wasSuccessful()) {
                         Object[] params = (Object[]) res.getClientResponse().getReturnedObject();
                         tweetMergeParams.add(params);
+                    } else {
+                        LOGGER.error("Failed to download and get DB params for status with ID: " + status.getId());
                     }
                 }
-                TweetsDB.parameterisedTweetMergeBatch(tweetMergeParams);
+                if (!tweetMergeParams.isEmpty()) {
+                    TweetsDB.parameterisedTweetMergeBatch(tweetMergeParams);
+                }
             }
 
             String deleteScheduledRetweetQuery = "DELETE FROM retweetqueue WHERE tweetid=? AND retweetingusertwitterid=?";
@@ -302,7 +342,12 @@ public class ClientRefreshQueue implements Runnable {
             String insertFailedRetweetQuery = "INSERT INTO failedretweets (tweetid,retweetingusertwitterid,retweettime,errorcode,failreason) "
                     + "VALUES (?,?,?,?,?)";
             if (!insertFailedRetweetParams.isEmpty()) {
-                CoreDB.runParameterisedUpdateBatch(insertFailedRetweetQuery, insertFailedRetweetParams);
+                ArrayList<Object[]> failedRetweetParams = new ArrayList<>();
+                for (RetweetQueueEntry entry : insertFailedRetweetParams) {
+                    failedRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(),
+                        entry.getRetweetTime(), entry.getErrorCode(), entry.getFailReason()});
+                }
+                CoreDB.runParameterisedUpdateBatch(insertFailedRetweetQuery, failedRetweetParams);
             }
 
             String insertScheduledRetweetQuery = "INSERT INTO retweetqueue (tweetid,retweetingusertwitterid,retweettime) "
@@ -318,7 +363,10 @@ public class ClientRefreshQueue implements Runnable {
         }
 
         SwingUtilities.invokeLater(() -> {
+            GUI.getPrimaryPanel().getQueueSubPanel().refreshQueueTable();
             GUI.getQueuingPanel().refreshQueueTable();
+            GUI.getFailedRetweetsPanel().refreshTweetsTable();
+            GUI.getFailedRetweetsPanel().refreshFailureCounter();
         });
     }
 

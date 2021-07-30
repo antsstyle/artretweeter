@@ -20,7 +20,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="antsstyle.artretweeter">
+        <Logger name="com.antsstyle.artretweeter">
             <AppenderRef ref="fileAppender" level="info"/>
         </Logger>
          <Root level="all">

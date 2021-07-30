@@ -87,7 +87,6 @@ public class GUIHelperMethods {
         }
     }
 
-
     public static void setAllGUIColours() {
         UIManager.put("ScrollBar.shadow", GUIConfig.JBUTTON_BG_COLOUR);
         UIManager.put("ScrollBar.thumb", GUIConfig.JBUTTON_BG_COLOUR);
@@ -272,6 +271,13 @@ public class GUIHelperMethods {
         JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    public static void showTweetPreview(JTable table) {
+        Integer[] panelAttributes = GUI.getPrimaryPanel().getPanelAttributes();
+        JScrollPane[] panes = GUI.getPrimaryPanel().getScrollPanes();
+        JLabel[] labels = GUI.getPrimaryPanel().getImageLabels();
+        showTweetPreview(table, panelAttributes, panes, labels);
+    }
+
     /**
      * Displays the images related to the selected data entry in the management table.
      *
@@ -443,151 +449,6 @@ public class GUIHelperMethods {
         pane.setSize(d);
         pane.setMaximumSize(d);
         pane.setPreferredSize(d);
-    }
-
-    public static boolean queueRetweet(JTable table, Account account, boolean changeTime) {
-        int row = table.getSelectedRow();
-        if (row == -1) {
-            return false;
-        }
-        int modelRow = table.convertRowIndexToModel(row);
-        int idColumnIndex = table.getColumnModel().getColumnIndex("ID");
-        Integer id = (Integer) table.getModel().getValueAt(modelRow, idColumnIndex);
-        DBResponse selectResp = CoreDB.selectFromTable(DBTable.TWEETS, new String[]{"id"}, new Object[]{id});
-        if (!selectResp.wasSuccessful()) {
-            String msg = "Failed to query DB for tweet information!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return false;
-        } else if (selectResp.getReturnedRows().isEmpty()) {
-            String msg = "This tweet doesn't exist in DB - has the DB file been modified?";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        TweetHolder tweet = ResultSetConversion.getTweet(selectResp.getReturnedRows().get(0));
-        selectResp = CoreDB.selectFromTable(DBTable.RETWEETQUEUE,
-                new String[]{"tweetid", "retweetingusertwitterid"},
-                new Object[]{tweet.getTweetID(), account.getTwitterID()});
-        if (!selectResp.wasSuccessful()) {
-            String msg = "Failed to query DB for retweet queue information!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        if (!selectResp.getReturnedRows().isEmpty() && !changeTime) {
-            String msg = "This tweet is already queued for retweeting.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return false;
-        }
-        DBResponse accountsResp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
-        if (!accountsResp.wasSuccessful()) {
-            String msg = "Failed to query DB for accounts information!";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return false;
-        } else if (accountsResp.getReturnedRows().isEmpty()) {
-            String msg = "You cannot queue a retweet without an account. Add one first.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return false;
-        }
-        boolean isAuthorised = false;
-        ArrayList<HashMap<String, Object>> rows = accountsResp.getReturnedRows();
-        for (HashMap<String, Object> dbRow : rows) {
-            Account acc = ResultSetConversion.getAccount(dbRow);
-            if (acc.getTwitterID().equals(tweet.getUserTwitterID())) {
-                isAuthorised = true;
-                break;
-            }
-        }
-        if (!isAuthorised) {
-            String msg = "ArtRetweeter will only queue retweets for tweets from accounts you own.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return false;
-        }
-        ChooseDatePanel datePanel = new ChooseDatePanel();
-        int selectionResult = JOptionPane.showConfirmDialog(GUI.getInstance(), datePanel, "Select Retweet Date", JOptionPane.OK_CANCEL_OPTION);
-        if (selectionResult != JOptionPane.OK_OPTION) {
-            return false;
-        }
-        Timestamp time = datePanel.getSelectedTime();
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.HOUR_OF_DAY, 1);
-        if (cal.getTimeInMillis() > time.getTime()) {
-            String msg = "You must choose a date at least one hour from the current time.";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return false;
-        }
-        OperationResult opResult = ServerAPI.queueRetweet(account, tweet.getTweetID(), time);
-        if (!opResult.wasSuccessful()) {
-            showErrors(opResult, LOGGER, null);
-            return false;
-        }
-        Boolean success = (Boolean) opResult.getServerResponse().getReturnedObject();
-        if (success) {
-            DBResponse updateResp;
-            if (changeTime) {
-                if (!TweetsDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), account.getTwitterID(), time})) {
-                    String msg = "<html>Time changed successfully, but an error occurred updating this queue entry "
-                            + "<br/>in the ArtRetweeter client.</html>";
-                    JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-                    LOGGER.error(msg);
-                    return false;
-                }
-
-                int rowCount = QueuingPanel.queuedTweetsTable.getRowCount();
-                Integer queueTableIDColumnIndex = QueuingPanel.queuedTweetsTable.getColumnModel().getColumnIndex("ID");
-                Integer queueTableRTTimeColumnIndex = QueuingPanel.queuedTweetsTable.getColumnModel().getColumnIndex("Retweet Time");
-                for (int i = 0; i < rowCount; i++) {
-                    Integer tableID = (Integer) QueuingPanel.queuedTweetsTable.getModel().getValueAt(i, queueTableIDColumnIndex);
-                    if (tableID.equals(tweet.getId())) {
-                        QueuingPanel.queuedTweetsTable.getModel().setValueAt(time, i, queueTableRTTimeColumnIndex);
-                        break;
-                    }
-                }
-
-                return true;
-            } else {
-                updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE,
-                        new String[]{"tweetid", "retweetingusertwitterid", "retweettime"},
-                        new Object[]{tweet.getTweetID(), account.getTwitterID(), time});
-                if (updateResp.wasSuccessful()) {
-                    DefaultTableModel dtm = (DefaultTableModel) QueuingPanel.queuedTweetsTable.getModel();
-                    if (changeTime) {
-                        int rowCount = QueuingPanel.queuedTweetsTable.getRowCount();
-                        Integer queueTableIDColumnIndex = QueuingPanel.queuedTweetsTable.getColumnModel().getColumnIndex("ID");
-                        Integer queueTableRTTimeColumnIndex = QueuingPanel.queuedTweetsTable.getColumnModel().getColumnIndex("Retweet Time");
-                        for (int i = 0; i < rowCount; i++) {
-                            Integer tableID = (Integer) QueuingPanel.queuedTweetsTable.getModel().getValueAt(i, queueTableIDColumnIndex);
-                            if (tableID.equals(tweet.getId())) {
-                                QueuingPanel.queuedTweetsTable.getModel().setValueAt(time, i, queueTableRTTimeColumnIndex);
-                                break;
-                            }
-                        }
-                    } else {
-                        dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), time});
-                    }
-                    return true;
-                } else if (updateResp.getStatusCode().equals(DBResponseCode.DUPLICATE_ERROR)) {
-                    String msg = "<html>This tweet is already queued for retweeting.</html>";
-                    JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-                    LOGGER.error(msg);
-                    return false;
-                } else {
-                    String msg = "<html>Queued successfully, but an error occurred adding this queue entry "
-                            + "<br/>to the ArtRetweeter client.</html>";
-                    JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-                    LOGGER.error(msg);
-                    return false;
-                }
-            }
-
-        } else {
-            String msg = "<html>ArtRetweeter server returned an error, check log output.</html>";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            LOGGER.error(msg);
-            return false;
-        }
     }
 
     public static void setTemporaryButtonText(JButton button, String message) {

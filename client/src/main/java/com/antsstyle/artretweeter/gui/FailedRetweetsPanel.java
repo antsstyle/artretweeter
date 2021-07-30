@@ -12,6 +12,7 @@ import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
             GUIHelperMethods.showTweetPreview(tweetsTable, getPanelAttributes(), imagePanes, imageLabels);
         });
         refreshAccountBoxModel(true);
+        refreshFailureCounter();
     }
 
     @Override
@@ -96,6 +98,18 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         selectAccountComboBox.setEnabled(true);
     }
 
+    public void refreshFailureCounter() {
+        String query = "SELECT COUNT(*) AS C FROM failedretweets";
+        DBResponse resp = CoreDB.customQuerySelect(query);
+        if (!resp.wasSuccessful()) {
+            LOGGER.error("Failed to get failed retweet count!");
+            return;
+        }
+        ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
+        Integer count = ((Long) rows.get(0).get("C")).intValue();
+        GUI.setFailedNotificationCount(GUI.getInstance(), count);
+    }
+    
     @Override
     public void refreshTweetsTable() {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
@@ -387,7 +401,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        boolean queuedSuccessfully = GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount, false);
+        boolean queuedSuccessfully = ServerAPI.queueRetweet(tweetsTable, currentlySelectedAccount, false);
         if (queuedSuccessfully) {
             clearFailedRetweet();
         }

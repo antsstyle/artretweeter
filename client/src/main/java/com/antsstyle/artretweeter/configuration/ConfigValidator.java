@@ -42,7 +42,26 @@ public class ConfigValidator {
             if (timeValue < 30 && unitsValue.toLowerCase().equals("minutes")) {
                 LOGGER.info("Frequency of tweet checking is below minimum threshold. Reverting to default value of 30 minutes.");
                 mappings.put(TwitterConfig.P_CHECK_NEW_TWEETS_FREQUENCY, 30);
-                
+            }
+        }
+
+        if (mappings.containsKey(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY)
+                || mappings.containsKey(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS)) {
+            Integer timeValue;
+            if (mappings.containsKey(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY)) {
+                timeValue = Integer.parseInt((String) mappings.get(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY));
+            } else {
+                timeValue = TwitterConfig.CHECK_NEW_COLLECTIONS_FREQUENCY;
+            }
+            String unitsValue;
+            if (mappings.containsKey(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS)) {
+                unitsValue = (String) mappings.get(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS);
+            } else {
+                unitsValue = TwitterConfig.CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS;
+            }
+            if (timeValue < 6 && unitsValue.toLowerCase().equals("hours")) {
+                LOGGER.info("Frequency of collection checking is below minimum threshold. Reverting to default value of 6 hours.");
+                mappings.put(TwitterConfig.P_CHECK_NEW_COLLECTIONS_FREQUENCY, 6);
             }
         }
     }

@@ -52,6 +52,7 @@ function statusesUserTimeline($userAuth) {
     $params['screen_name'] = $screen_name;
     $params['include_rts'] = "false";
     $params['trim_user'] = "true";
+    $params['tweet_mode'] = "extended";
 
     if (!is_null($max_id)) {
         $params['max_id'] = $max_id;

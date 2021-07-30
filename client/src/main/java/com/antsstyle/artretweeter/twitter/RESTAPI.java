@@ -66,8 +66,6 @@ public class RESTAPI {
 
     private static final Logger LOGGER = LogManager.getLogger(RESTAPI.class);
 
-    public static Boolean CURRENTLY_PROCESSING = false;
-
     /* Twitter API Status codes */
     public static final int PAGE_NOT_FOUND = 34;
     public static final int RATE_LIMIT_EXCEEDED = 88;
@@ -723,7 +721,6 @@ public class RESTAPI {
         JsonArray responseJSON = apiCallResult.getTwitterResponse().getResponseJSONArray();
         ArrayList<Object[]> params = new ArrayList<>();
         Gson gson = new Gson();
-
         StatusJSON[] receivedStatuses;
         try {
             receivedStatuses = gson.fromJson(responseJSON, StatusJSON[].class);

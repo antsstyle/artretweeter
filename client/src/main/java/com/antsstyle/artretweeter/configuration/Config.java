@@ -87,6 +87,7 @@ public final class Config {
      *
      */
     public static void initialise() {
+        configModules.clear();
         configModules.add(miscConfig);
         configModules.add(guiConfig);
         configModules.add(twitterConfig);

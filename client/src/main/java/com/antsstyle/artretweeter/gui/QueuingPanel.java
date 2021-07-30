@@ -13,6 +13,7 @@ import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import com.antsstyle.artretweeter.tools.FormatTools;
 import java.awt.Dimension;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -111,7 +112,8 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             Integer id = (Integer) row.get("TWEETDATABASEID");
             String tweetText = (String) row.get("TEXT");
             Timestamp retweetTime = (Timestamp) row.get("RETWEETTIME");
-            dtm.addRow(new Object[]{id, tweetText, retweetTime});
+            String retweetTimeString = FormatTools.DATETIME_FORMAT.format(new Date(retweetTime.getTime()));
+            dtm.addRow(new Object[]{id, tweetText, retweetTimeString});
         }
     }
 
@@ -296,7 +298,7 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Long.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Long.class
+                java.lang.Long.class, java.lang.String.class, java.lang.Object.class, java.lang.Integer.class, java.lang.Integer.class, java.lang.Long.class
             };
             boolean[] canEdit = new boolean [] {
                 false, false, false, false, false, false
@@ -448,12 +450,12 @@ public class QueuingPanel extends TweetDisplayBasePanel {
 
     private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
         queueRetweetButton.setEnabled(false);
-        GUIHelperMethods.queueRetweet(tweetsTable, currentlySelectedAccount, false);
+        ServerAPI.queueRetweet(tweetsTable, currentlySelectedAccount, false);
         queueRetweetButton.setEnabled(true);
     }//GEN-LAST:event_queueRetweetButtonActionPerformed
 
     private void changeRetweetTime() {
-        GUIHelperMethods.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
+        ServerAPI.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
     }
 
     private void unqueueRetweet() {
@@ -509,14 +511,14 @@ public class QueuingPanel extends TweetDisplayBasePanel {
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        
         DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
         dtm.setRowCount(0);
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
             Long retweetCount = (Long) row.get("NUMRETWEETS");
-            String dateString = DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
+            String dateString = FormatTools.DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
             dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount(),
                 retweetCount});
         }

@@ -7,6 +7,7 @@ package com.antsstyle.artretweeter.gui.configuration;
 
 import com.antsstyle.artretweeter.configuration.Config;
 import com.antsstyle.artretweeter.configuration.GUIConfig;
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.gui.GUIHelperMethods;
 import java.util.ArrayList;
 import org.apache.logging.log4j.LogManager;
@@ -132,6 +133,7 @@ public class ConfigurationPrimaryPanel extends javax.swing.JPanel {
         }
         Config.refreshConfigurations();
         Config.initialise();
+        initialise();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
