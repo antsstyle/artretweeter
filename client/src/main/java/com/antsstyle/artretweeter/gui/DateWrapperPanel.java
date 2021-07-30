@@ -20,7 +20,7 @@ import org.jdatepicker.impl.UtilDateModel;
 public class DateWrapperPanel extends javax.swing.JPanel {
 
     private final JDatePickerImpl datePicker;
-    
+
     /**
      * Creates new form DateWrapperPanel
      */
@@ -40,7 +40,7 @@ public class DateWrapperPanel extends javax.swing.JPanel {
         datePicker = new JDatePickerImpl(datePanelImpl, new DateLabelFormatter());
         add(datePicker);
     }
-    
+
     public JDatePickerImpl getDatePicker() {
         return datePicker;
     }

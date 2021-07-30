@@ -62,6 +62,8 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
 
 /**
  *
@@ -94,6 +96,11 @@ public class GUIHelperMethods {
         UIManager.put("ScrollBar.thumbHighlight", GUIConfig.JBUTTON_BG_COLOUR);
         UIManager.put("ScrollBar.darkShadow", GUIConfig.JBUTTON_BG_COLOUR);
         UIManager.put("ScrollBar.highlight", GUIConfig.JBUTTON_BG_COLOUR);
+        UIManager.put("OptionPane.background", GUIConfig.WINDOW_BG_COLOUR);
+        UIManager.put("OptionPane.foreground", GUIConfig.WINDOW_FONT_COLOUR);
+        UIManager.put("OptionPane.messageForeground", GUIConfig.WINDOW_FONT_COLOUR);
+        UIManager.getLookAndFeelDefaults().put("Panel.background", GUIConfig.WINDOW_BG_COLOUR);
+        UIManager.getLookAndFeelDefaults().put("Panel.foreground", GUIConfig.WINDOW_FONT_COLOUR);
         ArrayList<Container> containers = GUI.getAllGUIContainers();
         for (Container c : containers) {
             setGUIColours(c);
@@ -237,6 +244,12 @@ public class GUIHelperMethods {
             c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         } else if (c instanceof JOptionPane) {
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
+        } else if (c instanceof JDatePickerImpl) {
+            c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
+            c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
+        } else if (c instanceof JDatePanelImpl) {
             c.setBackground(GUIConfig.WINDOW_BG_COLOUR);
             c.setForeground(GUIConfig.WINDOW_FONT_COLOUR);
         }

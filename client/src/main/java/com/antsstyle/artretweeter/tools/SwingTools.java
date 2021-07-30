@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.tools;
 
 import com.antsstyle.artretweeter.gui.GUI;
+import com.antsstyle.artretweeter.gui.GUIHelperMethods;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
@@ -113,6 +114,7 @@ public class SwingTools {
             components.add(inputComponents[i]);
             dialogPanel.add(inputComponents[i]);
         }
+        GUIHelperMethods.setGUIColours(mainPanel);
         int res = JOptionPane
                 .showConfirmDialog(GUI.getInstance(), mainPanel, title, JOptionPane.OK_CANCEL_OPTION);
         if (res == JOptionPane.OK_OPTION) {

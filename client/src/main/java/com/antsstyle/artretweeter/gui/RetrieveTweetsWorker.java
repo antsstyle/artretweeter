@@ -260,7 +260,7 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
             GUI.getTweetManagementPanel().refreshTweetsTable();
         }
         if (tweetSelAcc.getTwitterID().equals(account.getTwitterID())) {
-            GUI.getMainManagementPanel().getMainTweetsPanel().refreshTweetsTable();
+            GUI.getMainManagementPanel().getMainTweetsPanel().refreshTweetsTable(false);
         }
         GUI.getAccountsPanel().getProgressBar().setVisible(false);
         GUI.getAccountsPanel().enableAllAccountButtons();

@@ -8,7 +8,6 @@ package com.antsstyle.artretweeter.queues;
 import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.CachedVariable;
-import com.antsstyle.artretweeter.datastructures.ConfigItem;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
 import com.antsstyle.artretweeter.datastructures.RetweetRecord;
@@ -212,7 +211,7 @@ public class ClientRefreshQueue implements Runnable {
 
     private Calendar getNextTweetRetweetRecordRefreshTime() {
         Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.HOUR_OF_DAY, 24);
+        cal.add(Calendar.HOUR_OF_DAY, 1);
         return cal;
     }
 
@@ -400,7 +399,8 @@ public class ClientRefreshQueue implements Runnable {
             TweetsDB.insertRetweetRecordEntryBatch(insertParams);
         }
         SwingUtilities.invokeLater(() -> {
-            GUI.getQueuingPanel().refreshTweetsTable();
+            GUI.getMainManagementPanel().getMainTweetsPanel().refreshTweetsTable(false);
+            GUI.getMainManagementPanel().getQueueSubPanel().refreshQueueTable();
         });
     }
 }

@@ -7,7 +7,6 @@ package com.antsstyle.artretweeter.db;
 
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.CachedVariable;
-import com.antsstyle.artretweeter.datastructures.ConfigItem;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
@@ -22,13 +21,6 @@ import java.util.HashMap;
  * @author antss
  */
 public class ResultSetConversion {
-
-    public static ConfigItem getConfigItem(HashMap<String, Object> row) {
-        ConfigItem item = new ConfigItem()
-                .setName((String) row.get("NAME"))
-                .setValue((String) row.get("VALUE"));
-        return item;
-    }
 
     public static CachedVariable getCachedVariable(HashMap<String, Object> row) {
         CachedVariable item = new CachedVariable()

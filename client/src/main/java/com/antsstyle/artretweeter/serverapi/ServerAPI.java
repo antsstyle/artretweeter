@@ -362,6 +362,7 @@ public class ServerAPI {
             return false;
         }
         ChooseDatePanel datePanel = new ChooseDatePanel();
+        GUIHelperMethods.setGUIColours(datePanel);
         int selectionResult = JOptionPane.showConfirmDialog(GUI.getInstance(), datePanel, "Select Retweet Date", JOptionPane.OK_CANCEL_OPTION);
         if (selectionResult != JOptionPane.OK_OPTION) {
             return false;
