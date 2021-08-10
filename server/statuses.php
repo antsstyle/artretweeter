@@ -6,6 +6,31 @@ require_once "core.php";
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 
+function retrieveTweetMetrics($userAuth) {
+    $nextcursor = filter_input(INPUT_POST, 'nextcursor', FILTER_SANITIZE_NUMBER_INT);
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id'] || !$nextcursor) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    $metricsInDB = refreshTweetMetrics($userAuth['twitter_id'], $nextcursor, "Latest Metrics");
+    if (!metricsInDB) {
+        echo encodeErrorInformation("A server error was encountered attempting to retrieve tweet metrics.");
+        exit;
+    }
+    $idString = $metricsInDB['idstring'];
+    if (!$idString) {
+        
+    } else {
+        $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
+                $userAuth['access_token'], $userAuth['access_token_secret']);
+        $params['id'] = $idString;
+        $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
+        if ($connection->getLastHttpCode() == 200) {
+            insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+        }
+    }
+}
+
 function getQueueStatus($userAuth) {
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
         echo encodeErrorInformation("Parameters are not set correctly.");
@@ -36,7 +61,12 @@ function statusesShow($userAuth) {
 
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userAuth['access_token'], $userAuth['access_token_secret']);
-    queryTwitterUserAuth($connection, "statuses/show", "GET", $params, $userAuth);
+    $results = queryTwitterUserAuth($connection, "statuses/show", "GET", $params, $userAuth, false, false);
+    if ($connection->getLastHttpCode() == 200) {
+        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+    }
+    echo encodeTwitterResponseInformation($connection, $results);
+    exit();
 }
 
 function statusesUserTimeline($userAuth) {
@@ -63,7 +93,12 @@ function statusesUserTimeline($userAuth) {
 
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userAuth['access_token'], $userAuth['access_token_secret']);
-    queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth);
+    $results = queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
+    if ($connection->getLastHttpCode() == 200) {
+        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+    }
+    echo encodeTwitterResponseInformation($connection, $results);
+    exit();
 }
 
 function queueRetweet($userAuth) {
@@ -121,7 +156,12 @@ function statusesLookup($userAuth) {
 
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userAuth['access_token'], $userAuth['access_token_secret']);
-    queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth);
+    $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
+    if ($connection->getLastHttpCode() == 200) {
+        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+    }
+    echo encodeTwitterResponseInformation($connection, $results);
+    exit();
 }
 
 function statusesDestroy($userAuth) {
@@ -136,4 +176,15 @@ function statusesDestroy($userAuth) {
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userAuth['access_token'], $userAuth['access_token_secret']);
     queryTwitterUserAuth($connection, "statuses/destroy", "POST", $params, $userAuth);
+}
+
+function deleteTweet($userAuth) {
+    $tweetid = filter_input(INPUT_POST, 'tweetid', FILTER_SANITIZE_NUMBER_INT);
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetid || !$userAuth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    $success = $GLOBALS['databaseConnection']->prepare("DELETE FROM tweetmetrics WHERE twitterid=?")->execute([$tweetid]);
+    echo encodeDBResponseInformation($success);
+    exit();
 }

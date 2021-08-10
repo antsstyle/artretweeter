@@ -44,6 +44,9 @@ if ($artretweeter_endpoint) {
         case "retweets/unqueue":
             ArtRetweeter\unqueueRetweet($userAuth);
             break;
+        case "tweets/deletetweet":
+            ArtRetweeter\deleteTweet($userAuth);
+            break;
     }
     exit();
 }

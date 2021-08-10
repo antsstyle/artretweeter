@@ -401,7 +401,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        boolean queuedSuccessfully = ServerAPI.queueRetweet(tweetsTable, currentlySelectedAccount, false);
+        boolean queuedSuccessfully = ServerAPI.queueRetweet(currentlySelectedAccount, false);
         if (queuedSuccessfully) {
             clearFailedRetweet();
         }

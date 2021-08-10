@@ -41,6 +41,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpEntity;
@@ -298,7 +299,8 @@ public class ServerAPI {
         }
     }
 
-    public static boolean queueRetweet(JTable table, Account account, boolean changeTime) {
+    public static boolean queueRetweet(Account account, boolean changeTime) {
+        JTable table = GUI.getMainManagementPanel().getMainTweetsPanel().getTweetsTable();
         int[] selectedRowsCheck = table.getSelectedRows();
         if (selectedRowsCheck.length > 1) {
             String msg = "Select only one tweet at a time to queue.";
@@ -411,7 +413,7 @@ public class ServerAPI {
                 updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, new String[]{"tweetid", "retweetingusertwitterid", "retweettime"},
                         new Object[]{tweet.getTweetID(), account.getTwitterID(), time});
                 if (updateResp.wasSuccessful()) {
-                    DefaultTableModel dtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
+                    DefaultTableModel queueDtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
                     if (changeTime) {
                         int rowCount = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getRowCount();
                         Integer queueTableIDColumnIndex = GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable()
@@ -428,7 +430,17 @@ public class ServerAPI {
                             }
                         }
                     } else {
-                        dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp});
+                        queueDtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp});
+                        TableModel tm = table.getModel();
+                        int rowCount = table.getRowCount();
+                        Integer pendingRTColumnIndex = table.getColumnModel().getColumnIndex("Pending RT");
+                        for (int i = 0; i < rowCount; i++) {
+                            Integer idTest = (Integer) tm.getValueAt(i, idColumnIndex);
+                            if (idTest.equals(id)) {
+                                table.setValueAt(true, i, pendingRTColumnIndex);
+                                break;
+                            }
+                        }
                     }
                     return true;
                 } else if (updateResp.getStatusCode().equals(DBResponseCode.DUPLICATE_ERROR)) {

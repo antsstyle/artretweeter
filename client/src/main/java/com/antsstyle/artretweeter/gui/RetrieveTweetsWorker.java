@@ -247,19 +247,11 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
             return;
         }
         GUI.getAccountsPanel().setTweetRetrievalResults(results, account, storedTweetCount, receivedTweetCount);
-        Account selAcc = GUI.getCollectionsPanel().getCurrentlySelectedAccount();
+        Account selAcc = GUI.getMainManagementPanel().getMainTweetsPanel().getSelectedAccount();
         if (selAcc.getTwitterID().equals(account.getTwitterID())) {
-            GUI.getCollectionsPanel().refreshTweetsTable();
+            GUI.getMainManagementPanel().getQueueSubPanel().refreshQueueTable();
         }
-        Account queueSelAcc = GUI.getQueuingPanel().getCurrentlySelectedAccount();
-        if (queueSelAcc.getTwitterID().equals(account.getTwitterID())) {
-            GUI.getQueuingPanel().refreshTweetsTable();
-        }
-        Account tweetSelAcc = GUI.getTweetManagementPanel().getCurrentlySelectedAccount();
-        if (tweetSelAcc.getTwitterID().equals(account.getTwitterID())) {
-            GUI.getTweetManagementPanel().refreshTweetsTable();
-        }
-        if (tweetSelAcc.getTwitterID().equals(account.getTwitterID())) {
+        if (selAcc.getTwitterID().equals(account.getTwitterID())) {
             GUI.getMainManagementPanel().getMainTweetsPanel().refreshTweetsTable(false);
         }
         GUI.getAccountsPanel().getProgressBar().setVisible(false);

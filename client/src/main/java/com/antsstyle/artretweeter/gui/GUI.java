@@ -85,19 +85,13 @@ public class GUI extends javax.swing.JFrame {
     public static void preInitialisation() {
         setFrameImageIcon(getInstance());
         ALL_CONTAINERS.add(ACCOUNTS_PANEL);
-        ALL_CONTAINERS.add(COLLECTIONS_PANEL);
         ALL_CONTAINERS.add(PRIMARY_DISPLAY_PANEL);
-        ALL_CONTAINERS.add(QUEUING_PANEL);
         ALL_CONTAINERS.add(FAILED_RETWEETS_PANEL);
         ALL_CONTAINERS.add(HELP_PANEL);
-        ALL_CONTAINERS.add(TWEET_MANAGEMENT_PANEL);
         ALL_CONTAINERS.add(CONFIGURATION_PANEL);
         ALL_CONTAINERS.add(MAIN_MANAGEMENT_PANEL);
         ACCOUNTS_PANEL.initialise();
-        COLLECTIONS_PANEL.initialise();
-        QUEUING_PANEL.initialise();
         FAILED_RETWEETS_PANEL.initialise();
-        TWEET_MANAGEMENT_PANEL.initialise();
         CONFIGURATION_PANEL.initialise();
         MAIN_MANAGEMENT_PANEL.initialise();
         getInstance()
@@ -184,24 +178,12 @@ public class GUI extends javax.swing.JFrame {
         return ACCOUNTS_PANEL;
     }
 
-    public static CollectionsPanel getCollectionsPanel() {
-        return COLLECTIONS_PANEL;
-    }
-
-    public static QueuingPanel getQueuingPanel() {
-        return QUEUING_PANEL;
-    }
-
     public static FailedRetweetsPanel getFailedRetweetsPanel() {
         return FAILED_RETWEETS_PANEL;
     }
 
     public static HelpPanel getHelpPanel() {
         return HELP_PANEL;
-    }
-
-    public static TweetManagementPanel getTweetManagementPanel() {
-        return TWEET_MANAGEMENT_PANEL;
     }
 
     public static ConfigurationPrimaryPanel getConfigurationPanel() {
@@ -213,11 +195,8 @@ public class GUI extends javax.swing.JFrame {
     }
 
     private static final AccountsPanel ACCOUNTS_PANEL = new AccountsPanel();
-    private static final CollectionsPanel COLLECTIONS_PANEL = new CollectionsPanel();
-    private static final QueuingPanel QUEUING_PANEL = new QueuingPanel();
     private static final FailedRetweetsPanel FAILED_RETWEETS_PANEL = new FailedRetweetsPanel();
     private static final HelpPanel HELP_PANEL = new HelpPanel();
-    private static final TweetManagementPanel TWEET_MANAGEMENT_PANEL = new TweetManagementPanel();
     private static final ConfigurationPrimaryPanel CONFIGURATION_PANEL = new ConfigurationPrimaryPanel();
     private static final MainManagementPanel MAIN_MANAGEMENT_PANEL = new MainManagementPanel();
 

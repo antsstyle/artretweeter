@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Set;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JOptionPane;
+import javax.swing.JTable;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.event.ListSelectionEvent;
@@ -105,6 +106,10 @@ public class MainTweetsPanel extends javax.swing.JPanel {
 
     public Account getSelectedAccount() {
         return currentlySelectedAccount;
+    }
+    
+    public JTable getTweetsTable() {
+        return tweetsTable;
     }
 
     /**
@@ -577,7 +582,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         queueRetweetButton.setEnabled(false);
         GUI.getMainManagementPanel().getQueueSubPanel().disableTableListener();
         try {
-            ServerAPI.queueRetweet(tweetsTable, currentlySelectedAccount, false);
+            ServerAPI.queueRetweet(currentlySelectedAccount, false);
         } catch (Exception e) {
             LOGGER.error("Failed to queue retweet", e);
         }

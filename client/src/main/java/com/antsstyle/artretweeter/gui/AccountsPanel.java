@@ -588,11 +588,8 @@ public class AccountsPanel extends javax.swing.JPanel {
         CoreDB.addAccountToDB(account);
         DefaultTableModel dtm = (DefaultTableModel) accountsTable.getModel();
         dtm.addRow(new Object[]{account.getScreenName(), 0, 0});
-        GUI.getCollectionsPanel().refreshAccountBoxModel(false);
-        GUI.getQueuingPanel().refreshAccountBoxModel(false);
-        GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
-        GUI.getTweetManagementPanel().refreshAccountBoxModel(false);
         GUI.getMainManagementPanel().getMainTweetsPanel().refreshAccountBoxModel(false);
+        GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
         ClientRefreshQueue.getInstance().refreshTimers();
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);

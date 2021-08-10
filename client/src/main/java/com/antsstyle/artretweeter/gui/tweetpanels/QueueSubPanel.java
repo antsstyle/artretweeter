@@ -224,7 +224,7 @@ public class QueueSubPanel extends javax.swing.JPanel {
 
     private void changeRetweetTime() {
         Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
-        ServerAPI.queueRetweet(queuedTweetsTable, currentlySelectedAccount, true);
+        ServerAPI.queueRetweet(currentlySelectedAccount, true);
     }
 
     private void unqueueRetweet() {

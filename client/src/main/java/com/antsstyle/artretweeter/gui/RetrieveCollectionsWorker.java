@@ -141,10 +141,7 @@ public class RetrieveCollectionsWorker extends SwingWorker<Object, Pair<Integer,
         }
         GUI.getAccountsPanel().setCollectionRetrievalResults(results, errorResults, account);
         GUI.getAccountsPanel().setFinishedRetrievingCollectionsGUIElements();
-        Account selAcc = GUI.getCollectionsPanel().getCurrentlySelectedAccount();
-        if (selAcc.getTwitterID().equals(account.getTwitterID())) {
-            GUI.getCollectionsPanel().refreshCollectionBoxModel(false);
-        }
+        Account selAcc = GUI.getMainManagementPanel().getMainTweetsPanel().getSelectedAccount();
         if (selAcc.getTwitterID().equals(account.getTwitterID())) {
             GUI.getMainManagementPanel().getCollectionsSubPanel().refreshCollectionBoxModel(false);
         }
