@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeSet;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
@@ -64,6 +65,29 @@ import org.apache.logging.log4j.Logger;
 public class ServerAPI {
 
     private static final Logger LOGGER = LogManager.getLogger(ServerAPI.class);
+
+    public static OperationResult getStoredTweetIDs(Account account) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.GET_STORED_TWEET_IDS, account);
+        if (!apiCallResult.wasSuccessful()) {
+            return apiCallResult;
+        }
+        JsonObject resp = apiCallResult.getServerResponse().getResponseJSONObject().get("dbresult").getAsJsonObject();
+        JsonElement tweetIDsElement = resp.get("tweetids");
+        ArrayList<Long> tweetIDs = new ArrayList<>();
+        if (tweetIDsElement.isJsonArray()) {
+            JsonArray arr = tweetIDsElement.getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonObject obj = arr.get(i).getAsJsonObject();
+                Long tweetID = obj.get("tweetid").getAsLong();
+                tweetIDs.add(tweetID);
+            }
+        } else {
+            apiCallResult.getServerResponse().setStatusCode(StatusCode.ARTRETWEETER_SERVER_ERROR);
+        }
+        apiCallResult.getServerResponse().setReturnedObject(tweetIDs);
+        return apiCallResult;
+    }
 
     public static OperationResult getQueueStatus(Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
@@ -151,6 +175,13 @@ public class ServerAPI {
         List<NameValuePair> nvps = new ArrayList<>();
         nvps.add(new BasicNameValuePair("tweetid", String.valueOf(tweetID)));
         OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.UNQUEUE_RETWEET, account);
+        return apiCallResult;
+    }
+
+    public static OperationResult deleteTweet(Account account, Long tweetID) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("tweetid", String.valueOf(tweetID)));
+        OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.DELETE_TWEET, account);
         return apiCallResult;
     }
 
@@ -437,7 +468,7 @@ public class ServerAPI {
                         for (int i = 0; i < rowCount; i++) {
                             Integer idTest = (Integer) tm.getValueAt(i, idColumnIndex);
                             if (idTest.equals(id)) {
-                                table.setValueAt(true, i, pendingRTColumnIndex);
+                                table.getModel().setValueAt(true, i, pendingRTColumnIndex);
                                 break;
                             }
                         }

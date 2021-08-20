@@ -501,6 +501,9 @@ public class AccountsPanel extends javax.swing.JPanel {
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             RetrieveTweetsWorker worker = new RetrieveTweetsWorker();
+            if (!account.getRetrievedOldTweetsLimit()) {
+                worker.setFirstRetrieval(true);
+            }
             if (!worker.initialise(account, showGUI)) {
                 APIQueryManager.releaseAPILock();
                 enableAllAccountButtons();
@@ -689,8 +692,9 @@ public class AccountsPanel extends javax.swing.JPanel {
                 Integer newRetrievedCount = last.getLeft();
                 Integer newReceivedCount = last.getRight();
                 tm.setValueAt(countBeforeStart + newRetrievedCount, i, tweetsRetrievedColumnIndex);
-                tweetDownloadProgressLabel.setText("<html>Retrieving... ".concat(String.valueOf(newRetrievedCount)).concat(" ").concat(tweetsRetrieved)
-                        .concat(" added so far (out of ").concat(String.valueOf(newReceivedCount).concat(" received).</html>")));
+                tweetDownloadProgressLabel.setText("<html>Retrieving... ".concat(String.valueOf(newRetrievedCount))
+                        .concat(" ").concat(tweetsRetrieved).concat(" added so far (out of ")
+                        .concat(String.valueOf(newReceivedCount).concat(" received).</html>")));
                 break;
             }
         }

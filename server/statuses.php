@@ -6,13 +6,22 @@ require_once "core.php";
 
 use Abraham\TwitterOAuth\TwitterOAuth;
 
+function getStoredTweetsInDB($userAuth) {
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    validateUserAuth($userAuth);
+    getTweetIDsForUser($userAuth['twitter_id']);
+}
+
 function retrieveTweetMetrics($userAuth) {
     $nextcursor = filter_input(INPUT_POST, 'nextcursor', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id'] || !$nextcursor) {
         echo encodeErrorInformation("Parameters are not set correctly.");
         exit;
     }
-    $metricsInDB = refreshTweetMetrics($userAuth['twitter_id'], $nextcursor, "Latest Metrics");
+    $metricsInDB = getTweetMetricsToRefresh($userAuth['twitter_id'], $nextcursor, "Latest Metrics");
     if (!metricsInDB) {
         echo encodeErrorInformation("A server error was encountered attempting to retrieve tweet metrics.");
         exit;
@@ -26,7 +35,7 @@ function retrieveTweetMetrics($userAuth) {
         $params['id'] = $idString;
         $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
         if ($connection->getLastHttpCode() == 200) {
-            insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+            insertTweetsAndMetrics($results, $userAuth['twitter_id']);
         }
     }
 }
@@ -63,7 +72,7 @@ function statusesShow($userAuth) {
             $userAuth['access_token'], $userAuth['access_token_secret']);
     $results = queryTwitterUserAuth($connection, "statuses/show", "GET", $params, $userAuth, false, false);
     if ($connection->getLastHttpCode() == 200) {
-        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+        insertTweetsAndMetrics($results, $userAuth['twitter_id']);
     }
     echo encodeTwitterResponseInformation($connection, $results);
     exit();
@@ -95,7 +104,7 @@ function statusesUserTimeline($userAuth) {
             $userAuth['access_token'], $userAuth['access_token_secret']);
     $results = queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
     if ($connection->getLastHttpCode() == 200) {
-        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+        insertTweetsAndMetrics($results, $userAuth['twitter_id']);
     }
     echo encodeTwitterResponseInformation($connection, $results);
     exit();
@@ -158,7 +167,7 @@ function statusesLookup($userAuth) {
             $userAuth['access_token'], $userAuth['access_token_secret']);
     $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
     if ($connection->getLastHttpCode() == 200) {
-        insertTweetMetrics($results, $userAuth['twitter_id'], "Latest Metrics");
+        insertTweetsAndMetrics($results, $userAuth['twitter_id']);
     }
     echo encodeTwitterResponseInformation($connection, $results);
     exit();

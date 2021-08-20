@@ -7,6 +7,7 @@ package com.antsstyle.artretweeter.db;
 
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.CachedVariable;
+import com.antsstyle.artretweeter.datastructures.TableFilterEntry;
 import com.antsstyle.artretweeter.tools.PathTools;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,6 +36,25 @@ public class ConfigDB {
 
     public static boolean updateConfigItem(String configName, String configValue) {
         return CoreDB.runCustomUpdate(CONFIG_MERGE_QUERY, new Object[]{configName, configValue});
+    }
+    
+    public static ArrayList<TableFilterEntry> getTweetManagementTableFilterSettings() {
+        CachedVariable managementTweetTableFiltering = CachedVariableDB.getCachedVariableByName("artretweeter.managementtweettablefiltering");
+        if (managementTweetTableFiltering != null) {
+            ArrayList<TableFilterEntry> results = new ArrayList<>();
+            String[] items = StringUtils.split(managementTweetTableFiltering.getValue(), ";");
+            LOGGER.debug(items.length);
+            for (int i = 0; i < items.length; i++) {
+                LOGGER.debug(items[i]);
+            }
+            for (int i = 0; i < items.length; i+=4) {
+                TableFilterEntry entry = new TableFilterEntry(items[i], Boolean.valueOf(items[i+1]), items[i+2], items[i+3]);
+                results.add(entry);
+            }
+            return results;
+        } else {
+            return new ArrayList<>();
+        }
     }
 
     public static Pair<String[], String[]> getTweetManagementTableSortSettings() {

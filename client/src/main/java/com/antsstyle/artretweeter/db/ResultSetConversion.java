@@ -73,7 +73,8 @@ public class ResultSetConversion {
                 .setToken((String) row.get("TOKEN"))
                 .setTokenSecret((String) row.get("TOKENSECRET"))
                 .setMaxID((Long) row.get("MAX_ID"))
-                .setSinceID((Long) row.get("SINCE_ID"));
+                .setSinceID((Long) row.get("SINCE_ID"))
+                .setRetrievedOldTweetsLimit(((String) row.get("RETRIEVEDOLDTWEETSLIMIT")).equals("Y"));
         return account;
     }
 

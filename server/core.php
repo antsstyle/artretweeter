@@ -19,6 +19,19 @@ try {
     exit();
 }
 
+function getTweetIDsForUser($userAuthTwitterID) {
+    $selectQuery = "SELECT tweetid FROM tweets WHERE usertwitterid=?";
+    $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);
+    $success = $selectStmt->execute([$userAuthTwitterID]);
+    if (!$success) {
+        $returnArray['tweetids'] = false;
+    } else {
+        $returnArray['tweetids'] = $selectStmt->fetchAll();
+    }
+
+    echo encodeDBResponseInformation($returnArray);
+}
+
 function removeExpiredRetweets() {
     $time1HourAgo = date('Y-m-d H:i:s', strtotime('-1 hour', time()));
     $insertQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
@@ -591,7 +604,7 @@ function removeAccountFromDB($twitterID) {
     echo encodeDBResponseInformation($success);
 }
 
-function refreshTweetMetrics($userTwitterID, $startTweetID, $metricsType) {
+function getTweetMetricsToRefresh($userTwitterID, $startTweetID, $metricsType) {
     $selectQuery = "SELECT *,(SELECT description FROM retrievalmetrics WHERE retrievalmetrics.id=tweetmetrics.retrievalmetric) "
             . "AS description FROM tweetmetrics WHERE usertwitterid=? AND tweetid > ? "
             . "AND retrievalmetric=(SELECT id FROM retrievalmetrics WHERE description=?) "
@@ -630,17 +643,17 @@ function refreshTweetMetrics($userTwitterID, $startTweetID, $metricsType) {
     return $results;
 }
 
-function insertTweetMetrics($tweets, $userTwitterID, $metricsType) {
+function insertTweetsAndMetrics($tweets, $userTwitterID) {
     $selectQuery = "SELECT id FROM retrievalmetrics WHERE description=?";
     $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);
-    $success = $selectStmt->execute([$metricsType]);
+    $success = $selectStmt->execute(["Latest Metrics"]);
     if (!$success) {
         error_log("Failed to get metrics type, cannot insert tweet metrics.");
         return;
     }
     $metricID = $selectStmt->fetchColumn();
     if (!$metricID) {
-        error_log("No metrics type found for description: $metricsType, cannot insert tweet metrics.");
+        error_log("No metrics type found, cannot insert tweet metrics.");
         return;
     }
     $GLOBALS['databaseConnection']->beginTransaction();
@@ -653,18 +666,47 @@ function insertTweetMetrics($tweets, $userTwitterID, $metricsType) {
         if (!$tweet->extended_entities->media) {
             continue;
         }
+        if ($tweet->extended_entities->media[0]->type != "photo") {
+            continue;
+        }
         if ($tweet->retweeted_status) {
             continue;
         }
         if ($tweet->in_reply_to_user_id && ($tweet->in_reply_to_user_id != $userTwitterID)) {
             continue;
         }
-        $stmt = $GLOBALS['databaseConnection']->prepare("INSERT INTO tweetmetrics 
-            (tweetid,usertwitterid,createdat,fulltweettext,retrievedtime,retrievedmetric,likes,retweets) 
-	VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE likes=?, retweets=?, retrievedtime=?");
-        $stmt->execute([$tweet->id, $userTwitterID, $created_at, $tweet->full_text, $timeNow, $metricID,
-            $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
-            $tweet->retweet_count, $timeNow]);
+        try {
+            $stmt = $GLOBALS['databaseConnection']->prepare("INSERT IGNORE INTO tweets
+            (tweetid,usertwitterid,createdat,fulltweettext) 
+	VALUES (?,?,?,?)");
+            $stmt->execute([$tweet->id, $userTwitterID, $created_at, $tweet->full_text]);
+        } catch (PDOException $e) {
+            error_log("Failed to insert tweet: $e");
+        }
+        if ($stmt->rowCount()) {
+            try {
+                $stmt = $GLOBALS['databaseConnection']->prepare("INSERT INTO tweetmetrics
+                (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (LAST_INSERT_ID(),?,?,?,?) 
+                ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
+                $stmt->execute([$timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
+                    $tweet->retweet_count, $timeNow]);
+            } catch (PDOException $e) {
+                error_log("Failed to insert tweet metrics for new tweet: $e");
+            }
+        } else {
+            $stmt = $GLOBALS['databaseConnection']->prepare("SELECT id FROM tweets WHERE tweetid=?");
+            $stmt->execute([$tweet->id]);
+            $tweetsTableID = $stmt->fetchColumn();
+            try {
+                $stmt = $GLOBALS['databaseConnection']->prepare("INSERT INTO tweetmetrics
+                (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (?,?,?,?,?) 
+                ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
+                $stmt->execute([$tweetsTableID, $timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
+                    $tweet->retweet_count, $timeNow]);
+            } catch (PDOException $e) {
+                error_log("Failed to insert tweet metrics for existing tweet: $e");
+            }
+        }
     }
     $GLOBALS['databaseConnection']->commit();
 }

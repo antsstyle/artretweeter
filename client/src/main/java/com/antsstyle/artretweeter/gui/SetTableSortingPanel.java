@@ -35,10 +35,6 @@ public class SetTableSortingPanel extends javax.swing.JPanel {
         return Pair.of(items, itemOrders);
     }
 
-    public void commitUserSettings() {
-
-    }
-
     public void setComboBoxSettings() {
         CachedVariable managementTweetTableSorting = CachedVariableDB.getCachedVariableByName("artretweeter.managementtweettablesorting");
         if (managementTweetTableSorting != null) {

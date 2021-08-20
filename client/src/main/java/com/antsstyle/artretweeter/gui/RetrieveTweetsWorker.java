@@ -16,12 +16,14 @@ import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.serverapi.APIQueryManager;
+import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeSet;
 import javax.swing.SwingWorker;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -46,6 +48,13 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
     private Integer receivedTweetCount = 0;
 
     private Integer countBeforeStart;
+
+    private Boolean firstRetrieval = false;
+    private Boolean startedServerRetrieval = false;
+
+    public void setFirstRetrieval(Boolean firstRetrieval) {
+        this.firstRetrieval = firstRetrieval;
+    }
 
     public static boolean retrieveForAllAccounts() {
         DBResponse resp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
@@ -131,6 +140,7 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
         Long sinceID = finalSinceID;
         Boolean finished = false;
         OperationResult finalResult = new OperationResult();
+        ArrayList<Long> retrievedFromAPITweetIDs = new ArrayList<>();
         int consecutiveErrors = 0;
         try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
             while (!finished) {
@@ -143,6 +153,11 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                     if (lastResult.wasSuccessful()) {
                         consecutiveErrors = 0;
                         ArrayList<StatusJSON> returnedStatuses = returnResults.getRight();
+                        if (firstRetrieval) {
+                            for (StatusJSON json : returnedStatuses) {
+                                retrievedFromAPITweetIDs.add(json.getId());
+                            }
+                        }
                         statuses.addAll(returnedStatuses);
                         Pair<Long, Long> resultPair = (Pair<Long, Long>) lastResult.getTwitterResponse().getReturnedObject();
                         if (returnedStatuses.isEmpty()) {
@@ -217,6 +232,38 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                         LOGGER.info("Interrupted while waiting - aborting tweet download.");
                         break;
                     }
+                }
+            }
+
+            if (firstRetrieval) {
+                LOGGER.debug("Finished retrieving statuses from Twitter API. Checking ArtRetweeter server for older tweets...");
+                startedServerRetrieval = true;
+                OperationResult serverResult = ServerAPI.getStoredTweetIDs(account);
+                if (serverResult.wasSuccessful()) {
+                    ArrayList<Long> tweetIDs = (ArrayList<Long>) serverResult.getServerResponse().getReturnedObject();
+                    tweetIDs.removeAll(retrievedFromAPITweetIDs);
+                    ArrayList<ArrayList<Long>> lists = new ArrayList<>();
+                    for (int i = 0; i < tweetIDs.size(); i += 100) {
+                        if (i + 100 >= tweetIDs.size()) {
+                            lists.add(new ArrayList<>(tweetIDs.subList(i, tweetIDs.size())));
+                        } else {
+                            lists.add(new ArrayList<>(tweetIDs.subList(i, i + 100)));
+                        }
+                    }
+                    for (ArrayList<Long> list : lists) {
+                        OperationResult tweetsResult = RESTAPI.getTweetsByIDs(list, account, tweetFolderPath);
+                        if (!tweetsResult.wasSuccessful()) {
+                            LOGGER.error("Error: " + tweetsResult.getErrorCode().toString());
+                        } else {
+                            ArrayList<StatusJSON> returnedStatuses = (ArrayList<StatusJSON>) tweetsResult.getTwitterResponse().getReturnedObject();
+                            int returnedStatusesCount = returnedStatuses.size();
+                            receivedTweetCount += list.size();
+                            storedTweetCount += returnedStatusesCount;
+                            publish(Pair.of(storedTweetCount, receivedTweetCount));
+                        }
+                    }
+                } else {
+                    LOGGER.error("Error: " + serverResult.getErrorCode().toString());
                 }
             }
             return Pair.of(finalResult, statuses);

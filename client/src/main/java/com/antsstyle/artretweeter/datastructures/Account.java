@@ -27,6 +27,16 @@ public class Account {
     private String screenName;
     private Long maxID;
     private Long sinceID;
+    private Boolean retrievedOldTweetsLimit;
+
+    public Boolean getRetrievedOldTweetsLimit() {
+        return retrievedOldTweetsLimit;
+    }
+
+    public Account setRetrievedOldTweetsLimit(Boolean retrievedOldTweetsLimit) {
+        this.retrievedOldTweetsLimit = retrievedOldTweetsLimit;
+        return this;
+    }
 
     public Long getSinceID() {
         return sinceID;

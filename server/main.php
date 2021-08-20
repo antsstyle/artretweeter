@@ -47,6 +47,9 @@ if ($artretweeter_endpoint) {
         case "tweets/deletetweet":
             ArtRetweeter\deleteTweet($userAuth);
             break;
+        case "tweets/getstoredtweetids":
+            ArtRetweeter\getStoredTweetsInDB($userAuth);
+            break;
     }
     exit();
 }

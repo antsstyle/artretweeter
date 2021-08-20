@@ -11,6 +11,8 @@ package com.antsstyle.artretweeter.serverapi;
  */
 public enum ArtRetweeterEndpoint {
 
+    DELETE_TWEET("tweets/deletetweet"),
+    GET_STORED_TWEET_IDS("tweets/getstoredtweetids"),
     QUEUE_STATUS("retweets/queuestatus"),
     QUEUE_RETWEET("retweets/queue"),
     REMOVE_ACCOUNT("accounts/remove"),
