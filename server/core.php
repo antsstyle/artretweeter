@@ -20,9 +20,9 @@ try {
 }
 
 function getTweetIDsForUser($userAuthTwitterID) {
-    $selectQuery = "SELECT tweetid FROM tweets WHERE usertwitterid=?";
+    $selectQuery = "SELECT tweetid FROM tweets WHERE usertwitterid=? AND deletedflag=?";
     $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);
-    $success = $selectStmt->execute([$userAuthTwitterID]);
+    $success = $selectStmt->execute([$userAuthTwitterID, "N"]);
     if (!$success) {
         $returnArray['tweetids'] = false;
     } else {
@@ -309,8 +309,6 @@ function getNumTweetsInTimeInterval($userTwitterID, $retweetTime, $timeInterval,
     }
     $recordCount = $stmt->fetchColumn();
     $rescount = $recordCount + $scheduledCount;
-    error_log("First pass.");
-    error_log("Scheduled count: $scheduledCount      Record count: $recordCount         Rescount: $rescount    Limit: $limit");
     if ($rescount >= $limit) {
         if ($echoAndExit) {
             echo encodeErrorInformation("Too many retweets in 1 hour period.");
@@ -454,8 +452,6 @@ function getNumTweetsInTimeInterval($userTwitterID, $retweetTime, $timeInterval,
     $latestTimeString = strtotime($latestTimestampFinal);
     $diff = $latestTimeString - $earliestTimeString;
     if ($diff <= $intervalSizeSeconds) {
-        error_log("Interval size seconds: $intervalSizeSeconds");
-        error_log("Diff: $diff");
         if ($echoAndExit) {
             echo encodeErrorInformation("Too many retweets in $timeInterval period.");
             exit();
@@ -648,14 +644,27 @@ function insertTweetsAndMetrics($tweets, $userTwitterID) {
     $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);
     $success = $selectStmt->execute(["Latest Metrics"]);
     if (!$success) {
-        error_log("Failed to get metrics type, cannot insert tweet metrics.");
+        error_log("Failed to get metrics type, cannot insert tweets.");
         return;
     }
     $metricID = $selectStmt->fetchColumn();
     if (!$metricID) {
-        error_log("No metrics type found, cannot insert tweet metrics.");
+        error_log("No metrics type found, cannot insert tweets.");
         return;
     }
+
+    $selectQuery = "SELECT tweetid FROM tweets WHERE usertwitterid=? AND deletedflag=?";
+    $selectStmt = $GLOBALS['databaseConnection']->prepare($selectQuery);
+    $success = $selectStmt->execute([$userTwitterID, "Y"]);
+    if (!$success) {
+        error_log("Failed to get delete-flagged tweets for user, cannot insert tweets.");
+        return;
+    }
+
+    while ($row = $selectStmt->fetch()) {
+        $deletedTweetsArray[$row['tweetid']] = 1;
+    }
+
     $GLOBALS['databaseConnection']->beginTransaction();
     $timeNow = date("Y-m-d H:i:s");
     foreach ($tweets as $tweet) {
@@ -673,6 +682,9 @@ function insertTweetsAndMetrics($tweets, $userTwitterID) {
             continue;
         }
         if ($tweet->in_reply_to_user_id && ($tweet->in_reply_to_user_id != $userTwitterID)) {
+            continue;
+        }
+        if (isset($deletedTweetsArray) && isset($deletedTweetsArray[$tweet->id])) {
             continue;
         }
         try {

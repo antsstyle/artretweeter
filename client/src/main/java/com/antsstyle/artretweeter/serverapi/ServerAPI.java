@@ -185,6 +185,13 @@ public class ServerAPI {
         return apiCallResult;
     }
 
+    public static OperationResult deleteTweets(Account account, String tweetIDs) {
+        List<NameValuePair> nvps = new ArrayList<>();
+        nvps.add(new BasicNameValuePair("tweetids", tweetIDs));
+        OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.DELETE_MULTIPLE_TWEETS, account);
+        return apiCallResult;
+    }
+
     public static OperationResult removeAccount(Account account) {
         List<NameValuePair> nvps = new ArrayList<>();
         OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.REMOVE_ACCOUNT, account);

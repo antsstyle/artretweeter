@@ -649,10 +649,28 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         for (int modelRow : modelRows) {
             ids.add((Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
         }
+        ArrayList<Long> tweetIDs = TweetsDB.getTweetIDsByDatabaseIDs(ids);
+        boolean success = false;
         try {
-            TweetsDB.deleteTweetsUsingDatabaseIDs(ids, false);
+            success = TweetsDB.deleteTweetsUsingDatabaseIDs(ids, false);
         } catch (Exception e) {
             LOGGER.error("Failed to delete tweets from database", e);
+        }
+        if (success) {
+            if (tweetIDs != null && !tweetIDs.isEmpty()) {
+                String tweetString = "";
+                for (Long tweetID : tweetIDs) {
+                    tweetString = tweetString.concat(String.valueOf(tweetID)).concat(",");
+                }
+                tweetString = tweetString.substring(0, tweetString.length() - 1);
+                OperationResult res = ServerAPI.deleteTweets(currentlySelectedAccount, tweetString);
+                if (!res.wasSuccessful()) {
+                    LOGGER.error("Deleting tweets on server failed. Error code: " + res.getErrorCode());
+                    LOGGER.error(res.getServerResponse().getLogMessage());
+                }
+            }
+        } else {
+            LOGGER.error("Failed to delete tweets from DB, did not delete on server.");
         }
         deleteTweetsFromArtRetweeterButton.setText("Delete tweets from ArtRetweeter");
         refreshTweetsTable(true);
@@ -722,9 +740,14 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                 + "(SELECT id FROM tweets WHERE tweets.tweetid=retweetqueue.tweetid) AS tweetdatabaseid,"
                 + "(SELECT fulltweettext FROM tweets WHERE tweets.tweetid=retweetqueue.tweetid) AS text "
                 + "FROM retweetqueue WHERE retweetingusertwitterid=? ORDER BY retweettime ASC";
+        TableFilterEntry pendingRTEntry = null;
         TableFilterEntry numRetweetsEntry = null;
         for (TableFilterEntry entry : currentTableFilters) {
             if (!entry.getFilterEnabled()) {
+                continue;
+            }
+            if (entry.getDatabaseFieldName().equals("pendingrt")) {
+                pendingRTEntry = entry;
                 continue;
             }
             if (entry.getDatabaseFieldName().equals("numretweets")) {
@@ -771,10 +794,18 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
+            boolean queued = queuedTweetIDs.contains(tweet.getId());
+            if (pendingRTEntry != null && pendingRTEntry.getFilterEnabled()) {
+                if (pendingRTEntry.getFieldValue().equals("true") && !queued) {
+                    continue;
+                } else if (pendingRTEntry.getFieldValue().equals("false") && queued) {
+                    continue;
+                }
+            }
             Long retweetCount = (Long) row.get("NUMRETWEETS");
             TableTimestamp tableTimestamp = new TableTimestamp(tweet.getCreatedAt());
             dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, tweet.getRetweetCount(), tweet.getLikeCount(),
-                retweetCount, queuedTweetIDs.contains(tweet.getId())});
+                retweetCount, queued});
         }
     }
 

@@ -193,7 +193,26 @@ function deleteTweet($userAuth) {
         echo encodeErrorInformation("Parameters are not set correctly.");
         exit;
     }
-    $success = $GLOBALS['databaseConnection']->prepare("DELETE FROM tweetmetrics WHERE twitterid=?")->execute([$tweetid]);
+    $success = $GLOBALS['databaseConnection']->prepare("UPDATE tweets SET deletedflag=? WHERE tweetid=?")->execute(["Y", $tweetid]);
+    echo encodeDBResponseInformation($success);
+    exit();
+}
+
+function deleteMultipleTweets($userAuth) {
+    $tweetids = filter_input(INPUT_POST, 'tweetids', FILTER_SANITIZE_STRING);
+    if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetids || !$userAuth['twitter_id']) {
+        echo encodeErrorInformation("Parameters are not set correctly.");
+        exit;
+    }
+    $params = explode(',', $tweetids);
+    $tweetCount = count($params);
+    array_unshift($params, "Y");
+    $query = "UPDATE tweets SET deletedflag=? WHERE tweetid IN (?";
+    for ($i = 0; $i < $tweetCount-1; $i++) {
+        $query .= ",?";
+    }
+    $query .= ")";
+    $success = $GLOBALS['databaseConnection']->prepare($query)->execute($params);
     echo encodeDBResponseInformation($success);
     exit();
 }

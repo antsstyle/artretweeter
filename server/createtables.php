@@ -68,3 +68,5 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS retrievalmetrics (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		description VARCHAR(255) NOT NULL,
                 CONSTRAINT retrievalmetrics_uniqueretrievalmetric UNIQUE (description))");
+
+$databaseConnection->prepare("INSERT INTO retrievalmetrics (description) VALUES (?)")->execute(["Latest Metrics"]);
