@@ -7,7 +7,7 @@ The client application is written in Java and uses the Java Runtime Environment.
 
 ## Downloading and using ArtRetweeter
 
-If you're using 64-bit Windows, you can download the "with-Java-for-Win64" zip from the latest release (see the right side of this page for the releases tab). Simply unzip and run ArtRetweeter v2.1.0.exe.
+If you're using 64-bit Windows, you can download the "with-Java-for-Win64" zip from the latest release (see the right side of this page for the releases tab). Simply unzip and run the EXE.
 
 If you're using another operating system, download the zip without Java bundled, unzip it and run ArtRetweeter v2.1.0.jar. You will need to install Java before you can run it (https://jdk.java.net/16/)
 
