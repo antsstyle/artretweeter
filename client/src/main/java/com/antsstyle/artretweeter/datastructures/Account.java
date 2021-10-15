@@ -27,14 +27,24 @@ public class Account {
     private String screenName;
     private Long maxID;
     private Long sinceID;
-    private Boolean retrievedOldTweetsLimit;
+    private Boolean retrievedOldTweetsLimitFromTwitter;
+    private Boolean retrievedAllOldTweetsFromServer;
 
-    public Boolean getRetrievedOldTweetsLimit() {
-        return retrievedOldTweetsLimit;
+    public Boolean getRetrievedAllOldTweetsFromServer() {
+        return retrievedAllOldTweetsFromServer;
     }
 
-    public Account setRetrievedOldTweetsLimit(Boolean retrievedOldTweetsLimit) {
-        this.retrievedOldTweetsLimit = retrievedOldTweetsLimit;
+    public Account setRetrievedAllOldTweetsFromServer(Boolean retrievedAllOldTweetsFromServer) {
+        this.retrievedAllOldTweetsFromServer = retrievedAllOldTweetsFromServer;
+        return this;
+    }
+
+    public Boolean getRetrievedOldTweetsLimitFromTwitter() {
+        return retrievedOldTweetsLimitFromTwitter;
+    }
+
+    public Account setRetrievedOldTweetsLimitFromTwitter(Boolean retrievedOldTweetsLimitFromTwitter) {
+        this.retrievedOldTweetsLimitFromTwitter = retrievedOldTweetsLimitFromTwitter;
         return this;
     }
 

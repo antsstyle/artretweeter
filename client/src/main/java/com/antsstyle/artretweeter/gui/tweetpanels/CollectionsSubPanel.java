@@ -79,7 +79,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
         });
         refreshCollectionBoxModel(true);
     }
-    
+
     public TwitterCollectionHolder getSelectedCollection() {
         return currentlySelectedCollection;
     }
@@ -528,7 +528,11 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
         }
 
         if (!result.wasSuccessful()) {
-            GUIHelperMethods.showErrors(result, LOGGER, null);
+            if (validTweets.size() == 1) {
+                GUIHelperMethods.showErrors(result, LOGGER, "Error removing tweet from collection:");
+            } else {
+                GUIHelperMethods.showErrors(result, LOGGER, "Error removing tweets from collection:");
+            }
             return;
         }
         DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
@@ -609,7 +613,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
                 DefaultTableModel dtm = (DefaultTableModel) collectionTweetsTable.getModel();
                 dtm.setRowCount(0);
             } else {
-                GUIHelperMethods.showErrors(opResult, LOGGER, null);
+                GUIHelperMethods.showErrors(opResult, LOGGER, "Error deleting collection:");
             }
         }
     }
@@ -660,7 +664,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
             return true;
         } else if (selectCollectionBoxModel.getSize() == 1) {
             TwitterCollectionHolder holder = (TwitterCollectionHolder) selectCollectionBoxModel.getSelectedItem();
-            return (holder.equals(MainTweetsPanel.NO_COLLECTIONS) || holder.equals(MainTweetsPanel.DB_ERROR_COLLECTION) 
+            return (holder.equals(MainTweetsPanel.NO_COLLECTIONS) || holder.equals(MainTweetsPanel.DB_ERROR_COLLECTION)
                     || holder.equals(MainTweetsPanel.SELECT_ACCOUNT_FIRST));
         }
         return false;
@@ -716,7 +720,7 @@ public class CollectionsSubPanel extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Success", JOptionPane.INFORMATION_MESSAGE);
             refreshCollectionBoxModel(false);
         } else {
-            GUIHelperMethods.showErrors(res, LOGGER, null);
+            GUIHelperMethods.showErrors(res, LOGGER, "Error creating collection:");
         }
 
     }

@@ -8,6 +8,7 @@ package com.antsstyle.artretweeter.gui;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
+import org.jdatepicker.DateModel;
 
 /**
  *
@@ -26,15 +27,21 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         Integer minute = cal.get(Calendar.MINUTE);
         if (minute < 15) {
             minuteComboBox.setSelectedItem("15");
+            cal.add(Calendar.MINUTE, 15-minute);
         } else if (minute < 30) {
             minuteComboBox.setSelectedItem("30");
+            cal.add(Calendar.MINUTE, 30-minute);
         } else if (minute < 45) {
             minuteComboBox.setSelectedItem("45");
+            cal.add(Calendar.MINUTE, 45-minute);
         } else {
             minuteComboBox.setSelectedItem("00");
+            cal.add(Calendar.MINUTE, 60-minute);
             hour++;
             if (hour == 24) {
                 hour = 0;
+                DateModel dateModel =  dateWrapperPanel.getDatePicker().getModel();
+                dateModel.setValue(cal.getTime());
             }
         }
         String hourString = String.valueOf(hour);
@@ -42,6 +49,7 @@ public class ChooseDatePanel extends javax.swing.JPanel {
             hourString = "0".concat(hourString);
         }
         hourComboBox.setSelectedItem(hourString);
+        dateWrapperPanel.setJDatePickerSize();
     }
 
     public Timestamp getSelectedTime() {
@@ -73,6 +81,10 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel1.setText("Please choose a date and time at least one hour from now.");
 
+        dateWrapperPanel.setMaximumSize(new java.awt.Dimension(328, 30));
+        dateWrapperPanel.setMinimumSize(new java.awt.Dimension(328, 30));
+        dateWrapperPanel.setPreferredSize(new java.awt.Dimension(328, 30));
+
         minuteComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "00", "15", "30", "45" }));
         minuteComboBox.setMaximumSize(new java.awt.Dimension(52, 26));
         minuteComboBox.setMinimumSize(new java.awt.Dimension(52, 26));
@@ -91,7 +103,7 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(123, 123, 123)
+                .addGap(109, 109, 109)
                 .addComponent(hourComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 9, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -102,7 +114,7 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
-                .addGap(0, 6, Short.MAX_VALUE)
+                .addGap(0, 0, Short.MAX_VALUE)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -116,20 +128,22 @@ public class ChooseDatePanel extends javax.swing.JPanel {
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(36, Short.MAX_VALUE)
-                .addComponent(dateWrapperPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 328, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(36, 36, 36))
             .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 375, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addGap(0, 0, Short.MAX_VALUE)
+                .addComponent(dateWrapperPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(26, 26, 26))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(dateWrapperPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
         );
     }// </editor-fold>//GEN-END:initComponents

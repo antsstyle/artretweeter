@@ -7,11 +7,13 @@ package com.antsstyle.artretweeter.gui;
 
 import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.AutomationSettingsHolder;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.RequestToken;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
+import com.antsstyle.artretweeter.db.AutomationDB;
 import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
@@ -21,6 +23,7 @@ import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.queues.ClientRefreshQueue;
 import com.antsstyle.artretweeter.serverapi.APIQueryManager;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.antsstyle.artretweeter.tools.SwingTools;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.awt.Desktop;
@@ -347,6 +350,10 @@ public class AccountsPanel extends javax.swing.JPanel {
     public void setTweetRetrievalResults(Pair<OperationResult, ArrayList<StatusJSON>> results, Account account,
             Integer storedTweetCount, Integer receivedTweetCount) {
         OperationResult res = results.getLeft();
+        if (!res.wasSuccessful()) {
+            GUIHelperMethods.showErrors(res, LOGGER, "Error retrieving tweets:");
+            return;
+        }
         TableModel tm = accountsTable.getModel();
         int modelRow = getModelRowForAccount(account);
         int tweetsRetrievedColumnIndex = accountsTable.getColumnModel().getColumnIndex("Tweets Retrieved");
@@ -364,13 +371,13 @@ public class AccountsPanel extends javax.swing.JPanel {
             tm.setValueAt(count, modelRow, tweetsRetrievedColumnIndex);
         }
 
-        StatusCode artRetweeterStatusCode = res.getTwitterResponse().getStatusCode();
+        ServerStatusCode serverStatusCode = res.getTwitterResponse().getServerStatusCode();
 
         if (res.wasSuccessful()) {
             tweetDownloadProgressLabel.setText("<html>Tweet retrieval finished successfully. "
                     + String.valueOf(storedTweetCount) + " stored, out of "
                     + String.valueOf(receivedTweetCount) + " received.</html>");
-        } else if (artRetweeterStatusCode.equals(StatusCode.RATE_LIMIT_EXCEEDED_ERROR)) {
+        } else if (serverStatusCode.equals(ServerStatusCode.TWITTER_RATE_LIMIT_EXCEEDED)) {
             int resetTimeSeconds = (int) res.getTwitterResponse().getReturnedObject();
             tweetDownloadProgressLabel.setText("<html>Twitter rate limit exceeded. You must wait " + String.valueOf(resetTimeSeconds)
                     + " before attempting to retry.</html>");
@@ -408,7 +415,7 @@ public class AccountsPanel extends javax.swing.JPanel {
                     + "and " + String.valueOf(errorCount) + " failed and were not retrieved." + "</html>");
         } else {
             tweetDownloadProgressLabel.setText("<html>A fatal error occurred - no collections were retrieved.</html>");
-            LOGGER.error("Fatal error: " + errorResults.get(0).getErrorCode().getStatusMessage());
+            LOGGER.error("Fatal error: " + errorResults.get(0).getErrorMessage());
         }
     }
 
@@ -501,9 +508,6 @@ public class AccountsPanel extends javax.swing.JPanel {
         Integer result = JOptionPane.showConfirmDialog(GUI.getInstance(), msg, "Add Account", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             RetrieveTweetsWorker worker = new RetrieveTweetsWorker();
-            if (!account.getRetrievedOldTweetsLimit()) {
-                worker.setFirstRetrieval(true);
-            }
             if (!worker.initialise(account, showGUI)) {
                 APIQueryManager.releaseAPILock();
                 enableAllAccountButtons();
@@ -541,7 +545,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
         OperationResult reqTokenResult = RESTAPI.oauthRequestToken();
         if (!reqTokenResult.wasSuccessful()) {
-            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, null);
+            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, "Error adding account:");
             return;
         }
         RequestToken token = (RequestToken) reqTokenResult.getTwitterResponse().getReturnedObject();
@@ -583,7 +587,7 @@ public class AccountsPanel extends javax.swing.JPanel {
         String pin = (String) results.get(0);
         OperationResult authResult = RESTAPI.oauthAccessToken(pin, token);
         if (!authResult.wasSuccessful()) {
-            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, null);
+            GUIHelperMethods.showErrors(reqTokenResult, LOGGER, "Error confirming access token:");
             return;
         }
 
@@ -593,6 +597,16 @@ public class AccountsPanel extends javax.swing.JPanel {
         dtm.addRow(new Object[]{account.getScreenName(), 0, 0});
         GUI.getMainManagementPanel().getMainTweetsPanel().refreshAccountBoxModel(false);
         GUI.getFailedRetweetsPanel().refreshAccountBoxModel(false);
+
+        OperationResult autoResult = ServerAPI.getAutomationSettings(account);
+        if (!autoResult.wasSuccessful()) {
+            LOGGER.error("Failed to get automation settings for this user!");
+        } else {
+            AutomationSettingsHolder holder = (AutomationSettingsHolder) autoResult.getServerResponse().getReturnedObject();
+            AutomationDB.updateAutomationSettings(holder);
+        }
+        GUI.getAutomationPanel().refreshAccountBoxModel(false);
+
         ClientRefreshQueue.getInstance().refreshTimers();
         String statusMessage = "<html>Account added successfully!</html>";
         JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -638,7 +652,7 @@ public class AccountsPanel extends javax.swing.JPanel {
 
         Account account = ResultSetConversion.getAccount(accountResp.getReturnedRows().get(0));
         String confirmDelete = "<html>Are you sure you want to delete account '" + screenName
-                + "' from ArtRetweeter? This action cannot be undone.<br/><br/>"
+                + "' from ArtRetweeter?<br/><br/>"
                 + "Note that this method does not revoke access to this application. "
                 + "To do that, you must log into the Twitter<br/>website and go to Settings->Security and "
                 + "account access->Apps and sessions to revoke permissions."
@@ -650,16 +664,27 @@ public class AccountsPanel extends javax.swing.JPanel {
         }
         OperationResult res = ServerAPI.removeAccount(account);
         if (!res.wasSuccessful()) {
-            String errorMessage = "An error occurred in deleting the account - check log output.";
+            String errorMessage = "An error occurred in deleting the account:<br/><br/>" + res.getErrorMessage();
             ArrayList<Boolean> bools = (ArrayList<Boolean>) res.getServerResponse().getReturnedObject();
             if (bools != null) {
+                int failCount = 0;
+                for (Boolean b: bools) {
+                    if (!b) {
+                        failCount++;
+                    }
+                }
                 Boolean failQueueCleared = bools.get(0);
                 Boolean scheduleQueueCleared = bools.get(1);
                 Boolean userCleared = bools.get(2);
+                Boolean metricsCleared = bools.get(3);
+                Boolean tweetsCleared = bools.get(4);
+                Boolean autoCleared = bools.get(5);
                 LOGGER.error("Failed to delete account from ArtRetweeter server.");
                 LOGGER.error("Failure queue cleared: " + failQueueCleared);
                 LOGGER.error("Schedule queue cleared: " + scheduleQueueCleared);
                 LOGGER.error("User cleared: " + userCleared);
+            } else {
+                GUIHelperMethods.showErrors(res, LOGGER, "An error occurred in deleting the account:");
             }
             JOptionPane.showMessageDialog(GUI.getInstance(), errorMessage, "Error", JOptionPane.ERROR_MESSAGE);
             return;

@@ -8,6 +8,10 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS users (
 		twitterid BIGINT NOT NULL PRIMARY KEY,
 		accesstoken VARCHAR(255) NOT NULL,
                 accesstokensecret VARCHAR(255) NOT NULL,
+                automationenabled VARCHAR(1) DEFAULT 'N' NOT NULL,
+                oldtweetlimitretrieved VARCHAR(1) DEFAULT 'N' NOT NULL,
+                sinceid BIGINT DEFAULT 0 NOT NULL,
+                maxid BIGINT DEFAULT 0 NOT NULL,
                 CONSTRAINT users_uniquetwitterid UNIQUE (twitterid))");
 
 $databaseConnection->query("CREATE TABLE IF NOT EXISTS ratelimitrecords (
@@ -32,6 +36,7 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
                 retweetingusertwitterid BIGINT NOT NULL,
                 tweetid BIGINT NOT NULL,
                 retweettime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                automated VARCHAR(1) NOT NULL,
                 ADD CONSTRAINT scheduledretweets_uniquescheduledtweet UNIQUE (retweetinguserid,tweetid))");
 
 $databaseConnection->query("CREATE TABLE IF NOT EXISTS failedretweets (
@@ -70,3 +75,23 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS retrievalmetrics (
                 CONSTRAINT retrievalmetrics_uniqueretrievalmetric UNIQUE (description))");
 
 $databaseConnection->prepare("INSERT INTO retrievalmetrics (description) VALUES (?)")->execute(["Latest Metrics"]);
+
+$databaseConnection->query("CREATE TABLE IF NOT EXISTS userautomationsettings (
+             id INTEGER PRIMARY KEY, 
+             usertwitterid BIGINT NOT NULL, 
+             automationenabled VARCHAR(1) NOT NULL, 
+             dayflags VARCHAR(7) NOT NULL, 
+             hourflags VARCHAR(24) NOT NULL, 
+             minuteflags VARCHAR(4) NOT NULL,
+             includedtext VARCHAR(255) DEFAULT NULL, 
+             excludedtext VARCHAR(255) DEFAULT NULL, 
+             retweetpercent INTEGER NOT NULL, 
+             oldtweetcutoffdate DATETIME, 
+             oldtweetcutoffdateenabled VARCHAR(1) NOT NULL, 
+             includedtextenabled VARCHAR(1) NOT NULL, 
+             excludedtextenabled VARCHAR(1) NOT NULL, 
+             timezonehouroffset INTEGER NOT NULL,
+             timezoneminuteoffset INTEGER NOT NULL,
+             includetextcondition VARCHAR(50) NOT NULL,
+             excludetextcondition VARCHAR(50) NOT NULL,
+             CONSTRAINT uniquetwitterid UNIQUE (usertwitterid))");

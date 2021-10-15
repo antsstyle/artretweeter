@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.db;
 
 import com.antsstyle.artretweeter.datastructures.Account;
+import com.antsstyle.artretweeter.datastructures.AutomationSettingsHolder;
 import com.antsstyle.artretweeter.datastructures.CachedVariable;
 import com.antsstyle.artretweeter.datastructures.RetweetQueueEntry;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
@@ -21,6 +22,28 @@ import java.util.HashMap;
  * @author antss
  */
 public class ResultSetConversion {
+    
+    public static AutomationSettingsHolder getAutomationSettingsHolder(HashMap<String, Object> row) {
+        AutomationSettingsHolder holder = new AutomationSettingsHolder()
+                .setId((Integer) row.get("ID"))
+                .setDayFlags((String) row.get("DAYFLAGS"))
+                .setHourFlags((String) row.get("HOURFLAGS"))
+                .setMinuteFlags((String) row.get("MINUTEFLAGS"))
+                .setAutomationEnabled((String) row.get("AUTOMATIONENABLED"))
+                .setExcludedText((String) row.get("EXCLUDEDTEXT"))
+                .setIncludedText((String) row.get("INCLUDEDTEXT"))
+                .setIncludedTextEnabled((String) row.get("INCLUDEDTEXTENABLED"))
+                .setExcludedTextEnabled((String) row.get("EXCLUDEDTEXTENABLED"))
+                .setRetweetPercent((Integer) row.get("RETWEETPERCENT"))
+                .setUserTwitterID((Long) row.get("USERTWITTERID"))
+                .setOldTweetCutoffDate((Timestamp) row.get("OLDTWEETCUTOFFDATE"))
+                .setOldTweetCutoffDateEnabled((String) row.get("OLDTWEETCUTOFFDATEENABLED"))
+                .setTimeZoneHourOffset((Integer) row.get("TIMEZONEHOUROFFSET"))
+                .setTimeZoneMinuteOffset((Integer) row.get("TIMEZONEMINUTEOFFSET"))
+                .setIncludeTextCondition((String) row.get("INCLUDETEXTCONDITION"))
+                .setExcludeTextCondition((String) row.get("EXCLUDETEXTCONDITION"));
+        return holder;
+    }
 
     public static CachedVariable getCachedVariable(HashMap<String, Object> row) {
         CachedVariable item = new CachedVariable()
@@ -34,6 +57,7 @@ public class ResultSetConversion {
                 .setId((Integer) row.get("ID"))
                 .setRetweetingUserTwitterID((Long) row.get("RETWEETINGUSERTWITTERID"))
                 .setRetweetTime((Timestamp) row.get("RETWEETTIME"))
+                .setAutomated(((String) row.get("AUTOMATED")).equals("Y"))
                 .setTweetID((Long) row.get("TWEETID"));
         return entry;
     }
@@ -74,7 +98,8 @@ public class ResultSetConversion {
                 .setTokenSecret((String) row.get("TOKENSECRET"))
                 .setMaxID((Long) row.get("MAX_ID"))
                 .setSinceID((Long) row.get("SINCE_ID"))
-                .setRetrievedOldTweetsLimit(((String) row.get("RETRIEVEDOLDTWEETSLIMIT")).equals("Y"));
+                .setRetrievedAllOldTweetsFromServer(((String) row.get("RETRIEVEDALLOLDTWEETSFROMSERVER")).equals("Y"))
+                .setRetrievedOldTweetsLimitFromTwitter(((String) row.get("RETRIEVEDOLDTWEETSLIMITFROMTWITTER")).equals("Y"));
         return account;
     }
 

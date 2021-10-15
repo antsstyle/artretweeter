@@ -52,6 +52,8 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         jSeparator1 = new javax.swing.JToolBar.Separator();
         goToPrimaryPanelButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator10 = new javax.swing.JToolBar.Separator();
+        goToAutomationPanelButton = new com.antsstyle.artretweeter.gui.WWButton();
+        jSeparator11 = new javax.swing.JToolBar.Separator();
         goToFailedRetweetsButton = new com.antsstyle.artretweeter.gui.WWButton();
         jSeparator5 = new javax.swing.JToolBar.Separator();
         goToConfigurationPanel = new com.antsstyle.artretweeter.gui.WWButton();
@@ -103,6 +105,20 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         });
         mainMenuToolBar.add(goToPrimaryPanelButton);
         mainMenuToolBar.add(jSeparator10);
+
+        goToAutomationPanelButton.setText("Automation");
+        goToAutomationPanelButton.setToolTipText("");
+        goToAutomationPanelButton.setFocusable(false);
+        goToAutomationPanelButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        goToAutomationPanelButton.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        goToAutomationPanelButton.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        goToAutomationPanelButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                goToAutomationPanelButtonActionPerformed(evt);
+            }
+        });
+        mainMenuToolBar.add(goToAutomationPanelButton);
+        mainMenuToolBar.add(jSeparator11);
 
         goToFailedRetweetsButton.setText("Failed Retweets");
         goToFailedRetweetsButton.setToolTipText("");
@@ -182,16 +198,22 @@ public class PrimaryDisplayPanel extends javax.swing.JPanel {
         GUI.getInstance().switchPanels(GUI.getMainManagementPanel());
     }//GEN-LAST:event_goToPrimaryPanelButtonActionPerformed
 
+    private void goToAutomationPanelButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goToAutomationPanelButtonActionPerformed
+        GUI.getInstance().switchPanels(GUI.getAutomationPanel());
+    }//GEN-LAST:event_goToAutomationPanelButtonActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel displayAreaPanel;
     private com.antsstyle.artretweeter.gui.WWButton goToAccountsButton;
+    private com.antsstyle.artretweeter.gui.WWButton goToAutomationPanelButton;
     private com.antsstyle.artretweeter.gui.WWButton goToConfigurationPanel;
     private com.antsstyle.artretweeter.gui.WWButton goToFailedRetweetsButton;
     private com.antsstyle.artretweeter.gui.WWButton goToHelpAndInfoButton;
     private com.antsstyle.artretweeter.gui.WWButton goToPrimaryPanelButton;
     private javax.swing.JToolBar.Separator jSeparator1;
     private javax.swing.JToolBar.Separator jSeparator10;
+    private javax.swing.JToolBar.Separator jSeparator11;
     private javax.swing.JToolBar.Separator jSeparator3;
     private javax.swing.JToolBar.Separator jSeparator5;
     private javax.swing.JToolBar.Separator jSeparator6;

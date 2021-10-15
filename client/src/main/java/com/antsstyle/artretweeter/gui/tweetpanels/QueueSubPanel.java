@@ -13,6 +13,7 @@ import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.db.TweetsDB;
 import com.antsstyle.artretweeter.gui.GUI;
 import com.antsstyle.artretweeter.gui.GUIHelperMethods;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
@@ -67,11 +68,11 @@ public class QueueSubPanel extends javax.swing.JPanel {
     public JTable getQueuedTweetsTable() {
         return queuedTweetsTable;
     }
-    
+
     public void disableTableListener() {
         queuedTweetsTable.getSelectionModel().removeListSelectionListener(listener);
     }
-    
+
     public void enableTableListener() {
         queuedTweetsTable.getSelectionModel().addListSelectionListener(listener);
     }
@@ -88,7 +89,7 @@ public class QueueSubPanel extends javax.swing.JPanel {
             return;
         }
 
-        String query = "SELECT retweetqueue.retweettime,"
+        String query = "SELECT retweetqueue.retweettime,retweetqueue.automated,"
                 + "(SELECT id FROM tweets WHERE tweets.tweetid=retweetqueue.tweetid) AS tweetdatabaseid,"
                 + "(SELECT fulltweettext FROM tweets WHERE tweets.tweetid=retweetqueue.tweetid) AS text "
                 + "FROM retweetqueue WHERE retweetingusertwitterid=? ORDER BY retweettime ASC";
@@ -105,8 +106,9 @@ public class QueueSubPanel extends javax.swing.JPanel {
             Integer id = (Integer) row.get("TWEETDATABASEID");
             String tweetText = (String) row.get("TEXT");
             Timestamp retweetTime = (Timestamp) row.get("RETWEETTIME");
+            Boolean automated = ((String) row.get("AUTOMATED")).equals("Y");
             TableTimestamp tableTimestamp = new TableTimestamp(retweetTime);
-            dtm.addRow(new Object[]{id, tweetText, tableTimestamp});
+            dtm.addRow(new Object[]{id, tweetText, tableTimestamp, automated});
         }
     }
 
@@ -132,14 +134,14 @@ public class QueueSubPanel extends javax.swing.JPanel {
 
             },
             new String [] {
-                "ID", "Tweet Text", "Retweet Time"
+                "ID", "Tweet Text", "Retweet Time", "Automated"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Long.class, java.lang.String.class, java.lang.Object.class
+                java.lang.Long.class, java.lang.String.class, java.lang.Object.class, java.lang.Boolean.class
             };
             boolean[] canEdit = new boolean [] {
-                false, false, false
+                false, false, false, false
             };
 
             public Class getColumnClass(int columnIndex) {
@@ -159,6 +161,9 @@ public class QueueSubPanel extends javax.swing.JPanel {
             queuedTweetsTable.getColumnModel().getColumn(2).setMinWidth(125);
             queuedTweetsTable.getColumnModel().getColumn(2).setPreferredWidth(125);
             queuedTweetsTable.getColumnModel().getColumn(2).setMaxWidth(125);
+            queuedTweetsTable.getColumnModel().getColumn(3).setMinWidth(70);
+            queuedTweetsTable.getColumnModel().getColumn(3).setPreferredWidth(70);
+            queuedTweetsTable.getColumnModel().getColumn(3).setMaxWidth(70);
         }
 
         changeRetweetTimeButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
@@ -224,7 +229,50 @@ public class QueueSubPanel extends javax.swing.JPanel {
 
     private void changeRetweetTime() {
         Account currentlySelectedAccount = GUI.getMainManagementPanel().getSelectedAccount();
-        ServerAPI.queueRetweet(currentlySelectedAccount, true);
+        int[] selectedRowsCheck = queuedTweetsTable.getSelectedRows();
+        if (selectedRowsCheck.length > 1) {
+            String msg = "Select only one tweet at a time to queue.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        int row = queuedTweetsTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        int modelRow = queuedTweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = queuedTweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) queuedTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        TweetHolder tweet = ServerAPI.checkTweetCanBeQueued(currentlySelectedAccount, true, id);
+        if (tweet == null) {
+            return;
+        }
+        Timestamp time = ServerAPI.getTimeFromUser();
+        if (time == null) {
+            return;
+        }
+        OperationResult opResult = ServerAPI.queueRetweet(currentlySelectedAccount, tweet, time);
+        if (opResult.wasSuccessful()) {
+            TableTimestamp tableTimestamp = new TableTimestamp(time);
+            if (!TweetsDB.insertRetweetQueueEntry(new Object[]{tweet.getTweetID(), currentlySelectedAccount.getTwitterID(), time, "N"})) {
+                String msg = "<html>Time changed successfully, but an error occurred updating this queue entry "
+                        + "<br/>in the ArtRetweeter client.</html>";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.error(msg);
+                return;
+            }
+            int rowCount = queuedTweetsTable.getRowCount();
+            Integer queueTableIDColumnIndex = queuedTweetsTable.getColumnModel().getColumnIndex("ID");
+            Integer queueTableRTTimeColumnIndex = queuedTweetsTable.getColumnModel().getColumnIndex("Retweet Time");
+            for (int i = 0; i < rowCount; i++) {
+                Integer tableID = (Integer) queuedTweetsTable.getModel().getValueAt(i, queueTableIDColumnIndex);
+                if (tableID.equals(tweet.getId())) {
+                    queuedTweetsTable.getModel().setValueAt(tableTimestamp, i, queueTableRTTimeColumnIndex);
+                    break;
+                }
+            }
+        } else {
+            GUIHelperMethods.showErrors(opResult, LOGGER, "Error changing retweet time:");
+        }
     }
 
     private void unqueueRetweet() {
@@ -252,7 +300,7 @@ public class QueueSubPanel extends javax.swing.JPanel {
         TweetHolder tweet = ResultSetConversion.getTweet(selectResp.getReturnedRows().get(0));
         OperationResult result = ServerAPI.unqueueRetweet(currentlySelectedAccount, tweet.getTweetID());
         if (!result.wasSuccessful()) {
-            GUIHelperMethods.showErrors(result, LOGGER, null);
+            GUIHelperMethods.showErrors(result, LOGGER, "Error unqueuing retweet:");
             return;
         }
         DBResponse deleteResp = CoreDB.deleteFromTable(DBTable.RETWEETQUEUE,

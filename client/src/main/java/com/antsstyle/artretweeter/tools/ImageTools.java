@@ -7,6 +7,7 @@ package com.antsstyle.artretweeter.tools;
 
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
+import com.antsstyle.artretweeter.enumerations.ClientStatusCode;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import java.awt.image.BufferedImage;
 import java.io.FileOutputStream;
@@ -104,12 +105,12 @@ public class ImageTools {
                     Thread.sleep(Math.max((5 * waitSecondsMultiplier) * 1000, 1000));
                 } catch (Exception e) {
                     LOGGER.error("Interrupted while waiting to retry image download - aborting.", e);
-                    result.getClientResponse().setStatusCode(StatusCode.INTERRUPTED_ERROR);
+                    result.getClientResponse().setClientStatusCode(ClientStatusCode.INTERRUPTED);
                 }
             }
         }
         LOGGER.error("Maximum retry limit reached - aborting image download.");
-        ClientResponse result = new ClientResponse(StatusCode.MAX_DOWNLOAD_RETRY_REACHED);
+        ClientResponse result = new ClientResponse(ClientStatusCode.MAX_DOWNLOAD_RETRY_REACHED);
         OperationResult opResult = new OperationResult();
         opResult.setClientResponse(result);
         return opResult;
@@ -127,7 +128,7 @@ public class ImageTools {
         OperationResult result = new OperationResult();
         ClientResponse clientResp;
         if (Files.exists(fullFilePath) && !overwriteExisting) {
-            clientResp = new ClientResponse(StatusCode.FILE_ALREADY_DOWNLOADED);
+            clientResp = new ClientResponse(ClientStatusCode.FILE_ALREADY_DOWNLOADED);
             result.setClientResponse(clientResp);
             return result;
         }
@@ -148,10 +149,10 @@ public class ImageTools {
                 while ((length2 = is.read(byteBuffer)) != -1) {
                     os.write(byteBuffer, 0, length2);
                 }
-                clientResp = new ClientResponse(StatusCode.SUCCESS);
+                clientResp = new ClientResponse(ClientStatusCode.QUERY_OK);
             } catch (Exception e) {
                 LOGGER.error("Failed to download image from webpage!", e);
-                clientResp = new ClientResponse(StatusCode.DOWNLOAD_ERROR);
+                clientResp = new ClientResponse(ClientStatusCode.DOWNLOAD_ERROR);
             }
             EntityUtils.consume(entity1);
 
@@ -159,7 +160,7 @@ public class ImageTools {
             return result;
         } catch (Exception e) {
             LOGGER.error("Could not retrieve URL for image source!", e);
-            clientResp = new ClientResponse(StatusCode.MISC_ERROR);
+            clientResp = new ClientResponse(ClientStatusCode.MISC_ERROR);
             result.setClientResponse(clientResp);
             return result;
         }

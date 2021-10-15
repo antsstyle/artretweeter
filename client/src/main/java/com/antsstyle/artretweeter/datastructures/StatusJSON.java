@@ -5,7 +5,9 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
+import com.antsstyle.artretweeter.enumerations.ClientStatusCode;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.tools.ImageTools;
 import com.antsstyle.artretweeter.tools.PathTools;
@@ -78,7 +80,7 @@ public class StatusJSON {
         Path filepath1, filepath2 = null, filepath3 = null, filepath4 = null;
         String url1, url2 = null, url3 = null, url4 = null;
         if (extended_entities == null && (entities.getMedia() == null || entities.getMedia().length == 0)) {
-            result.setTwitterResponse(new TwitterResponse(StatusCode.TWEET_HAS_NO_IMAGES));
+            result.setTwitterResponse(new TwitterResponse(ServerStatusCode.TWEET_HAS_NO_IMAGES));
             return result;
         }
         if (extended_entities == null) {
@@ -92,12 +94,12 @@ public class StatusJSON {
             return res1;
         }
 
-        if (!res1.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
+        if (!res1.getClientResponse().getClientStatusCode().equals(ClientStatusCode.FILE_ALREADY_DOWNLOADED)) {
             try {
                 Thread.sleep(1000);
             } catch (Exception e) {
                 LOGGER.error("Interrupted - aborting tweet download.", e);
-                result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
+                result.setClientResponse(new ClientResponse(ClientStatusCode.INTERRUPTED));
                 return result;
             }
         }
@@ -110,12 +112,12 @@ public class StatusJSON {
                 return res2;
             }
 
-            if (!res2.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
+            if (!res2.getClientResponse().getClientStatusCode().equals(ClientStatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
+                    result.setClientResponse(new ClientResponse(ClientStatusCode.INTERRUPTED));
                     return result;
                 }
             }
@@ -128,12 +130,12 @@ public class StatusJSON {
             if (!res3.wasSuccessful()) {
                 return res3;
             }
-            if (!res3.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
+            if (!res3.getClientResponse().getClientStatusCode().equals(ClientStatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
+                    result.setClientResponse(new ClientResponse(ClientStatusCode.INTERRUPTED));
                     return result;
                 }
             }
@@ -145,12 +147,12 @@ public class StatusJSON {
             if (!res4.wasSuccessful()) {
                 return res4;
             }
-            if (!res4.getClientResponse().getStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
+            if (!res4.getClientResponse().getClientStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
                     LOGGER.error("Interrupted - aborting tweet download.", e);
-                    result.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
+                    result.setClientResponse(new ClientResponse(ClientStatusCode.INTERRUPTED));
                     return result;
                 }
             }
@@ -182,7 +184,7 @@ public class StatusJSON {
                 createdAtTimestamp, favorite_count, retweet_count,
                 textParam, source};
         }
-        result.setClientResponse(new ClientResponse(StatusCode.SUCCESS));
+        result.setClientResponse(new ClientResponse(ClientStatusCode.QUERY_OK));
         result.getClientResponse().setReturnedObject(params);
         return result;
     }

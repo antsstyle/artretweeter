@@ -5,7 +5,7 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
-import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 
 /**
  *
@@ -13,20 +13,12 @@ import com.antsstyle.artretweeter.enumerations.StatusCode;
  */
 public class ServerResponse extends Response {
 
-    public ServerResponse(StatusCode statusCode) {
-        this.statusCode = statusCode;
+    public ServerResponse(ServerStatusCode serverStatusCode) {
+        this.serverStatusCode = serverStatusCode;
     }
-
-    public String getLogMessage() {
-        if (statusCode == null) {
-            return null;
-        }
-        String msg = "HTTP status code: ".concat(String.valueOf(httpStatusCode));
-        msg = msg.concat("; ").concat(statusCode.getStatusMessage());
-        if (extraStatusMessage != null) {
-            msg = msg.concat(" ").concat(extraStatusMessage);
-        }
-        return msg;
+    
+    public Boolean wasSuccessful() {
+        return !serverStatusCode.isErrorStatus();
     }
 
 }

@@ -17,6 +17,16 @@ public class RetweetQueueEntry {
     private Integer id;
     private Long tweetID;
     private Long retweetingUserTwitterID;
+    private Boolean automated;
+
+    public Boolean getAutomated() {
+        return automated;
+    }
+
+    public RetweetQueueEntry setAutomated(Boolean automated) {
+        this.automated = automated;
+        return this;
+    }
 
     public Long getRetweetingUserTwitterID() {
         return retweetingUserTwitterID;

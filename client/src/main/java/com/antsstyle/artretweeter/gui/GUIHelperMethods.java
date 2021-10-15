@@ -255,32 +255,16 @@ public class GUIHelperMethods {
         }
     }
 
-    public static void showErrors(OperationResult result, Logger logger, String endText) {
-        String error;
-        if (result.getClientResponse() != null && !result.getClientResponse().wasSuccessful()) {
-            error = result.getClientResponse().getStatusCode().getStatusMessage();
-            if (result.getClientResponse().getExtraStatusMessage() != null) {
-                error = error.concat(": ").concat(result.getClientResponse().getExtraStatusMessage());
-            }
-        } else if (result.getServerResponse() != null && !result.getServerResponse().wasSuccessful()) {
-            error = result.getServerResponse().getStatusCode().getStatusMessage();
-            if (result.getServerResponse().getExtraStatusMessage() != null) {
-                error = error.concat(": ").concat(result.getServerResponse().getExtraStatusMessage());
-            }
-        } else if (result.getTwitterResponse() != null && !result.getTwitterResponse().wasSuccessful()) {
-            error = result.getTwitterResponse().getStatusCode().getStatusMessage();
-            if (result.getTwitterResponse().getExtraStatusMessage() != null) {
-                error = error.concat(": ").concat(result.getTwitterResponse().getExtraStatusMessage());
-            }
+    public static void showErrors(OperationResult result, Logger logger, String startText) {
+        String error = result.getErrorMessage();
+        String msg = "<html>";
+        if (startText != null) {
+            msg = msg.concat(startText).concat("<br/><br/>");
         } else {
-            return;
+            msg = msg.concat("Error performing operation:<br/><br/>");
         }
-        String msg = "<html>Error performing operation.<br/><br/>"
-                + error;
-        if (endText != null) {
-            msg = msg.concat("<br/><br/>").concat(endText);
-            msg = msg.concat(" </html>");
-        }
+        msg = msg.concat(error);
+        msg = msg.concat("</html>");
         JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
@@ -332,7 +316,7 @@ public class GUIHelperMethods {
         int numImages = filePaths.size();
         if (numImages < 1 || numImages > 4) {
             // Invalid number of images in tweet
-            String msg = "Invalid number of images in tweet - check log output.";
+            String msg = "Invalid number of images in tweet.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             LOGGER.error("Number of images in tweet: " + numImages);
             return;

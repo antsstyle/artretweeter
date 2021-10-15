@@ -5,6 +5,7 @@
  */
 package com.antsstyle.artretweeter.db;
 
+import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,13 +23,13 @@ public class TweetsDB {
 
     private static final Logger LOGGER = LogManager.getLogger(TweetsDB.class);
 
-    private static final String RETWEET_QUEUE_MERGE_QUERY = "MERGE INTO retweetqueue USING (VALUES (?,?,?))"
-            + " AS vals(tweetid,retweetingusertwitterid,retweettime) ON (retweetqueue.tweetid = vals.tweetid"
+    private static final String RETWEET_QUEUE_MERGE_QUERY = "MERGE INTO retweetqueue USING (VALUES (?,?,?,?))"
+            + " AS vals(tweetid,retweetingusertwitterid,retweettime,automated) ON (retweetqueue.tweetid = vals.tweetid"
             + " AND retweetqueue.retweetingusertwitterid = vals.retweetingusertwitterid)"
             + " WHEN MATCHED THEN UPDATE SET retweetqueue.tweetid=vals.tweetid,retweetqueue.retweetingusertwitterid=vals.retweetingusertwitterid,"
-            + " retweetqueue.retweettime=vals.retweettime"
-            + " WHEN NOT MATCHED THEN INSERT (tweetid,retweetingusertwitterid,retweettime)"
-            + " VALUES (vals.tweetid, vals.retweetingusertwitterid, vals.retweettime)";
+            + " retweetqueue.retweettime=vals.retweettime, retweetqueue.automated=vals.automated "
+            + " WHEN NOT MATCHED THEN INSERT (tweetid,retweetingusertwitterid,retweettime,automated)"
+            + " VALUES (vals.tweetid, vals.retweetingusertwitterid, vals.retweettime, vals.automated)";
 
     private static final String RETWEET_RECORDS_INSERT_QUERY = "MERGE INTO retweetrecords USING (VALUES (?,?,?))"
             + " AS vals(usertwitterid,tweetid,retweettime) ON (retweetrecords.tweetid = vals.tweetid"
@@ -69,6 +70,19 @@ public class TweetsDB {
 
     public static boolean parameterisedTweetMergeBatch(ArrayList<Object[]> params) {
         return CoreDB.runParameterisedUpdateBatch(TWEET_MERGE_QUERY, params);
+    }
+
+    public static Long getTweetIDByDatabaseID(Integer tweetDatabaseID) {
+        String query = "SELECT tweetid FROM tweets WHERE id=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, tweetDatabaseID);
+        if (!resp.wasSuccessful()) {
+            return null;
+        }
+        if (resp.getReturnedRows().isEmpty()) {
+            return -1L;
+        } else {
+            return (Long) resp.getReturnedRows().get(0).get("TWEETID");
+        }
     }
 
     public static ArrayList<Long> getTweetIDsByDatabaseIDs(ArrayList<Integer> tweetDatabaseIDs) {
@@ -112,6 +126,7 @@ public class TweetsDB {
         ArrayList<Object> objectParams = new ArrayList<>();
         objectParams.addAll(tweetIDs);
         Object[] paramsArray = objectParams.toArray(new Object[objectParams.size()]);
+        StringBuilder updateDeletedFlagQuery = new StringBuilder("UPDATE tweets SET deletedflag='Y' WHERE tweetid IN (?");
         StringBuilder selectQuery = new StringBuilder("SELECT * FROM tweets WHERE tweetid IN (?");
         StringBuilder deleteTweetsQuery = new StringBuilder("DELETE FROM tweets WHERE tweetid IN (?");
         StringBuilder deleteCollectionTweetsQuery = new StringBuilder("DELETE FROM collectiontweets WHERE tweetid IN (?");
@@ -119,24 +134,20 @@ public class TweetsDB {
             selectQuery = selectQuery.append(",?");
             deleteTweetsQuery = deleteTweetsQuery.append(",?");
             deleteCollectionTweetsQuery = deleteCollectionTweetsQuery.append(",?");
+            updateDeletedFlagQuery = updateDeletedFlagQuery.append(",?");
         }
         if (!deletedFromTwitter) {
             selectQuery = selectQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
-            deleteTweetsQuery = deleteTweetsQuery.append(") AND tweetid NOT IN (SELECT tweetid FROM collectiontweets)");
         } else {
             deleteCollectionTweetsQuery = deleteCollectionTweetsQuery.append(")");
             deleteTweetsQuery = deleteTweetsQuery.append(")");
             selectQuery = selectQuery.append(")");
         }
-
+        updateDeletedFlagQuery = updateDeletedFlagQuery.append(")");
         DBResponse selectResp = CoreDB.customQuerySelect(selectQuery.toString(), paramsArray);
         if (!selectResp.wasSuccessful()) {
             LOGGER.error("Error retrieving tweets from database - aborting deletion.");
             return false;
-        }
-        if (selectResp.getReturnedRows().isEmpty()) {
-            LOGGER.error("Tweets to delete could not be found in database - aborting deletion.");
-            return true;
         }
 
         ArrayList<HashMap<String, Object>> rows = selectResp.getReturnedRows();
@@ -151,11 +162,26 @@ public class TweetsDB {
             }
         }
 
-        CoreDB.runCustomUpdate(deleteTweetsQuery.toString(), paramsArray);
+        CoreDB.runCustomUpdate(updateDeletedFlagQuery.toString(), paramsArray);
         if (deletedFromTwitter) {
+            CoreDB.runCustomUpdate(deleteTweetsQuery.toString(), paramsArray);
             CoreDB.runCustomUpdate(deleteCollectionTweetsQuery.toString(), paramsArray);
         }
         return true;
+    }
+
+    public static ArrayList<Long> getAllTweetIDsForAccount(Account account) {
+        String query = "SELECT tweetid FROM tweets WHERE usertwitterid=?";
+        DBResponse resp = CoreDB.customQuerySelect(query, account.getTwitterID());
+        if (!resp.wasSuccessful()) {
+            return null;
+        }
+        ArrayList<Long> tweetIDs = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
+        for (HashMap<String, Object> row : rows) {
+            tweetIDs.add((Long) row.get("TWEETID"));
+        }
+        return tweetIDs;
     }
 
 }

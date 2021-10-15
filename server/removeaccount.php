@@ -10,7 +10,7 @@ $userAuthTwitterID = filter_input(INPUT_POST, 'user_auth_twitter_id', FILTER_SAN
 
 if ($request_method == "POST") {
     if (is_null($access_token) || is_null($access_token_secret) || is_null($userAuthTwitterID)) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 

@@ -5,33 +5,37 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
-import com.antsstyle.artretweeter.enumerations.StatusCode;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
  *
  * @author antss
  */
 public class OperationResult {
 
-    private static final Logger LOGGER = LogManager.getLogger(OperationResult.class);
-
     private ClientResponse clientResponse;
     private ServerResponse serverResponse;
     private TwitterResponse twitterResponse;
 
-    public StatusCode getErrorCode() {
-        if (clientResponse != null && !clientResponse.wasSuccessful()) {
-            return clientResponse.statusCode;
+    public String getErrorMessage() {
+        if (clientResponse != null) {
+            return clientResponse.getClientStatusCode().getStatusMessage();
+        } else if (serverResponse != null) {
+            String msg = serverResponse.getServerStatusCode().getStatusMessage();
+            if (serverResponse.getExtraStatusMessage() != null) {
+                msg = msg.concat(" ").concat(serverResponse.getExtraStatusMessage());
+            }
+            return msg;
+        } else if (twitterResponse != null) {
+            String msg = twitterResponse.getServerStatusCode().getStatusMessage();
+            if (twitterResponse.getTwitterErrorMessage() != null) {
+                msg = msg.concat(" ").concat(twitterResponse.getTwitterErrorMessage());
+            }
+            if (twitterResponse.getExtraStatusMessage() != null) {
+                msg = msg.concat(" ").concat(twitterResponse.getExtraStatusMessage());
+            }
+            return msg;
+        } else {
+            return null;
         }
-        if (serverResponse != null && !serverResponse.wasSuccessful()) {
-            return serverResponse.statusCode;
-        }
-        if (twitterResponse != null && !twitterResponse.wasSuccessful()) {
-            return twitterResponse.statusCode;
-        }
-        return null;
     }
 
     public ClientResponse getClientResponse() {
@@ -44,13 +48,13 @@ public class OperationResult {
     }
 
     public Boolean wasSuccessful() {
-        if (serverResponse != null && serverResponse.getStatusCode().isErrorStatus()) {
+        if (serverResponse != null && serverResponse.getServerStatusCode().isErrorStatus()) {
             return false;
         }
-        if (twitterResponse != null && twitterResponse.getStatusCode().isErrorStatus()) {
+        if (twitterResponse != null && twitterResponse.getServerStatusCode().isErrorStatus()) {
             return false;
         }
-        if (clientResponse != null && clientResponse.getStatusCode().isErrorStatus()) {
+        if (clientResponse != null && clientResponse.getClientStatusCode().isErrorStatus()) {
             return false;
         }
         return true;

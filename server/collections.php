@@ -9,7 +9,7 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 function collectionsDestroy($userAuth) {
     $collection_id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$collection_id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -26,7 +26,7 @@ function collectionsCreate($userAuth) {
     $timeline_order = filter_input(INPUT_POST, 'timeline_order', FILTER_SANITIZE_STRING);
 
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$name || !$userAuth['twitter_id'] || !$timeline_order || !$description) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -42,7 +42,7 @@ function collectionsCreate($userAuth) {
 function collectionsShow($userAuth) {
     $collection_id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$collection_id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -56,7 +56,7 @@ function collectionsShow($userAuth) {
 function collectionsEntriesCurate($userAuth) {
     $json_data = json_decode(filter_input(INPUT_POST, 'json_data', FILTER_SANITIZE_URL), true);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$json_data || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -69,7 +69,7 @@ function collectionsEntriesAdd($userAuth) {
     $collection_id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     $tweet_id = filter_input(INPUT_POST, 'tweet_id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$collection_id || !$userAuth['twitter_id'] || !$tweet_id) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -85,7 +85,7 @@ function collectionsEntriesRemove($userAuth) {
     $collection_id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     $tweet_id = filter_input(INPUT_POST, 'tweet_id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$collection_id || !$userAuth['twitter_id'] || !$tweet_id) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -103,7 +103,7 @@ function collectionsEntriesMove($userAuth) {
     $relative_to_tweet_id = filter_input(INPUT_POST, 'relative_to', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$collection_id || !$userAuth['twitter_id'] || !$tweet_id
             || !$relative_to_tweet_id) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -120,7 +120,7 @@ function collectionsEntries($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     $max_position = filter_input(INPUT_POST, 'max_position', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -139,7 +139,7 @@ function collectionsEntries($userAuth) {
 function collectionsList($userAuth) {
     $user_id = filter_input(INPUT_POST, 'user_id', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$user_id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 

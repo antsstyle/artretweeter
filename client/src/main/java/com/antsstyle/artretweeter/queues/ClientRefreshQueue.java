@@ -297,7 +297,7 @@ public class ClientRefreshQueue implements Runnable {
             for (RetweetQueueEntry entry : scheduledRetweetsOnServer) {
                 if (!scheduledRetweetsOnClient.contains(entry)) {
                     insertScheduledRetweetParams.add(new Object[]{entry.getTweetID(), entry.getRetweetingUserTwitterID(),
-                        entry.getRetweetTime()});
+                        entry.getRetweetTime(), entry.getAutomated() ? "Y" : "N"});
                     if (!tweetsMapKeyset.contains(entry.getTweetID())) {
                         tweetIDsToRetrieve.add(entry.getTweetID());
                     }
@@ -354,8 +354,8 @@ public class ClientRefreshQueue implements Runnable {
                 CoreDB.runParameterisedUpdateBatch(insertFailedRetweetQuery, failedRetweetParams);
             }
 
-            String insertScheduledRetweetQuery = "INSERT INTO retweetqueue (tweetid,retweetingusertwitterid,retweettime) "
-                    + "VALUES (?,?,?)";
+            String insertScheduledRetweetQuery = "INSERT INTO retweetqueue (tweetid,retweetingusertwitterid,retweettime,automated) "
+                    + "VALUES (?,?,?,?)";
             if (!insertScheduledRetweetParams.isEmpty()) {
                 CoreDB.runParameterisedUpdateBatch(insertScheduledRetweetQuery, insertScheduledRetweetParams);
             }

@@ -4,6 +4,7 @@ require_once "accounts.php";
 require_once "collections.php";
 require_once "core.php";
 require_once "oauth.php";
+require_once "statuscodes.php";
 require_once "statuses.php";
 
 $request_method = filter_var(getenv('REQUEST_METHOD'), FILTER_SANITIZE_STRING);
@@ -18,17 +19,23 @@ $userAuth['access_token'] = $access_token;
 $userAuth['access_token_secret'] = $access_token_secret;
 
 if ($request_method != "POST") {
-    echo ArtRetweeter\encodeErrorInformation("Invalid request type.");
+    echo ArtRetweeter\encodeStatusInformation(ArtRetweeter\StatusCodes::INVALID_INPUT, "Invalid request type.");
     exit();
 }
 
 if (!$artretweeter_endpoint && !$twitter_endpoint) {
-    echo ArtRetweeter\encodeErrorInformation("No endpoint was specified.");
+    echo ArtRetweeter\encodeStatusInformation(ArtRetweeter\StatusCodes::INVALID_INPUT, "No endpoint was specified.");
     exit();
 }
 
 if ($artretweeter_endpoint) {
     switch ($artretweeter_endpoint) {
+        case "accounts/commitautomationsettings":
+            ArtRetweeter\commitAutomationSettings($userAuth);
+            break;
+        case "accounts/getautomationsettings":
+            ArtRetweeter\getAutomationSettings($userAuth);
+            break;
         case "accounts/remove":
             ArtRetweeter\removeAccount($userAuth);
             break;
@@ -113,6 +120,6 @@ switch ($twitter_endpoint) {
         ArtRetweeter\statusesUserTimeline($userAuth);
         break;
     default:
-        echo ArtRetweeter\encodeErrorInformation("Invalid endpoint, or endpoint not supported.");
+        echo ArtRetweeter\encodeStatusInformation(ArtRetweeter\StatusCodes::INVALID_INPUT, "Invalid endpoint, or endpoint not supported.");
         break;
 }

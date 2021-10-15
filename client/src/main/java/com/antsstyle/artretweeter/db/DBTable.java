@@ -20,7 +20,8 @@ public enum DBTable {
             + "screen_name VARCHAR(256) NOT NULL, "
             + "max_id BIGINT, "
             + "since_id BIGINT, "
-            + "retrievedoldtweetslimit VARCHAR(1) DEFAULT 'N' NOT NULL, "
+            + "retrievedoldtweetslimitfromtwitter VARCHAR(1) DEFAULT 'N' NOT NULL, "
+            + "retrievedalloldtweetsfromserver VARCHAR(1) DEFAULT 'N' NOT NULL, "
             + "CONSTRAINT uniqueaccount UNIQUE (twitterid))"),
     APPRATELIMITS("appratelimits",
             "CREATE TABLE IF NOT EXISTS appratelimits ("
@@ -28,7 +29,7 @@ public enum DBTable {
             + "endpoint VARCHAR(255) NOT NULL, "
             + "maxlimit INTEGER NOT NULL, "
             + "remaininglimit INTEGER NOT NULL, "
-            + "resettime TIMESTAMP NOT NULL, "
+            + "resettime DATETIME NOT NULL, "
             + "CONSTRAINT uniqueappratelimit UNIQUE (endpoint))"
     ),
     FAILEDRETWEETS("failedretweets",
@@ -36,7 +37,7 @@ public enum DBTable {
             + "id INTEGER IDENTITY PRIMARY KEY, "
             + "tweetid BIGINT NOT NULL, "
             + "retweetingusertwitterid BIGINT NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL, "
+            + "retweettime DATETIME NOT NULL, "
             + "errorcode INTEGER NOT NULL, "
             + "failreason VARCHAR(255) NOT NULL, "
             + "CONSTRAINT uniquefailedretweet UNIQUE (tweetid,retweetingusertwitterid,retweettime))"),
@@ -55,10 +56,11 @@ public enum DBTable {
             + "url2 VARCHAR(255), "
             + "url3 VARCHAR(255), "
             + "url4 VARCHAR(255), "
-            + "created_at TIMESTAMP NOT NULL, "
+            + "created_at DATETIME NOT NULL, "
             + "likecount INTEGER NOT NULL, "
             + "retweetcount INTEGER NOT NULL, "
             + "source VARCHAR(500) NOT NULL, "
+            + "deletedflag VARCHAR(1) DEFAULT 'N' NOT NULL, "
             + "CONSTRAINT uniquetweet UNIQUE (tweetid))"),
     CONFIGURATION("configuration",
             "CREATE TABLE IF NOT EXISTS configuration ("
@@ -94,15 +96,36 @@ public enum DBTable {
             + "id INTEGER IDENTITY PRIMARY KEY, "
             + "tweetid BIGINT NOT NULL, "
             + "retweetingusertwitterid BIGINT NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL, "
+            + "retweettime DATETIME NOT NULL, "
+            + "automated VARCHAR(1) NOT NULL, "
             + "CONSTRAINT uniqueretweetqueueentry UNIQUE (tweetid,retweetingusertwitterid))"),
     RETWEETRECORDS("retweetrecords",
             "CREATE TABLE IF NOT EXISTS retweetrecords ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
             + "usertwitterid BIGINT NOT NULL, "
             + "tweetid BIGINT NOT NULL, "
-            + "retweettime TIMESTAMP NOT NULL, "
+            + "retweettime DATETIME NOT NULL, "
             + "CONSTRAINT uniqueretweetentry UNIQUE (usertwitterid,tweetid,retweettime))"),
+    USERAUTOMATIONSETTINGS("userautomationsettings",
+            "CREATE TABLE IF NOT EXISTS userautomationsettings ("
+            + "id INTEGER IDENTITY PRIMARY KEY, "
+            + "usertwitterid BIGINT NOT NULL, "
+            + "automationenabled VARCHAR(1) NOT NULL, "
+            + "dayflags VARCHAR(7) NOT NULL, "
+            + "hourflags VARCHAR(24) NOT NULL, "
+            + "minuteflags VARCHAR(4) NOT NULL, "
+            + "includedtext VARCHAR(255) DEFAULT NULL, "
+            + "excludedtext VARCHAR(255) DEFAULT NULL, "
+            + "retweetpercent INTEGER NOT NULL, "
+            + "oldtweetcutoffdate DATETIME, "
+            + "oldtweetcutoffdateenabled VARCHAR(1) NOT NULL, "
+            + "includedtextenabled VARCHAR(1) NOT NULL, "
+            + "excludedtextenabled VARCHAR(1) NOT NULL, "
+            + "timezonehouroffset INTEGER NOT NULL, "
+            + "timezoneminuteoffset INTEGER NOT NULL, "
+            + "includetextcondition VARCHAR(50) NOT NULL, "
+            + "excludetextcondition VARCHAR(50) NOT NULL, "
+            + "CONSTRAINT uniquetwitterid UNIQUE (usertwitterid))"),
     USERRATELIMITS("userratelimits",
             "CREATE TABLE IF NOT EXISTS userratelimits ("
             + "id INTEGER IDENTITY PRIMARY KEY, "
@@ -110,7 +133,7 @@ public enum DBTable {
             + "endpoint VARCHAR(255) NOT NULL, "
             + "maxlimit INTEGER NOT NULL, "
             + "remaininglimit INTEGER NOT NULL, "
-            + "resettime TIMESTAMP NOT NULL, "
+            + "resettime DATETIME NOT NULL, "
             + "CONSTRAINT uniqueuserratelimit UNIQUE (usertwitterid,endpoint))");
 
     private final String tableName;

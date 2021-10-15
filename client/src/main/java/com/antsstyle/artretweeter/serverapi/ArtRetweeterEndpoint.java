@@ -11,8 +11,10 @@ package com.antsstyle.artretweeter.serverapi;
  */
 public enum ArtRetweeterEndpoint {
 
+    COMMIT_AUTOMATION_SETTINGS("accounts/commitautomationsettings"),
     DELETE_MULTIPLE_TWEETS("tweets/deletemultipletweets"),
     DELETE_TWEET("tweets/deletetweet"),
+    GET_AUTOMATION_SETTINGS("accounts/getautomationsettings"),
     GET_STORED_TWEET_IDS("tweets/getstoredtweetids"),
     QUEUE_STATUS("retweets/queuestatus"),
     QUEUE_RETWEET("retweets/queue"),

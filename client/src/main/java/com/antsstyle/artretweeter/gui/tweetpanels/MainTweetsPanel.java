@@ -21,6 +21,7 @@ import com.antsstyle.artretweeter.db.CollectionsDB;
 import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
+import com.antsstyle.artretweeter.db.DBResponseCode;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.db.TweetsDB;
@@ -32,6 +33,8 @@ import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
+import java.awt.Desktop;
+import java.net.URI;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -46,6 +49,7 @@ import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -140,6 +144,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         showDescriptionOfTableColumnsButton = new javax.swing.JButton();
         setTableSortingButton = new javax.swing.JButton();
         setTableFilteringButton = new javax.swing.JButton();
+        viewOnTwitterButton = new javax.swing.JButton();
 
         jLabel2.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel2.setText("Select account: ");
@@ -220,11 +225,11 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         });
 
         addTweetsToCurrentlySelectedCollectionButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        addTweetsToCurrentlySelectedCollectionButton.setText("Add tweets to currently selected collection");
+        addTweetsToCurrentlySelectedCollectionButton.setText("Add tweets to selected collection");
         addTweetsToCurrentlySelectedCollectionButton.setToolTipText("");
-        addTweetsToCurrentlySelectedCollectionButton.setMaximumSize(new java.awt.Dimension(323, 33));
-        addTweetsToCurrentlySelectedCollectionButton.setMinimumSize(new java.awt.Dimension(323, 33));
-        addTweetsToCurrentlySelectedCollectionButton.setPreferredSize(new java.awt.Dimension(323, 33));
+        addTweetsToCurrentlySelectedCollectionButton.setMaximumSize(new java.awt.Dimension(264, 33));
+        addTweetsToCurrentlySelectedCollectionButton.setMinimumSize(new java.awt.Dimension(264, 33));
+        addTweetsToCurrentlySelectedCollectionButton.setPreferredSize(new java.awt.Dimension(264, 33));
         addTweetsToCurrentlySelectedCollectionButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 addTweetsToCurrentlySelectedCollectionButtonActionPerformed(evt);
@@ -307,6 +312,18 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             }
         });
 
+        viewOnTwitterButton.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
+        viewOnTwitterButton.setText("View on Twitter");
+        viewOnTwitterButton.setToolTipText("");
+        viewOnTwitterButton.setMaximumSize(new java.awt.Dimension(177, 33));
+        viewOnTwitterButton.setMinimumSize(new java.awt.Dimension(177, 33));
+        viewOnTwitterButton.setPreferredSize(new java.awt.Dimension(177, 33));
+        viewOnTwitterButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                viewOnTwitterButtonActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -328,22 +345,24 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                         .addComponent(selectAccountComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, 171, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(showDescriptionOfTableColumnsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 287, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane26, javax.swing.GroupLayout.DEFAULT_SIZE, 960, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(queueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(addTweetsToCurrentlySelectedCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(setTableSortingButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(setTableFilteringButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(0, 200, Short.MAX_VALUE)))
+                                .addComponent(setTableFilteringButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(queueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, 147, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(addTweetsToCurrentlySelectedCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(viewOnTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, 177, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -359,7 +378,8 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(queueRetweetButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(addTweetsToCurrentlySelectedCollectionButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(deleteTweetsFromArtRetweeterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(viewOnTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(deleteTweetsFromTwitterButton, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -467,7 +487,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         }
 
         if (!result.wasSuccessful()) {
-            String msg = "Twitter API returned an error: " + result.getErrorCode().getStatusMessage();
+            String msg = "Twitter API returned an error: " + result.getErrorMessage();
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -594,7 +614,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                 addTweetManuallyTextField.setText("");
                 addTweetManuallyStatusLabel.setText("Tweet added successfully.");
             } else {
-                GUIHelperMethods.showErrors(res, LOGGER, null);
+                GUIHelperMethods.showErrors(res, LOGGER, "Error adding tweet:");
             }
         } else {
             String msg = "The entered URL is not a valid Twitter status URL.";
@@ -603,15 +623,70 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         }
     }
 
+    private void queueRetweet() {
+        int[] selectedRowsCheck = tweetsTable.getSelectedRows();
+        if (selectedRowsCheck.length > 1) {
+            String msg = "Select only one tweet at a time to queue.";
+            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        int row = tweetsTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        int modelRow = tweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        TweetHolder tweet = ServerAPI.checkTweetCanBeQueued(currentlySelectedAccount, false, id);
+        if (tweet == null) {
+            return;
+        }
+        Timestamp time = ServerAPI.getTimeFromUser();
+        if (time == null) {
+            return;
+        }
+        GUI.getMainManagementPanel().getQueueSubPanel().disableTableListener();
+        OperationResult opResult = ServerAPI.queueRetweet(currentlySelectedAccount, tweet, time);
+        if (opResult.wasSuccessful()) {
+            TableTimestamp tableTimestamp = new TableTimestamp(time);
+            DBResponse updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, 
+                    new String[]{"tweetid", "retweetingusertwitterid", "retweettime", "automated"},
+                    new Object[]{tweet.getTweetID(), currentlySelectedAccount.getTwitterID(), time, "N"});
+            if (updateResp.wasSuccessful()) {
+                DefaultTableModel queueDtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
+
+                queueDtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, false});
+                TableModel tm = tweetsTable.getModel();
+                int rowCount = tweetsTable.getRowCount();
+                Integer pendingRTColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Pending RT");
+                for (int i = 0; i < rowCount; i++) {
+                    Integer idTest = (Integer) tm.getValueAt(i, idColumnIndex);
+                    if (idTest.equals(id)) {
+                        tweetsTable.getModel().setValueAt(true, i, pendingRTColumnIndex);
+                        break;
+                    }
+                }
+            } else if (updateResp.getStatusCode().equals(DBResponseCode.DUPLICATE_ERROR)) {
+                String msg = "<html>This tweet is already queued for retweeting.</html>";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.error(msg);
+                return;
+            } else {
+                String msg = "<html>Queued successfully, but an error occurred adding this queue entry " + "<br/>to the ArtRetweeter client.</html>";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.error(msg);
+                return;
+            }
+        } else {
+            GUIHelperMethods.showErrors(opResult, LOGGER, "Error queuing retweet:");
+        }
+
+        GUI.getMainManagementPanel().getQueueSubPanel().enableTableListener();
+    }
+
     private void queueRetweetButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_queueRetweetButtonActionPerformed
         queueRetweetButton.setEnabled(false);
-        GUI.getMainManagementPanel().getQueueSubPanel().disableTableListener();
-        try {
-            ServerAPI.queueRetweet(currentlySelectedAccount, false);
-        } catch (Exception e) {
-            LOGGER.error("Failed to queue retweet", e);
-        }
-        GUI.getMainManagementPanel().getQueueSubPanel().enableTableListener();
+        queueRetweet();
         queueRetweetButton.setEnabled(true);
     }//GEN-LAST:event_queueRetweetButtonActionPerformed
 
@@ -665,8 +740,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                 tweetString = tweetString.substring(0, tweetString.length() - 1);
                 OperationResult res = ServerAPI.deleteTweets(currentlySelectedAccount, tweetString);
                 if (!res.wasSuccessful()) {
-                    LOGGER.error("Deleting tweets on server failed. Error code: " + res.getErrorCode());
-                    LOGGER.error(res.getServerResponse().getLogMessage());
+                    LOGGER.error("Deleting tweets on server failed. Error message: " + res.getErrorMessage());
                 }
             }
         } else {
@@ -844,6 +918,35 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         setTableFilteringButton.setEnabled(true);
     }//GEN-LAST:event_setTableFilteringButtonActionPerformed
 
+    private void viewOnTwitterButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_viewOnTwitterButtonActionPerformed
+        viewOnTwitterButton.setEnabled(false);
+        viewOnTwitter();
+        viewOnTwitterButton.setEnabled(true);
+    }//GEN-LAST:event_viewOnTwitterButtonActionPerformed
+
+    private void viewOnTwitter() {
+        int row = tweetsTable.getSelectedRow();
+        if (row == -1) {
+            return;
+        }
+        int modelRow = tweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        Long tweetID = TweetsDB.getTweetIDByDatabaseID(id);
+        String url = "https://twitter.com/".concat(currentlySelectedAccount.getScreenName()).concat("/status/")
+                .concat(String.valueOf(tweetID));
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try {
+                Desktop.getDesktop().browse(new URI(url));
+            } catch (Exception e) {
+                String msg = "An error occurred attempting to direct your browser to the tweet URL, check log output.";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                LOGGER.error(msg, e);
+                LOGGER.error("Tweet URL was: " + url);
+            }
+        }
+    }
+
     private void setTableFiltering() {
         setTableFilteringPanel.setComboBoxSettings();
         int result = JOptionPane.showConfirmDialog(GUI.getInstance(), setTableFilteringPanel, "Set Table Filtering", JOptionPane.OK_CANCEL_OPTION);
@@ -941,5 +1044,6 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     private javax.swing.JButton setTableSortingButton;
     private javax.swing.JButton showDescriptionOfTableColumnsButton;
     protected javax.swing.JTable tweetsTable;
+    private javax.swing.JButton viewOnTwitterButton;
     // End of variables declaration//GEN-END:variables
 }

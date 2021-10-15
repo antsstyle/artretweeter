@@ -5,9 +5,9 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
-import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
 
 /**
  *
@@ -18,13 +18,13 @@ public class TwitterResponse extends Response {
     private Integer receivedTweetCount = 0;
     private Integer storedTweetCount = 0;
     private JsonArray responseJSONArray;
-    private JsonObject errorJSON;
-    private JsonObject headerJSON;
+    private JsonElement errorJSON;
+    private JsonElement headerJSON;
     private String twitterErrorMessage;
     private Integer twitterErrorCode;
     
-    public TwitterResponse(StatusCode statusCode) {
-        this.statusCode = statusCode;
+    public TwitterResponse(ServerStatusCode twitterStatusCode) {
+        this.serverStatusCode = twitterStatusCode;
     }
 
     public Integer getTwitterErrorCode() {
@@ -43,19 +43,19 @@ public class TwitterResponse extends Response {
         this.responseJSONArray = responseJSONArray;
     }
 
-    public JsonObject getErrorJSON() {
+    public JsonElement getErrorJSON() {
         return errorJSON;
     }
 
-    public void setErrorJSON(JsonObject errorJSON) {
+    public void setErrorJSON(JsonElement errorJSON) {
         this.errorJSON = errorJSON;
     }
 
-    public JsonObject getHeaderJSON() {
+    public JsonElement getHeaderJSON() {
         return headerJSON;
     }
 
-    public void setHeaderJSON(JsonObject headerJSON) {
+    public void setHeaderJSON(JsonElement headerJSON) {
         this.headerJSON = headerJSON;
     }
 

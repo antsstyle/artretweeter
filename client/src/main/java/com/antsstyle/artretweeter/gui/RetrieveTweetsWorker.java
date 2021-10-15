@@ -9,14 +9,18 @@ import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.ClientResponse;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
 import com.antsstyle.artretweeter.datastructures.StatusJSON;
+import com.antsstyle.artretweeter.db.CachedVariableDB;
 import com.antsstyle.artretweeter.db.ConfigDB;
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBResponse;
 import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
+import com.antsstyle.artretweeter.db.TweetsDB;
+import com.antsstyle.artretweeter.enumerations.ClientStatusCode;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.serverapi.APIQueryManager;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.antsstyle.artretweeter.twitter.RESTAPI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,13 +52,6 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
     private Integer receivedTweetCount = 0;
 
     private Integer countBeforeStart;
-
-    private Boolean firstRetrieval = false;
-    private Boolean startedServerRetrieval = false;
-
-    public void setFirstRetrieval(Boolean firstRetrieval) {
-        this.firstRetrieval = firstRetrieval;
-    }
 
     public static boolean retrieveForAllAccounts() {
         DBResponse resp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
@@ -140,9 +137,7 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
         Long sinceID = finalSinceID;
         Boolean finished = false;
         OperationResult finalResult = new OperationResult();
-        ArrayList<Long> retrievedFromAPITweetIDs = new ArrayList<>();
-        int consecutiveErrors = 0;
-        try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             while (!finished) {
                 try {
                     LOGGER.debug("Params: Max ID: " + maxID + " Since ID: " + sinceID);
@@ -150,14 +145,9 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                             maxID, sinceID, tweetFolderPath);
                     OperationResult lastResult = returnResults.getLeft();
                     finalResult = lastResult;
+                    LOGGER.debug("Last result successful: " + lastResult.wasSuccessful());
                     if (lastResult.wasSuccessful()) {
-                        consecutiveErrors = 0;
                         ArrayList<StatusJSON> returnedStatuses = returnResults.getRight();
-                        if (firstRetrieval) {
-                            for (StatusJSON json : returnedStatuses) {
-                                retrievedFromAPITweetIDs.add(json.getId());
-                            }
-                        }
                         statuses.addAll(returnedStatuses);
                         Pair<Long, Long> resultPair = (Pair<Long, Long>) lastResult.getTwitterResponse().getReturnedObject();
                         if (returnedStatuses.isEmpty()) {
@@ -204,44 +194,35 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                         storedTweetCount += lastResult.getTwitterResponse().getStoredTweetCount();
                         receivedTweetCount += lastResult.getTwitterResponse().getReceivedTweetCount();
                         publish(Pair.of(storedTweetCount, receivedTweetCount));
-
-                    } else if (lastResult.getErrorCode().equals(StatusCode.RATE_LIMIT_EXCEEDED_ERROR)) {
-                        return Pair.of(lastResult, statuses);
                     } else {
-                        LOGGER.error("Error: " + lastResult.getErrorCode().toString());
-                        try {
-                            Thread.sleep(10 * 1000);
-                        } catch (Exception e) {
-                            LOGGER.error("Interrupted while waiting", e);
-                            finished = true;
-                        }
-                        consecutiveErrors++;
-                        if (consecutiveErrors >= 3) {
-                            finished = true;
-                        }
+                        return Pair.of(lastResult, statuses);
                     }
                 } catch (Exception e) {
                     LOGGER.error("Tweet retrieval encountered exception", e);
-                    finalResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
+                    finalResult.setClientResponse(new ClientResponse(ClientStatusCode.MISC_ERROR));
                     return Pair.of(finalResult, statuses);
                 }
-                if (!finished) {
-                    try {
-                        Thread.sleep(5 * 1000);
-                    } catch (Exception e) {
-                        LOGGER.info("Interrupted while waiting - aborting tweet download.");
-                        break;
-                    }
+                try {
+                    Thread.sleep(5 * 1000);
+                } catch (Exception e) {
+                    LOGGER.info("Interrupted while waiting - aborting tweet download.");
+                    break;
                 }
             }
 
-            if (firstRetrieval) {
+            if (!account.getRetrievedAllOldTweetsFromServer()) {
                 LOGGER.debug("Finished retrieving statuses from Twitter API. Checking ArtRetweeter server for older tweets...");
-                startedServerRetrieval = true;
                 OperationResult serverResult = ServerAPI.getStoredTweetIDs(account);
                 if (serverResult.wasSuccessful()) {
-                    ArrayList<Long> tweetIDs = (ArrayList<Long>) serverResult.getServerResponse().getReturnedObject();
-                    tweetIDs.removeAll(retrievedFromAPITweetIDs);
+                    Pair<ArrayList<Long>, Integer> returnData = (Pair<ArrayList<Long>, Integer>) serverResult.getServerResponse().getReturnedObject();
+                    ArrayList<Long> tweetIDs = returnData.getLeft();
+                    ArrayList<Long> tweetIDsAlreadyInDB = TweetsDB.getAllTweetIDsForAccount(account);
+                    if (tweetIDsAlreadyInDB != null) {
+                        tweetIDs.removeAll(tweetIDsAlreadyInDB);
+                    } else {
+                        LOGGER.error("Warning - tweet IDs in database could not be found, may be requesting unnecessary tweets from server.");
+                    }
+                    Integer lastRetrievedTweetServerID = returnData.getRight();
                     ArrayList<ArrayList<Long>> lists = new ArrayList<>();
                     for (int i = 0; i < tweetIDs.size(); i += 100) {
                         if (i + 100 >= tweetIDs.size()) {
@@ -253,7 +234,7 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                     for (ArrayList<Long> list : lists) {
                         OperationResult tweetsResult = RESTAPI.getTweetsByIDs(list, account, tweetFolderPath);
                         if (!tweetsResult.wasSuccessful()) {
-                            LOGGER.error("Error: " + tweetsResult.getErrorCode().toString());
+                            LOGGER.error("Error: " + tweetsResult.getErrorMessage());
                         } else {
                             ArrayList<StatusJSON> returnedStatuses = (ArrayList<StatusJSON>) tweetsResult.getTwitterResponse().getReturnedObject();
                             int returnedStatusesCount = returnedStatuses.size();
@@ -262,14 +243,21 @@ public class RetrieveTweetsWorker extends SwingWorker<Object, Pair<Integer, Inte
                             publish(Pair.of(storedTweetCount, receivedTweetCount));
                         }
                     }
+                    if (lastRetrievedTweetServerID != null) {
+                        CoreDB.updateTable(DBTable.ACCOUNTS,
+                                new String[]{"RETRIEVEDALLOLDTWEETSFROMSERVER"},
+                                new Object[]{"Y"},
+                                new String[]{"TWITTERID"},
+                                new Object[]{account.getTwitterID()});
+                    }
                 } else {
-                    LOGGER.error("Error: " + serverResult.getErrorCode().toString());
+                    LOGGER.error("Error: " + serverResult.getErrorMessage());
                 }
             }
             return Pair.of(finalResult, statuses);
         } catch (Exception e) {
             LOGGER.error("Failed to create httpclient!", e);
-            finalResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
+            finalResult.setClientResponse(new ClientResponse(ClientStatusCode.MISC_ERROR));
             finalResult.getClientResponse().setExtraStatusMessage("Failed to create httpclient!");
             return Pair.of(finalResult, null);
         }

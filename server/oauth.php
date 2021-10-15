@@ -10,7 +10,7 @@ function oauthAccessToken() {
     $oauth_token = filter_input(INPUT_POST, 'oauth_token', FILTER_SANITIZE_STRING);
     $oauth_verifier = filter_input(INPUT_POST, 'oauth_verifier', FILTER_SANITIZE_STRING);
     if (!$oauth_token || !$oauth_verifier) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -33,7 +33,7 @@ function oauthRequestToken() {
 function oauthAuthorize() {
     $oauth_token = filter_input(INPUT_POST, 'oauth_token', FILTER_SANITIZE_STRING);
     if (!$oauth_token) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     $oauth_token_array['oauth_token'] = $oauth_token;
@@ -44,7 +44,7 @@ function oauthAuthorize() {
 
 function oauthInvalidateToken($userAuth) {
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],

@@ -26,9 +26,11 @@ import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.RateLimitsDB;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.db.TweetsDB;
+import com.antsstyle.artretweeter.enumerations.ClientStatusCode;
 import com.antsstyle.artretweeter.enumerations.StatusCode;
 import com.antsstyle.artretweeter.main.ArtRetweeterMain;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -92,16 +94,16 @@ public class RESTAPI {
             Long userTwitterID, CloseableHttpResponse response) {
         OperationResult res = new OperationResult();
         if (response.getStatusLine().getStatusCode() != 200) {
-            res.setServerResponse(new ServerResponse(StatusCode.ARTRETWEETER_SERVER_ERROR));
+            res.setServerResponse(new ServerResponse(ServerStatusCode.SERVER_ERROR));
             res.getServerResponse().setExtraStatusMessage("Failed to communicate with ArtRetweeter server!");
             return Pair.of(res, null);
         }
         HttpEntity entity = response.getEntity();
         Gson gson = new Gson();
-        try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
+        try (InputStream is = entity.getContent(); InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
             if (MiscConfig.DEBUG_MODE) {
-                try ( PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString())) {
+                try (PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_TWITTERAPI_REQUEST_OUTPUT_FILE_PATH.toString())) {
                     Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
                     JsonObject obj = prettyGson.fromJson(jsonString, JsonObject.class);
                     prettyGson.toJson(obj, pw);
@@ -112,8 +114,19 @@ public class RESTAPI {
             JsonObject responseJSON = gson.fromJson(jsonString, JsonObject.class);
             if (responseJSON.keySet().contains("headers")) {
                 try {
-                    JsonObject headerJSON = responseJSON.get("headers").getAsJsonObject();
-                    processHeaders(headerJSON, endpoint, userTwitterID);
+                    JsonElement headerElement = responseJSON.get("headers");
+                    if (headerElement.isJsonArray()) {
+                        JsonArray headerArray = headerElement.getAsJsonArray();
+                        if (headerArray.size() != 0) {
+                            for (JsonElement individualHeader : headerArray) {
+                                JsonObject obj = individualHeader.getAsJsonObject();
+                                processHeaders(obj, endpoint, userTwitterID);
+                            }
+                        }
+                    } else {
+                        JsonObject headerJSON = responseJSON.get("headers").getAsJsonObject();
+                        processHeaders(headerJSON, endpoint, userTwitterID);
+                    }
                 } catch (Exception e1) {
                     LOGGER.error("Unable to process headers - empty array returned.", e1);
                 }
@@ -125,14 +138,14 @@ public class RESTAPI {
                 return Pair.of(res, responseJSON);
             }
             TwitterResponse twResult = processTwitterAPIErrorResponse(responseJSON);
-            if (result != null) {
+            if (twResult != null) {
                 res.setTwitterResponse(twResult);
                 return Pair.of(res, responseJSON);
             }
             return Pair.of(null, responseJSON);
         } catch (Exception e) {
             LOGGER.error("Unable to read response entity!", e);
-            ClientResponse clientRes = new ClientResponse(StatusCode.JSON_PARSE_ERROR);
+            ClientResponse clientRes = new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR);
             res.setClientResponse(clientRes);
             return Pair.of(res, null);
         }
@@ -151,10 +164,9 @@ public class RESTAPI {
         if (!responseObj.keySet().contains("errors")) {
             return null;
         }
-
         JsonArray errorObj = responseObj.get("errors").getAsJsonArray();
         // Use first error only
-        TwitterResponse result = new TwitterResponse(StatusCode.TWITTER_API_ERROR);
+        TwitterResponse result = new TwitterResponse(ServerStatusCode.TWITTER_API_ERROR);
         result.setTwitterErrorCode(errorObj.get(0).getAsJsonObject().get("code").getAsInt());
         result.setTwitterErrorMessage(errorObj.get(0).getAsJsonObject().get("message").getAsString());
         result.setHttpStatusCode(responseJSON.get("httpcode").getAsInt());
@@ -190,7 +202,7 @@ public class RESTAPI {
             Account account) {
         OperationResult opResult = new OperationResult();
         if (account == null && endpoint.getRequiresUserAuth()) {
-            opResult.setClientResponse(new ClientResponse(StatusCode.MISSING_CREDENTIALS_ERROR));
+            opResult.setClientResponse(new ClientResponse(ClientStatusCode.MISSING_CREDENTIALS));
             return opResult;
         }
         Long userTwitterID = null;
@@ -202,13 +214,13 @@ public class RESTAPI {
             nameValuePairs.add(new BasicNameValuePair("twitter_endpoint", endpoint.getEndpointName()));
         }
         String url = ArtRetweeterMain.prop.getProperty("serverurl");
-        try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
+        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
             int artRetweeterServerErrors = 0;
             int twitterAPIErrors = 0;
-            while (artRetweeterServerErrors < 3 && twitterAPIErrors < 3) {
-                try ( CloseableHttpResponse response = httpclient.execute(httpPost)) {
+            while (artRetweeterServerErrors < 4 && twitterAPIErrors < 4) {
+                try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
                     Pair<OperationResult, JsonObject> checkResult = processResponse(endpoint.getEndpointName(), userTwitterID, response);
                     int httpCode = response.getStatusLine().getStatusCode();
                     if (httpCode != 200 || checkResult.getLeft() != null) {
@@ -222,8 +234,8 @@ public class RESTAPI {
                         if (twitterAPIErrors == 3) {
                             OperationResult sResp = checkResult.getLeft();
                             if (sResp != null) {
-                                if (sResp.getTwitterResponse() != null && (sResp.getTwitterResponse().getTwitterErrorCode() < 500
-                                        || sResp.getTwitterResponse().getTwitterErrorCode() > 599)) {
+                                if (sResp.getTwitterResponse() != null && (sResp.getTwitterResponse().getTwitterErrorCode() > 500
+                                        && sResp.getTwitterResponse().getTwitterErrorCode() < 599)) {
                                     twitterAPIErrors++;
                                 } else {
                                     return sResp;
@@ -237,7 +249,7 @@ public class RESTAPI {
                             if (checkResult.getLeft() != null) {
                                 return checkResult.getLeft();
                             } else {
-                                opResult.setServerResponse(new ServerResponse(StatusCode.ARTRETWEETER_SERVER_ERROR));
+                                opResult.setServerResponse(new ServerResponse(ServerStatusCode.SERVER_ERROR));
                                 return opResult;
                             }
                         }
@@ -245,30 +257,30 @@ public class RESTAPI {
                             Thread.sleep((artRetweeterServerErrors + twitterAPIErrors) * 1000);
                         } catch (Exception e) {
                             LOGGER.error("Interrupted while waiting to retry API request", e);
-                            opResult.setClientResponse(new ClientResponse(StatusCode.INTERRUPTED_ERROR));
+                            opResult.setClientResponse(new ClientResponse(ClientStatusCode.INTERRUPTED));
                             return opResult;
                         }
                         continue;
                     }
                     JsonObject responseJSON = checkResult.getRight();
-                    opResult.setTwitterResponse(new TwitterResponse(StatusCode.SUCCESS));
-                    opResult.getTwitterResponse().setHeaderJSON(responseJSON.get("headers").getAsJsonObject());
+                    opResult.setTwitterResponse(new TwitterResponse(ServerStatusCode.QUERY_OK));
+                    opResult.getTwitterResponse().setHeaderJSON(responseJSON.get("headers"));
                     if (responseJSON.get("response").isJsonObject()) {
                         opResult.getTwitterResponse().setResponseJSONObject(responseJSON.get("response").getAsJsonObject());
                     } else if (responseJSON.get("response").isJsonArray()) {
                         opResult.getTwitterResponse().setResponseJSONArray(responseJSON.get("response").getAsJsonArray());
                     }
-                    opResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+                    opResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.QUERY_OK);
                     return opResult;
                 } catch (Exception e) {
                     LOGGER.error("Failed to get HTTP response!", e);
-                    opResult.setServerResponse(new ServerResponse(StatusCode.CONNECTION_ERROR));
+                    opResult.setServerResponse(new ServerResponse(ServerStatusCode.SERVER_ERROR));
                     return opResult;
                 }
             }
         } catch (Exception e) {
             LOGGER.error("Failed to create HTTP client!", e);
-            opResult.setClientResponse(new ClientResponse(StatusCode.MISC_ERROR));
+            opResult.setClientResponse(new ClientResponse(ClientStatusCode.MISC_ERROR));
             return opResult;
         }
         return opResult;
@@ -321,7 +333,7 @@ public class RESTAPI {
             receivedStatuses = gson.fromJson(responseJSON, StatusJSON[].class);
         } catch (Exception e1) {
             LOGGER.error("Failed to parse returned statuses JSON!", e1);
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
             return apiCallResult;
         }
         ArrayList<Object[]> params = new ArrayList<>();
@@ -353,7 +365,7 @@ public class RESTAPI {
         }
         if (!params.isEmpty()) {
             if (!TweetsDB.parameterisedTweetMergeBatch(params)) {
-                apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+                apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.DATABASE_ERROR));
                 apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
                 return apiCallResult;
             }
@@ -374,7 +386,7 @@ public class RESTAPI {
         JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         StatusJSON status = gson.fromJson(responseJSON, StatusJSON.class);
         if (!status.getUser().getId().equals(account.getTwitterID())) {
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DOWNLOAD_ERROR,
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.DOWNLOAD_ERROR,
                     "You can only download tweets from your own account."));
             return apiCallResult;
         }
@@ -403,7 +415,7 @@ public class RESTAPI {
             JsonArray errors = response.get("errors").getAsJsonArray();
             if (errors.size() != 0) {
                 apiCallResult.getTwitterResponse().setErrorJSON(errors.get(0).getAsJsonObject());
-                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+                apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.TWITTER_API_ERROR);
             }
         }
         return apiCallResult;
@@ -423,7 +435,7 @@ public class RESTAPI {
             JsonArray errors = response.get("errors").getAsJsonArray();
             if (errors.size() != 0) {
                 apiCallResult.getTwitterResponse().setErrorJSON(errors.get(0).getAsJsonObject());
-                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+                apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.TWITTER_API_ERROR);
             }
         }
         return apiCallResult;
@@ -439,9 +451,9 @@ public class RESTAPI {
         JsonObject responseJSON = apiCallResult.getTwitterResponse().getResponseJSONObject();
         String destroyed = responseJSON.get("destroyed").getAsString();
         if (destroyed.toLowerCase().equals("true")) {
-            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+            apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.QUERY_OK);
         } else {
-            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.TWITTER_API_ERROR);
+            apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.TWITTER_API_ERROR);
         }
         return apiCallResult;
     }
@@ -471,7 +483,7 @@ public class RESTAPI {
                     .setOrdering(CollectionOrdering.CURATION_REVERSE_CHRON);
             apiCallResult.getTwitterResponse().setReturnedObject(holder);
         }
-        apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+        apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.QUERY_OK);
         return apiCallResult;
     }
 
@@ -582,8 +594,8 @@ public class RESTAPI {
                 }
             }
         } else {
-            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.JSON_PARSE_ERROR);
-            apiCallResult.getTwitterResponse().setExtraStatusMessage("Unable to parse JSON!");
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
+            apiCallResult.getClientResponse().setExtraStatusMessage("Unable to parse JSON!");
             return apiCallResult;
         }
 
@@ -618,15 +630,15 @@ public class RESTAPI {
                 apiCallResult.getTwitterResponse().setReturnedObject(holder);
             } else {
                 LOGGER.error("Collection not found in response JSON!");
-                apiCallResult.getTwitterResponse().setStatusCode(StatusCode.MISC_ERROR);
+                apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
                 return apiCallResult;
             }
         } catch (Exception e) {
             LOGGER.error("Failed to parse JSON response", e);
-            apiCallResult.getTwitterResponse().setStatusCode(StatusCode.JSON_PARSE_ERROR);
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
             return apiCallResult;
         }
-        apiCallResult.getTwitterResponse().setStatusCode(StatusCode.SUCCESS);
+        apiCallResult.getTwitterResponse().setServerStatusCode(ServerStatusCode.QUERY_OK);
         return apiCallResult;
     }
 
@@ -641,7 +653,7 @@ public class RESTAPI {
         OperationResult apiCallResult = new OperationResult();
         Path tweetFolderPath = ConfigDB.getTweetFolderPath(account);
         if (tweetFolderPath == null) {
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.DATABASE_ERROR));
             apiCallResult.getClientResponse().setExtraStatusMessage("Unable to retrieve tweet folder path from DB!");
             return apiCallResult;
         }
@@ -649,7 +661,7 @@ public class RESTAPI {
                 new String[]{"collectionid"},
                 new Object[]{collectionID});
         if (!collectionCheckResp.wasSuccessful() || collectionCheckResp.getReturnedRows().isEmpty()) {
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.DATABASE_ERROR));
             apiCallResult.getClientResponse().setExtraStatusMessage("Unable to retrieve collection information from DB!");
             return apiCallResult;
         }
@@ -693,7 +705,7 @@ public class RESTAPI {
                 CollectionsDB.parameterisedCollectionTweetsMergeBatch(collectionTweetsMergeParams);
             }
         } else {
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
             apiCallResult.getClientResponse().setExtraStatusMessage("Unable to parse JSON!");
             return apiCallResult;
         }
@@ -726,8 +738,12 @@ public class RESTAPI {
             receivedStatuses = gson.fromJson(responseJSON, StatusJSON[].class);
         } catch (Exception e1) {
             LOGGER.error("Failed to parse returned statuses JSON!", e1);
-            apiCallResult.setClientResponse(new ClientResponse(StatusCode.JSON_PARSE_ERROR));
+            apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.JSON_PARSE_ERROR));
             apiCallResult.getClientResponse().setExtraStatusMessage("Failed to parse returned statuses JSON!");
+            return Pair.of(apiCallResult, null);
+        }
+        if (receivedStatuses == null) {
+            LOGGER.error("Received statuses was null!");
             return Pair.of(apiCallResult, null);
         }
         LOGGER.debug("Number of statuses received: " + receivedStatuses.length);
@@ -769,7 +785,7 @@ public class RESTAPI {
         }
         if (!params.isEmpty()) {
             if (!TweetsDB.parameterisedTweetMergeBatch(params)) {
-                apiCallResult.setClientResponse(new ClientResponse(StatusCode.DB_ERROR));
+                apiCallResult.setClientResponse(new ClientResponse(ClientStatusCode.DATABASE_ERROR));
                 apiCallResult.getClientResponse().setExtraStatusMessage("Failed to update database with tweet batch!");
                 return Pair.of(apiCallResult, statuses);
             }

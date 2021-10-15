@@ -4,4 +4,4 @@
     
 cd "$(dirname "$0")"
 
-php apischeduler.php
+php automation.php

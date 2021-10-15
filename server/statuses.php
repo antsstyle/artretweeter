@@ -8,7 +8,7 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 
 function getStoredTweetsInDB($userAuth) {
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     validateUserAuth($userAuth);
@@ -18,12 +18,12 @@ function getStoredTweetsInDB($userAuth) {
 function retrieveTweetMetrics($userAuth) {
     $nextcursor = filter_input(INPUT_POST, 'nextcursor', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id'] || !$nextcursor) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     $metricsInDB = getTweetMetricsToRefresh($userAuth['twitter_id'], $nextcursor, "Latest Metrics");
-    if (!metricsInDB) {
-        echo encodeErrorInformation("A server error was encountered attempting to retrieve tweet metrics.");
+    if (!$metricsInDB) {
+        echo encodeStatusInformation(StatusCodes::DATABASE_ERROR, "A server error was encountered attempting to retrieve tweet metrics.");
         exit;
     }
     $idString = $metricsInDB['idstring'];
@@ -42,7 +42,7 @@ function retrieveTweetMetrics($userAuth) {
 
 function getQueueStatus($userAuth) {
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     validateUserAuth($userAuth);
@@ -51,7 +51,7 @@ function getQueueStatus($userAuth) {
 
 function tweetRetweetStatus($userAuth) {
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     validateUserAuth($userAuth);
@@ -61,7 +61,7 @@ function tweetRetweetStatus($userAuth) {
 function statusesShow($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -83,7 +83,7 @@ function statusesUserTimeline($userAuth) {
     $max_id = filter_input(INPUT_POST, 'max_id', FILTER_SANITIZE_NUMBER_INT);
     $since_id = filter_input(INPUT_POST, 'since_id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$screen_name || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -114,13 +114,13 @@ function queueRetweet($userAuth) {
     $tweetID = filter_input(INPUT_POST, 'tweetid', FILTER_SANITIZE_NUMBER_INT);
     $retweetTime = filter_input(INPUT_POST, 'retweettime', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetID || !$userAuth['twitter_id'] || !$retweetTime) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     validateUserAuth($userAuth);
     $timeNow = strtotime('+1 hour', time());
     if ($timeNow > $retweetTime) {
-        echo encodeErrorInformation("Timestamp is not within valid range.");
+        echo encodeStatusInformation("Timestamp is not within valid range.");
         exit;
     }
 
@@ -130,7 +130,7 @@ function queueRetweet($userAuth) {
 function unqueueRetweet($userAuth) {
     $tweetID = filter_input(INPUT_POST, 'tweetid', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetID || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     validateUserAuth($userAuth);
@@ -140,7 +140,7 @@ function unqueueRetweet($userAuth) {
 function statusesUnretweet($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -156,7 +156,7 @@ function statusesUnretweet($userAuth) {
 function statusesLookup($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -176,7 +176,7 @@ function statusesLookup($userAuth) {
 function statusesDestroy($userAuth) {
     $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
 
@@ -190,18 +190,18 @@ function statusesDestroy($userAuth) {
 function deleteTweet($userAuth) {
     $tweetid = filter_input(INPUT_POST, 'tweetid', FILTER_SANITIZE_NUMBER_INT);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetid || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     $success = $GLOBALS['databaseConnection']->prepare("UPDATE tweets SET deletedflag=? WHERE tweetid=?")->execute(["Y", $tweetid]);
-    echo encodeDBResponseInformation($success);
+    echo encodeSuccessInformation($success);
     exit();
 }
 
 function deleteMultipleTweets($userAuth) {
     $tweetids = filter_input(INPUT_POST, 'tweetids', FILTER_SANITIZE_STRING);
     if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$tweetids || !$userAuth['twitter_id']) {
-        echo encodeErrorInformation("Parameters are not set correctly.");
+        echo encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
         exit;
     }
     $params = explode(',', $tweetids);
@@ -213,6 +213,6 @@ function deleteMultipleTweets($userAuth) {
     }
     $query .= ")";
     $success = $GLOBALS['databaseConnection']->prepare($query)->execute($params);
-    echo encodeDBResponseInformation($success);
+    echo encodeSuccessInformation($success);
     exit();
 }

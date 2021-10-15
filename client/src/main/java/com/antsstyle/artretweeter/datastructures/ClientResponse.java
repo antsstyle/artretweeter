@@ -5,7 +5,7 @@
  */
 package com.antsstyle.artretweeter.datastructures;
 
-import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.enumerations.ClientStatusCode;
 
 /**
  *
@@ -13,6 +13,15 @@ import com.antsstyle.artretweeter.enumerations.StatusCode;
  */
 public class ClientResponse extends Response {
     
+    private ClientStatusCode clientStatusCode;    
+
+    public ClientStatusCode getClientStatusCode() {
+        return clientStatusCode;
+    }
+
+    public void setClientStatusCode(ClientStatusCode clientStatusCode) {
+        this.clientStatusCode = clientStatusCode;
+    }
     private Boolean imageWasDownloaded;
 
     public Boolean getImageWasDownloaded() {
@@ -23,13 +32,17 @@ public class ClientResponse extends Response {
         this.imageWasDownloaded = imageWasDownloaded;
     }
 
-    public ClientResponse(StatusCode statusCode) {
-        this.statusCode = statusCode;
+    public ClientResponse(ClientStatusCode statusCode) {
+        this.clientStatusCode = statusCode;
     }
     
-    public ClientResponse(StatusCode statusCode, String extraStatusMessage) {
-        this.statusCode = statusCode;
+    public ClientResponse(ClientStatusCode statusCode, String extraStatusMessage) {
+        this.clientStatusCode = statusCode;
         this.extraStatusMessage = extraStatusMessage;
+    }
+    
+    public boolean wasSuccessful() {
+        return clientStatusCode.equals(ClientStatusCode.QUERY_OK);
     }
     
 }

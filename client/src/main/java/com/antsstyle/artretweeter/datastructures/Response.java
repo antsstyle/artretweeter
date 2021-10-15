@@ -6,6 +6,7 @@
 package com.antsstyle.artretweeter.datastructures;
 
 import com.antsstyle.artretweeter.enumerations.StatusCode;
+import com.antsstyle.artretweeter.enumerations.ServerStatusCode;
 import com.google.gson.JsonObject;
 
 /**
@@ -15,13 +16,18 @@ import com.google.gson.JsonObject;
 public abstract class Response {
 
     protected Integer httpStatusCode;
-    protected StatusCode statusCode;
+    protected ServerStatusCode serverStatusCode;
+
+    public ServerStatusCode getServerStatusCode() {
+        return serverStatusCode;
+    }
+
+    public void setServerStatusCode(ServerStatusCode serverStatusCode) {
+        this.serverStatusCode = serverStatusCode;
+    }
     protected String extraStatusMessage;
     protected JsonObject responseJSONObject;
 
-    public Boolean wasSuccessful() {
-        return !statusCode.isErrorStatus();
-    }
 
     public Integer getHttpStatusCode() {
         return httpStatusCode;
@@ -31,13 +37,6 @@ public abstract class Response {
         this.httpStatusCode = httpStatusCode;
     }
 
-    public StatusCode getStatusCode() {
-        return statusCode;
-    }
-
-    public void setStatusCode(StatusCode statusCode) {
-        this.statusCode = statusCode;
-    }
 
     public String getExtraStatusMessage() {
         return extraStatusMessage;

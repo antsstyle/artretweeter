@@ -11,7 +11,6 @@ package com.antsstyle.artretweeter.enumerations;
  */
 public enum StatusCode {
 
-    ARTRETWEETER_SERVER_ERROR(-1, "ArtRetweeter server returned an error", true),
     DB_ERROR(-2, "Database error", true),
     DIRECTORY_CREATION_ERROR(-3, "Failed to create necessary directories in file system", true),
     DOWNLOAD_ERROR(-4, "Download failed", true),
