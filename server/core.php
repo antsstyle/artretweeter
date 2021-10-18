@@ -799,7 +799,7 @@ function getAutomationSettingsInDB($userAuth) {
         $timeDiffMinutes = intval(floor(($timeDiffSeconds % 3600) / 60));
         $row['hourflags'] = shiftString($row['hourflags'], $timeDiffHours);
         $row['minuteflags'] = shiftString($row['minuteflags'], $timeDiffMinutes / 15);
-        echo json_encode($row);
+        echo encodeStatusInformation(StatusCodes::QUERY_OK, $row);
     }
 }
 
@@ -825,6 +825,8 @@ function shiftString($string, $shiftCount) {
 }
 
 function commitAutomationSettingsInDB($aS) {
+    // Get old automation settings: check if they existed, or were disabled. If so, schedule new automated retweets immediately
+    
     $userTimeZoneHour = $aS['timezonehouroffset'];
     $userTimeZoneMinute = $aS['timezoneminuteoffset'];
     $userOffsetSeconds = ($userTimeZoneHour * 3600) + ($userTimeZoneMinute * 60);
@@ -1111,4 +1113,8 @@ function getNextMinute($minuteValues) {
     } else {
         return $minuteValues[rand(0, count($minuteValues) - 1)];
     }
+}
+
+function beginInitialAutomationOnServer($userAuth) {
+    
 }

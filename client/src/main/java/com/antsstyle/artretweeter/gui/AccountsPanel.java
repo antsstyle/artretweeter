@@ -603,7 +603,9 @@ public class AccountsPanel extends javax.swing.JPanel {
             LOGGER.error("Failed to get automation settings for this user!");
         } else {
             AutomationSettingsHolder holder = (AutomationSettingsHolder) autoResult.getServerResponse().getReturnedObject();
-            AutomationDB.updateAutomationSettings(holder);
+            if (holder != null) {
+                AutomationDB.updateAutomationSettings(holder);
+            }
         }
         GUI.getAutomationPanel().refreshAccountBoxModel(false);
 
@@ -668,7 +670,7 @@ public class AccountsPanel extends javax.swing.JPanel {
             ArrayList<Boolean> bools = (ArrayList<Boolean>) res.getServerResponse().getReturnedObject();
             if (bools != null) {
                 int failCount = 0;
-                for (Boolean b: bools) {
+                for (Boolean b : bools) {
                     if (!b) {
                         failCount++;
                     }

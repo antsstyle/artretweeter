@@ -79,9 +79,13 @@ public class ServerAPI {
         if (!apiCallResult.wasSuccessful()) {
             return apiCallResult;
         }
-        JsonObject resp = apiCallResult.getServerResponse().getResponseJSONObject();
-        AutomationSettingsHolder holder = gson.fromJson(resp, AutomationSettingsHolder.class);
-        apiCallResult.getServerResponse().setReturnedObject(holder);
+        JsonElement resp = apiCallResult.getServerResponse().getResponseJSONObject().get("message");
+        if (resp.isJsonNull()) {
+            apiCallResult.getServerResponse().setReturnedObject(null);
+        } else {
+            AutomationSettingsHolder holder = gson.fromJson(resp, AutomationSettingsHolder.class);
+            apiCallResult.getServerResponse().setReturnedObject(holder);
+        }
         return apiCallResult;
     }
 
