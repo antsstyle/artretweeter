@@ -144,6 +144,10 @@ public class CoreDB {
     }
 
     public static boolean runParameterisedUpdateBatch(String query, ArrayList<Object[]> params) {
+        if (params.isEmpty()) {
+            LOGGER.warn("Trying to perform a batch update with a length 0 param list.");
+            return true;
+        }
         Connection connection = null;
         PreparedStatement stmt = null;
         try {

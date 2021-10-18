@@ -204,11 +204,6 @@ public class ServerAPI {
         nvps.add(new BasicNameValuePair("tweetid", String.valueOf(tweetID)));
         nvps.add(new BasicNameValuePair("retweettime", String.valueOf((long) Math.floor(retweetTime.getTime() / 1000.0))));
         OperationResult apiCallResult = serverCall(nvps, ArtRetweeterEndpoint.QUEUE_RETWEET, account);
-        if (!apiCallResult.wasSuccessful()) {
-            return apiCallResult;
-        }
-        Boolean success = apiCallResult.getServerResponse().getResponseJSONObject().get("dbresult").getAsBoolean();
-        apiCallResult.getServerResponse().setReturnedObject(success);
         return apiCallResult;
     }
 

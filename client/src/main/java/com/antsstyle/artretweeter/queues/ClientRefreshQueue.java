@@ -395,7 +395,9 @@ public class ClientRefreshQueue implements Runnable {
             for (RetweetRecord record : retweetRecordsOnServer) {
                 insertParams.add(new Object[]{record.getUserTwitterID(), record.getTweetID(), record.getRetweetTime()});
             }
-            TweetsDB.insertRetweetRecordEntryBatch(insertParams);
+            if (!insertParams.isEmpty()) {
+                TweetsDB.insertRetweetRecordEntryBatch(insertParams);
+            }
         }
         SwingUtilities.invokeLater(() -> {
             GUI.getMainManagementPanel().getMainTweetsPanel().refreshTweetsTable(false);

@@ -1181,7 +1181,7 @@ public class AutomationPanel extends javax.swing.JPanel {
         try {
             retweetPercent = Integer.parseInt(retweetPercentString);
         } catch (Exception e) {
-            String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 10-50).";
+            String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 20-75).";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
