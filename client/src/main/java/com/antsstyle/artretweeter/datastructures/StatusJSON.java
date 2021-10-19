@@ -13,7 +13,11 @@ import com.antsstyle.artretweeter.tools.ImageTools;
 import com.antsstyle.artretweeter.tools.PathTools;
 import java.nio.file.Path;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -162,7 +166,14 @@ public class StatusJSON {
             createdAtTimestamp = new Timestamp(FormatTools.TWITTER_DATE_FORMAT.parse(created_at).getTime());
         } catch (Exception e) {
             LOGGER.warn("Failed to parse Twitter timestamp!", e);
-            return null;
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss Z yyyy");
+                LocalDateTime time = LocalDateTime.parse(created_at, formatter);
+                createdAtTimestamp = Timestamp.valueOf(time);
+            } catch (Exception e1) {
+                LOGGER.error("DateTimeFormatter also failed to parse Twitter timestamp!", e1);
+                return null;
+            }
         }
         String textParam;
         if (full_text != null) {
