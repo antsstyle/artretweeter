@@ -83,6 +83,7 @@ public class ServerAPI {
         if (resp.isJsonNull()) {
             apiCallResult.getServerResponse().setReturnedObject(null);
         } else {
+
             AutomationSettingsHolder holder = gson.fromJson(resp, AutomationSettingsHolder.class);
             apiCallResult.getServerResponse().setReturnedObject(holder);
         }
@@ -263,10 +264,10 @@ public class ServerAPI {
         }
         HttpEntity entity = response.getEntity();
         Gson gson = new Gson();
-        try (InputStream is = entity.getContent(); InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
+        try ( InputStream is = entity.getContent();  InputStreamReader reader = new InputStreamReader(is, "UTF-8")) {
             String jsonString = IOUtils.toString(reader);
             if (MiscConfig.DEBUG_MODE) {
-                try (PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString())) {
+                try ( PrintWriter pw = new PrintWriter(MiscConfig.DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH.toString())) {
                     Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
                     JsonObject obj = prettyGson.fromJson(jsonString, JsonObject.class);
                     prettyGson.toJson(obj, pw);
@@ -299,7 +300,7 @@ public class ServerAPI {
         nameValuePairs.add(new BasicNameValuePair("user_auth_twitter_id", String.valueOf(account.getTwitterID())));
         nameValuePairs.add(new BasicNameValuePair("artretweeter_endpoint", endpoint.getEndpointName()));
         String url = ArtRetweeterMain.prop.getProperty("serverurl");
-        try (CloseableHttpClient httpclient = HttpClients.createDefault()) {
+        try ( CloseableHttpClient httpclient = HttpClients.createDefault()) {
             HttpPost httpPost = new HttpPost(url);
             httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
             int artRetweeterServerErrors = 0;
@@ -307,7 +308,7 @@ public class ServerAPI {
                 if (artRetweeterServerErrors > 0) {
                     LOGGER.debug("Art retweeter server errors: " + artRetweeterServerErrors);
                 }
-                try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
+                try ( CloseableHttpResponse response = httpclient.execute(httpPost)) {
                     Pair<ServerResponse, JsonObject> checkResult = processResponse(response);
                     int httpCode = response.getStatusLine().getStatusCode();
                     if (httpCode != 200 || checkResult.getLeft() != null) {

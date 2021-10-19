@@ -141,7 +141,7 @@ public class ImageTools {
         httpGet.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         try ( CloseableHttpClient httpclient = HttpClients.createDefault();  CloseableHttpResponse response1 = httpclient.execute(httpGet)) {
             HttpEntity entity1 = response1.getEntity();
-
+            Files.createDirectories(fullFilePath.getParent());
             try ( InputStream is = entity1.getContent();  OutputStream os = new FileOutputStream(fullFilePath.toFile())) {
                 int bufferSize = 65536;
                 byte[] byteBuffer = new byte[bufferSize];

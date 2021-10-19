@@ -147,7 +147,7 @@ public class StatusJSON {
             if (!res4.wasSuccessful()) {
                 return res4;
             }
-            if (!res4.getClientResponse().getClientStatusCode().equals(StatusCode.FILE_ALREADY_DOWNLOADED)) {
+            if (!res4.getClientResponse().getClientStatusCode().equals(ClientStatusCode.FILE_ALREADY_DOWNLOADED)) {
                 try {
                     Thread.sleep(1000);
                 } catch (Exception e) {
@@ -161,7 +161,7 @@ public class StatusJSON {
         try {
             createdAtTimestamp = new Timestamp(FormatTools.TWITTER_DATE_FORMAT.parse(created_at).getTime());
         } catch (Exception e) {
-            LOGGER.error("Failed to parse Twitter timestamp!", e);
+            LOGGER.warn("Failed to parse Twitter timestamp!", e);
             return null;
         }
         String textParam;
