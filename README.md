@@ -1,5 +1,5 @@
 # ArtRetweeter
-A tool for artists to use, focused on retweeting your previous posts by manually or automatically scheduling them, and enables use of the Twitter Collections feature.
+A tool for artists to use that allows you to automatically schedule retweets of your art (or manually if you so choose), and enables use of the Twitter Collections feature.
 
 ## Downloading and using ArtRetweeter
 
