@@ -21,7 +21,7 @@ ArtRetweeter doesn't currently support changing the order of tweets in a reverse
 
 - Some users may get incorrect "Date Posted" values in the Tweet Management table, usually on or around 1970-01-01. This bug does not impact any functionality.
 
-# Tech Stuff
+## Tech Stuff
 
 The server-side part of ArtRetweeter is written in PHP and uses TwitterOAuth (https://twitteroauth.com/).
 
