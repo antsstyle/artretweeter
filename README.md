@@ -1,9 +1,5 @@
 # ArtRetweeter
-A tool for artists to use, focused on the Twitter collections feature and retweeting previous posts.
-
-The server-side part is written in PHP and uses TwitterOAuth (https://twitteroauth.com/).
-
-The client application is written in Java and uses the Java Runtime Environment.
+A tool for artists to use, focused on retweeting your previous posts by manually or automatically scheduling them, and enables use of the Twitter Collections feature.
 
 ## Downloading and using ArtRetweeter
 
@@ -24,3 +20,9 @@ ArtRetweeter doesn't currently support changing the order of tweets in a reverse
 ## Known Bugs
 
 - Some users may get incorrect "Date Posted" values in the Tweet Management table, usually on or around 1970-01-01. This bug does not impact any functionality.
+
+# Tech Stuff
+
+The server-side part of ArtRetweeter is written in PHP and uses TwitterOAuth (https://twitteroauth.com/).
+
+The client application is written in Java.
