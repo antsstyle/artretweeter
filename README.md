@@ -20,3 +20,7 @@ Collections support three ordering types: tweets sorted by newest-first chronolo
 Here is an example collection: https://twitter.com/antsstyle/timelines/1410230429718695941
 
 ArtRetweeter doesn't currently support changing the order of tweets in a reverse curation order collection - this will be implemented in a future version.
+
+## Known Bugs
+
+- Some users may get incorrect "Date Posted" values in the Tweet Management table, usually on or around 1970-01-01. This bug does not impact any functionality.
