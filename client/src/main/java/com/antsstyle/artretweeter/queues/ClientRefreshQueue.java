@@ -125,7 +125,6 @@ public class ClientRefreshQueue implements Runnable {
         } else {
             nextCollectionRetrievalCal.setTimeInMillis(Long.valueOf(nextCollectionRetrievalTime.getValue()));
         }
-
         while (keepRunning) {
             if (nextTweetScheduleCal.getTime().before(new Date(System.currentTimeMillis()))) {
                 refreshTweetScheduleStatus();

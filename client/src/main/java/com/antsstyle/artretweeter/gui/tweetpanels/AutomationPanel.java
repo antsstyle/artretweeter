@@ -5,6 +5,7 @@
  */
 package com.antsstyle.artretweeter.gui.tweetpanels;
 
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.AutomationSettingsHolder;
 import com.antsstyle.artretweeter.datastructures.OperationResult;
@@ -16,8 +17,7 @@ import com.antsstyle.artretweeter.db.DBTable;
 import com.antsstyle.artretweeter.db.ResultSetConversion;
 import com.antsstyle.artretweeter.gui.GUI;
 import com.antsstyle.artretweeter.gui.GUIHelperMethods;
-import static com.antsstyle.artretweeter.gui.tweetpanels.MainTweetsPanel.DB_ERROR_ACCOUNT;
-import static com.antsstyle.artretweeter.gui.tweetpanels.MainTweetsPanel.NO_ACCOUNTS;
+import com.antsstyle.artretweeter.gui.TweetDisplayBasePanel;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -51,6 +51,9 @@ public class AutomationPanel extends javax.swing.JPanel {
     private final DefaultComboBoxModel timeZoneBoxModel = new DefaultComboBoxModel();
     private TimeZoneComboBoxHolder currentlySelectedTimeZone = null;
 
+    private final AutomationMetricsEnabledSubPanel metricsEnabledSubPanel = new AutomationMetricsEnabledSubPanel();
+    private final AutomationMetricsDisabledSubPanel metricsDisabledSubPanel = new AutomationMetricsDisabledSubPanel();
+
     /**
      * Creates new form AutomationPanel
      */
@@ -71,6 +74,43 @@ public class AutomationPanel extends javax.swing.JPanel {
         populateTimeZones();
         setDaylightSavingsComponents();
         dateWrapperPanel.setJDatePickerSize();
+        metricsDisabledSubPanel.setSize(metricsDisabledSubPanel.getPreferredSize());
+        metricsDisabledSubPanel.setPreferredSize(metricsDisabledSubPanel.getPreferredSize());
+        metricsDisabledSubPanel.setMaximumSize(metricsDisabledSubPanel.getPreferredSize());
+        metricsDisabledSubPanel.setMinimumSize(metricsDisabledSubPanel.getPreferredSize());
+        metricsEnabledSubPanel.setSize(metricsEnabledSubPanel.getPreferredSize());
+        metricsEnabledSubPanel.setPreferredSize(metricsEnabledSubPanel.getPreferredSize());
+        metricsEnabledSubPanel.setMaximumSize(metricsEnabledSubPanel.getPreferredSize());
+        metricsEnabledSubPanel.setMinimumSize(metricsEnabledSubPanel.getPreferredSize());
+        GUIHelperMethods.setGUIColours(metricsDisabledSubPanel);
+        GUIHelperMethods.setGUIColours(metricsEnabledSubPanel);
+        AutomationSettingsHolder holder = null;
+        DBResponse resp = CoreDB.selectFromTable(DBTable.USERAUTOMATIONSETTINGS,
+                new String[]{"USERTWITTERID"},
+                new Object[]{currentlySelectedAccount.getTwitterID()});
+        if (resp.wasSuccessful()) {
+            ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
+            if (!rows.isEmpty()) {
+                holder = ResultSetConversion.getAutomationSettingsHolder(rows.get(0));
+            }
+        } else {
+            LOGGER.error("Failed to get user automation settings from DB!");
+        }
+        metricsEnabledSubPanel.initialise(holder);
+        metricsDisabledSubPanel.initialise(holder);
+        setMetricsOptionsPanel(TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE);
+    }
+
+    public void setMetricsOptionsPanel(Boolean doNotShowMetricsOptions) {
+        if (doNotShowMetricsOptions) {
+            metricsOptionsPanel.removeAll();
+            metricsOptionsPanel.add(metricsDisabledSubPanel);
+        } else {
+            metricsOptionsPanel.removeAll();
+            metricsOptionsPanel.add(metricsEnabledSubPanel);
+        }
+        metricsOptionsPanel.revalidate();
+        metricsOptionsPanel.repaint();
     }
 
     private void populateTimeZones() {
@@ -155,7 +195,7 @@ public class AutomationPanel extends javax.swing.JPanel {
     }
 
     private void refreshAutomationGUIConfig() {
-        if (currentlySelectedAccount.equals(MainTweetsPanel.NO_ACCOUNTS) || currentlySelectedAccount.equals(MainTweetsPanel.DB_ERROR_ACCOUNT)) {
+        if (currentlySelectedAccount.equals(TweetDisplayBasePanel.NO_ACCOUNTS) || currentlySelectedAccount.equals(TweetDisplayBasePanel.DB_ERROR_ACCOUNT)) {
             return;
         }
         DBResponse resp = CoreDB.selectFromTable(DBTable.USERAUTOMATIONSETTINGS,
@@ -190,7 +230,8 @@ public class AutomationPanel extends javax.swing.JPanel {
         includeTweetTextCheckBox.setSelected(holder.getIncludedTextEnabled().equals("Y"));
         excludeTweetTextField.setText(holder.getExcludedText() == null ? "" : holder.getExcludedText());
         includeTweetTextField.setText(holder.getIncludedText() == null ? "" : holder.getIncludedText());
-        retweetPercentTextField.setText(String.valueOf(holder.getRetweetPercent()));
+        metricsEnabledSubPanel.setRetweetPercentField(String.valueOf(holder.getRetweetPercent()));
+        metricsEnabledSubPanel.setMetricMeasurementTypeComboBox(holder.getMetricsMeasurementType());
         includeTextConditionComboBox.setSelectedItem(holder.getIncludeTextCondition());
         excludeTextConditionComboBox.setSelectedItem(holder.getExcludeTextCondition());
         Calendar cal = Calendar.getInstance();
@@ -202,13 +243,12 @@ public class AutomationPanel extends javax.swing.JPanel {
         populateTimeZones();
     }
 
-
     protected boolean noAccountsInBoxModel() {
         if (selectAccountBoxModel.getSize() == 0) {
             return true;
         } else if (selectAccountBoxModel.getSize() == 1) {
             Account account = (Account) selectAccountBoxModel.getSelectedItem();
-            return (account.equals(NO_ACCOUNTS) || account.equals(DB_ERROR_ACCOUNT));
+            return (account.equals(TweetDisplayBasePanel.NO_ACCOUNTS) || account.equals(TweetDisplayBasePanel.DB_ERROR_ACCOUNT));
         }
         return false;
     }
@@ -220,7 +260,7 @@ public class AutomationPanel extends javax.swing.JPanel {
         DBResponse resp = CoreDB.selectFromTable(DBTable.ACCOUNTS);
         if (!resp.wasSuccessful()) {
             LOGGER.error("Failed to get collections data to refresh combo box model!");
-            currentlySelectedAccount = DB_ERROR_ACCOUNT;
+            currentlySelectedAccount = TweetDisplayBasePanel.DB_ERROR_ACCOUNT;
             selectAccountBoxModel.setSelectedItem(selectAccountBoxModel.getElementAt(0));
             selectAccountComboBox.setEnabled(true);
             selectAccountBoxModel.removeAllElements();
@@ -238,8 +278,8 @@ public class AutomationPanel extends javax.swing.JPanel {
                 refreshAutomationGUIConfig();
             }
         } else {
-            selectAccountBoxModel.addElement(NO_ACCOUNTS);
-            currentlySelectedAccount = NO_ACCOUNTS;
+            selectAccountBoxModel.addElement(TweetDisplayBasePanel.NO_ACCOUNTS);
+            currentlySelectedAccount = TweetDisplayBasePanel.NO_ACCOUNTS;
             selectAccountBoxModel.setSelectedItem(selectAccountBoxModel.getElementAt(0));
         }
         selectAccountComboBox.setEnabled(true);
@@ -290,12 +330,11 @@ public class AutomationPanel extends javax.swing.JPanel {
         includeTweetTextField = new javax.swing.JTextField();
         includeTweetTextCheckBox = new javax.swing.JCheckBox();
         excludeTweetTextField = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
-        retweetPercentTextField = new javax.swing.JTextField();
         jLabel5 = new javax.swing.JLabel();
         mainSettingsExplanationLabel = new javax.swing.JLabel();
         includeTextConditionComboBox = new javax.swing.JComboBox<>();
         excludeTextConditionComboBox = new javax.swing.JComboBox<>();
+        metricsOptionsPanel = new javax.swing.JPanel();
         jPanel5 = new javax.swing.JPanel();
         jPanel2 = new javax.swing.JPanel();
         time0001CheckBox = new javax.swing.JCheckBox();
@@ -397,12 +436,6 @@ public class AutomationPanel extends javax.swing.JPanel {
         includeTweetTextCheckBox.setMinimumSize(new java.awt.Dimension(450, 32));
         includeTweetTextCheckBox.setPreferredSize(new java.awt.Dimension(450, 32));
 
-        jLabel3.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
-        jLabel3.setText("  Exclude tweets in the bottom % of your tweet engagement (20-75%):");
-        jLabel3.setMaximumSize(new java.awt.Dimension(450, 32));
-        jLabel3.setMinimumSize(new java.awt.Dimension(450, 32));
-        jLabel3.setPreferredSize(new java.awt.Dimension(450, 32));
-
         jLabel5.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         jLabel5.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel5.setText("Search Settings");
@@ -423,36 +456,48 @@ public class AutomationPanel extends javax.swing.JPanel {
         excludeTextConditionComboBox.setName("[163, 32]"); // NOI18N
         excludeTextConditionComboBox.setPreferredSize(new java.awt.Dimension(163, 32));
 
+        metricsOptionsPanel.setMaximumSize(new java.awt.Dimension(1146, 44));
+        metricsOptionsPanel.setMinimumSize(new java.awt.Dimension(1146, 44));
+        metricsOptionsPanel.setPreferredSize(new java.awt.Dimension(1146, 44));
+
+        javax.swing.GroupLayout metricsOptionsPanelLayout = new javax.swing.GroupLayout(metricsOptionsPanel);
+        metricsOptionsPanel.setLayout(metricsOptionsPanelLayout);
+        metricsOptionsPanelLayout.setHorizontalGroup(
+            metricsOptionsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+        metricsOptionsPanelLayout.setVerticalGroup(
+            metricsOptionsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 44, Short.MAX_VALUE)
+        );
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
+            .addGroup(jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel3Layout.createSequentialGroup()
-                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel3Layout.createSequentialGroup()
-                                .addComponent(ignoreOldTweetsCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(dateWrapperPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel3Layout.createSequentialGroup()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(mainSettingsExplanationLabel, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(ignoreOldTweetsCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(jPanel3Layout.createSequentialGroup()
                                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(includeTweetTextCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(excludeTweetTextCheckBox, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(includeTweetTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 318, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(retweetPercentTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 57, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(excludeTweetTextField, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 318, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(includeTextConditionComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(excludeTextConditionComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(includeTweetTextField)
+                                    .addComponent(excludeTweetTextField)
+                                    .addComponent(dateWrapperPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                    .addComponent(includeTextConditionComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(excludeTextConditionComboBox, 0, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(mainSettingsExplanationLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(metricsOptionsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
@@ -468,20 +513,20 @@ public class AutomationPanel extends javax.swing.JPanel {
                     .addComponent(ignoreOldTweetsCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(excludeTweetTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(excludeTweetTextCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(includeTextConditionComboBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(excludeTweetTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(excludeTweetTextCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(includeTweetTextCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(includeTweetTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(includeTextConditionComboBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(excludeTextConditionComboBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(excludeTextConditionComboBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(includeTweetTextCheckBox, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(includeTweetTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(retweetPercentTextField, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(metricsOptionsPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -1059,14 +1104,13 @@ public class AutomationPanel extends javax.swing.JPanel {
             mainAutomationSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(mainAutomationSettingsPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(mainAutomationSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(mainAutomationSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(mainAutomationSettingsPanelLayout.createSequentialGroup()
                         .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
+                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 293, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         mainAutomationSettingsPanelLayout.setVerticalGroup(
             mainAutomationSettingsPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1094,9 +1138,9 @@ public class AutomationPanel extends javax.swing.JPanel {
 
         saveChangesButton.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
         saveChangesButton.setText("Save all changes");
-        saveChangesButton.setMaximumSize(new java.awt.Dimension(154, 91));
-        saveChangesButton.setMinimumSize(new java.awt.Dimension(154, 91));
-        saveChangesButton.setPreferredSize(new java.awt.Dimension(154, 91));
+        saveChangesButton.setMaximumSize(new java.awt.Dimension(212, 91));
+        saveChangesButton.setMinimumSize(new java.awt.Dimension(212, 91));
+        saveChangesButton.setPreferredSize(new java.awt.Dimension(212, 91));
         saveChangesButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 saveChangesButtonActionPerformed(evt);
@@ -1108,8 +1152,9 @@ public class AutomationPanel extends javax.swing.JPanel {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(mainAutomationSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
@@ -1122,11 +1167,10 @@ public class AutomationPanel extends javax.swing.JPanel {
                                 .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                                     .addGap(6, 6, 6)
                                     .addComponent(enableAutomatedRetweetingCheckBox, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                            .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 972, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(saveChangesButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(mainAutomationSettingsPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 948, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(saveChangesButton, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1173,22 +1217,25 @@ public class AutomationPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_selectNoneDaysButtonActionPerformed
 
     private void saveChangesButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveChangesButtonActionPerformed
-        if (currentlySelectedAccount.equals(MainTweetsPanel.NO_ACCOUNTS) || currentlySelectedAccount.equals(MainTweetsPanel.DB_ERROR_ACCOUNT)) {
+        if (currentlySelectedAccount.equals(TweetDisplayBasePanel.NO_ACCOUNTS) || currentlySelectedAccount.equals(TweetDisplayBasePanel.DB_ERROR_ACCOUNT)) {
             return;
         }
-        String retweetPercentString = retweetPercentTextField.getText().trim();
-        Integer retweetPercent;
-        try {
-            retweetPercent = Integer.parseInt(retweetPercentString);
-        } catch (Exception e) {
-            String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 20-75).";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (retweetPercent < 20 || retweetPercent > 75) {
-            String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 20-75).";
-            JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+        String retweetPercentString = metricsEnabledSubPanel.getRetweetPercentFieldText();
+        String metricsMeasurementType = metricsEnabledSubPanel.getMetricMeasurementTypeComboBoxItem();
+        Integer retweetPercent = 20;
+        if (!metricsMeasurementType.equals("Adaptive")) {
+            try {
+                retweetPercent = Integer.parseInt(retweetPercentString);
+            } catch (Exception e) {
+                String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 20-75).";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (retweetPercent < 20 || retweetPercent > 75) {
+                String msg = "You must enter a valid number for the retweet percentage (whole numbers only, between 20-75).";
+                JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         }
         String includeText = includeTweetTextField.getText().trim();
         String excludeText = excludeTweetTextField.getText().trim();
@@ -1298,7 +1345,10 @@ public class AutomationPanel extends javax.swing.JPanel {
                 .setTimeZoneMinuteOffset(timeZoneHolder.getMinuteOffset())
                 .setIncludeTextCondition(includeTextConditionEncoded)
                 .setExcludeTextCondition(excludeTextConditionEncoded)
-                .setRetweetPercent(retweetPercent);
+                .setMetricsMeasurementType(metricsMeasurementType);
+        if (!metricsMeasurementType.equals("Adaptive")) {
+            holder.setRetweetPercent(retweetPercent);
+        }
         if (excludeTweetTextCheckBox.isSelected()) {
             holder.setExcludedText(excludeText.equals("") ? null : StringUtils.replace(excludeText, " ", "%20"));
         }
@@ -1351,6 +1401,26 @@ public class AutomationPanel extends javax.swing.JPanel {
         }
     }//GEN-LAST:event_timeZoneComboBoxActionPerformed
 
+    private void showAveragesExplanation() {
+        String message = "When using this setting, ArtRetweeter will exclude all tweets"
+                + " that have less retweets than a given value. This is measured as a percentage of the average retweets your "
+                + "image tweets have, "
+                + "but there are a few ways you can choose the average to be calculated."
+                + "<br/><br/>"
+                + "Mean Average: Uses mean average of retweet count. If you "
+                + "tend to post a lot of random non-art pics that get little engagement (food pics, gacha rolls, etc) then this is recommended."
+                + "<br/><br/>"
+                + "Median Average: Uses median average of retweet count. "
+                + "This is recommended if you do not post much low-engagement content like food pics or gacha rolls, as a few big tweets will not "
+                + "skew the average value."
+                + "<br/><br/>"
+                + "Adaptive: ArtRetweeter will automatically adjust your given percentage by "
+                + "analysing your tweet engagement statistics. This attempts to account for "
+                + "outliers on its own, but is experimental right now.";
+        message = String.format(GUIHelperMethods.wordWrapLabelHTML, 500, message);
+        JOptionPane.showMessageDialog(GUI.getInstance(), message, "Averages Explanation", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private void setDaylightSavingsComponents() {
         TimeZone timeZone = TimeZone.getDefault();
         timeZoneMessageLabel.setVisible(timeZone.inDaylightTime(new Date()));
@@ -1372,7 +1442,6 @@ public class AutomationPanel extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel2;
-    private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
@@ -1387,12 +1456,12 @@ public class AutomationPanel extends javax.swing.JPanel {
     private javax.swing.JPanel jPanel6;
     private javax.swing.JPanel mainAutomationSettingsPanel;
     private javax.swing.JLabel mainSettingsExplanationLabel;
+    private javax.swing.JPanel metricsOptionsPanel;
     private javax.swing.JCheckBox min0CheckBox;
     private javax.swing.JCheckBox min15CheckBox;
     private javax.swing.JCheckBox min30CheckBox;
     private javax.swing.JCheckBox min45CheckBox;
     private javax.swing.JCheckBox mondayCheckBox;
-    private javax.swing.JTextField retweetPercentTextField;
     private javax.swing.JCheckBox saturdayCheckBox;
     private javax.swing.JButton saveChangesButton;
     private javax.swing.JComboBox<String> selectAccountComboBox;

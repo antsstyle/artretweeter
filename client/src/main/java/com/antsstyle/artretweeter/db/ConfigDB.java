@@ -77,12 +77,14 @@ public class ConfigDB {
 
     public static Path getTweetFolderPath(Account account) {
         Path tweetFolderPath;
-        DBResponse resp = CoreDB.selectFromTable(DBTable.CONFIGURATION, new String[]{"name"}, new Object[]{"tweetsavedirectory"});
+        String tweetSaveDirectory = String.valueOf(account.getTwitterID()).concat("tweetsavedirectory");
+        DBResponse resp = CoreDB.selectFromTable(DBTable.CACHEDVARIABLES, new String[]{"name"}, new Object[]{tweetSaveDirectory});
         if (!resp.wasSuccessful()) {
             return null;
         } else if (resp.getReturnedRows().isEmpty()) {
             tweetFolderPath = Paths.get(System.getProperty("user.dir")).resolve("tweetimages/").resolve(account.getScreenName().concat("/"));
-            CoreDB.insertIntoTable(DBTable.CONFIGURATION, new String[]{"name", "value"}, new Object[]{"tweetsavedirectory", PathTools.convertPathToString(tweetFolderPath)});
+            CoreDB.insertIntoTable(DBTable.CACHEDVARIABLES, new String[]{"name", "value"}, new Object[]{tweetSaveDirectory, 
+                PathTools.convertPathToString(tweetFolderPath)});
         } else {
             tweetFolderPath = Paths.get((String) resp.getReturnedRows().get(0).get("VALUE"));
         }

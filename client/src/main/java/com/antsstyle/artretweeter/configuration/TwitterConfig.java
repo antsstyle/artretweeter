@@ -24,4 +24,6 @@ public class TwitterConfig extends ConfigurationModule {
     public static String CHECK_NEW_TWEETS_FREQUENCY_TIME_UNITS = "Hours";
     public static Integer CHECK_NEW_COLLECTIONS_FREQUENCY = 1;
     public static String CHECK_NEW_COLLECTIONS_FREQUENCY_TIME_UNITS = "Days";
+    public static final String P_DO_NOT_SHOW_METRICS_ANYWHERE = "artretweeter.misc.donotshowmetricsanywhere";
+    public static Boolean DO_NOT_SHOW_METRICS_ANYWHERE = true;
 }

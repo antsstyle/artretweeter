@@ -80,10 +80,9 @@ public class ServerAPI {
             return apiCallResult;
         }
         JsonElement resp = apiCallResult.getServerResponse().getResponseJSONObject().get("message");
-        if (resp.isJsonNull()) {
+        if (resp.isJsonPrimitive()) {
             apiCallResult.getServerResponse().setReturnedObject(null);
         } else {
-
             AutomationSettingsHolder holder = gson.fromJson(resp, AutomationSettingsHolder.class);
             apiCallResult.getServerResponse().setReturnedObject(holder);
         }

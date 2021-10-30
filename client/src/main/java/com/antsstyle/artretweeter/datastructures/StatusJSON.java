@@ -171,8 +171,8 @@ public class StatusJSON {
                 LocalDateTime time = LocalDateTime.parse(created_at, formatter);
                 createdAtTimestamp = Timestamp.valueOf(time);
             } catch (Exception e1) {
-                LOGGER.error("DateTimeFormatter also failed to parse Twitter timestamp!", e1);
-                return null;
+                LOGGER.error("DateTimeFormatter also failed to parse Twitter timestamp - reverting to epoch.", e1);
+                createdAtTimestamp = new Timestamp(0);
             }
         }
         String textParam;

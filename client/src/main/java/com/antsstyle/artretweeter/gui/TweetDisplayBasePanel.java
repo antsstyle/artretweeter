@@ -5,6 +5,8 @@
  */
 package com.antsstyle.artretweeter.gui;
 
+import com.antsstyle.artretweeter.configuration.MiscConfig;
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
 import com.antsstyle.artretweeter.datastructures.TweetHolder;
 import com.antsstyle.artretweeter.datastructures.TwitterCollectionHolder;
@@ -24,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,8 +41,8 @@ public abstract class TweetDisplayBasePanel extends JPanel {
     protected Account currentlySelectedAccount;
     protected DefaultComboBoxModel selectAccountBoxModel = new DefaultComboBoxModel();
     protected String tweetsTableQuery = "SELECT * FROM tweets WHERE usertwitterid=?";
-    
-    protected JTable mainTweetsTable;
+
+    private JTable mainTweetsTable;
     protected JComboBox mainSelectAccountComboBox;
 
     protected int STANDARD_PANEL_WIDTH = 420;
@@ -47,26 +50,112 @@ public abstract class TweetDisplayBasePanel extends JPanel {
     protected int STANDARD_PANEL_MARGIN = 2;
     protected int STANDARD_PANEL_INSET = 1;
 
+    protected static final DefaultTableModel METRICS_ENABLED_TABLE_MODEL = new DefaultTableModel(
+            new Object[][]{},
+            new String[]{
+                "ID", "Tweet Text", "Date Posted", "Retweets", "Likes", "RT#", "Pending RT"
+            }
+    ) {
+        Class[] types = new Class[]{
+            java.lang.Long.class, java.lang.String.class, java.lang.Object.class, java.lang.Integer.class, java.lang.Integer.class,
+            java.lang.Long.class, java.lang.Boolean.class
+        };
+        boolean[] canEdit = new boolean[]{
+            false, false, false, false, false, false, false
+        };
+
+        @Override
+        public Class getColumnClass(int columnIndex) {
+            return types[columnIndex];
+        }
+
+        @Override
+        public boolean isCellEditable(int rowIndex, int columnIndex) {
+            return canEdit[columnIndex];
+        }
+    };
+
+    protected static final DefaultTableModel METRICS_DISABLED_TABLE_MODEL = new DefaultTableModel(
+            new Object[][]{},
+            new String[]{
+                "ID", "Tweet Text", "Date Posted", "RT#", "Pending RT"
+            }
+    ) {
+        Class[] types = new Class[]{
+            java.lang.Long.class, java.lang.String.class, java.lang.Object.class, java.lang.Long.class, java.lang.Boolean.class
+        };
+        boolean[] canEdit = new boolean[]{
+            false, false, false, false, false
+        };
+
+        @Override
+        public Class getColumnClass(int columnIndex) {
+            return types[columnIndex];
+        }
+
+        @Override
+        public boolean isCellEditable(int rowIndex, int columnIndex) {
+            return canEdit[columnIndex];
+        }
+    };
+
     protected final JScrollPane[] imagePanes = new JScrollPane[4];
     protected final JLabel[] imageLabels = new JLabel[4];
 
-    protected static final Account ALL_TWEETS_ACCOUNT = new Account()
+    public static final Account ALL_TWEETS_ACCOUNT = new Account()
             .setScreenName("<show all tweets>");
 
-    protected static final Account NO_ACCOUNTS = new Account()
+    public static final Account NO_ACCOUNTS = new Account()
             .setScreenName("<no accounts added>");
 
-    protected static final Account DB_ERROR_ACCOUNT = new Account()
+    public static final Account DB_ERROR_ACCOUNT = new Account()
             .setScreenName("<database error>");
 
-    protected static final TwitterCollectionHolder SELECT_ACCOUNT_FIRST = new TwitterCollectionHolder()
+    public static final TwitterCollectionHolder SELECT_ACCOUNT_FIRST = new TwitterCollectionHolder()
             .setName("<select an account first>");
 
-    protected static final TwitterCollectionHolder NO_COLLECTIONS = new TwitterCollectionHolder()
+    public static final TwitterCollectionHolder NO_COLLECTIONS = new TwitterCollectionHolder()
             .setName("<none>");
 
-    protected static final TwitterCollectionHolder DB_ERROR_COLLECTION = new TwitterCollectionHolder()
+    public static final TwitterCollectionHolder DB_ERROR_COLLECTION = new TwitterCollectionHolder()
             .setName("<database error>");
+    
+    protected void assignVariables(JTable mainTweetsTable, JComboBox mainSelectAccountComboBox,
+            DefaultComboBoxModel selectAccountBoxModel, JScrollPane[] imagePanes, JLabel[] imageLabels) {
+        this.mainTweetsTable = mainTweetsTable;
+        this.mainSelectAccountComboBox = mainSelectAccountComboBox;
+        this.selectAccountBoxModel = selectAccountBoxModel;
+        System.arraycopy(imagePanes, 0, this.imagePanes, 0, this.imagePanes.length);
+        System.arraycopy(imageLabels, 0, this.imageLabels, 0, this.imageLabels.length);
+    }
+    
+    protected void setTweetsTableMetricsEnabled() {
+        mainTweetsTable.setModel(METRICS_ENABLED_TABLE_MODEL);
+        //jScrollPane26.setViewportView(tweetsTable);
+        setCommonColumnWidths();
+        TableColumnModel tcm = mainTweetsTable.getColumnModel();
+        int retweetsColumnIndex = tcm.getColumnIndex("Retweets");
+        int likesColumnIndex = tcm.getColumnIndex("Likes");
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, retweetsColumnIndex, 70);
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, likesColumnIndex, 70);
+    }
+
+    protected void setTweetsTableMetricsDisabled() {
+        mainTweetsTable.setModel(METRICS_DISABLED_TABLE_MODEL);
+        setCommonColumnWidths();
+    }
+
+    private void setCommonColumnWidths() {
+        TableColumnModel tcm = mainTweetsTable.getColumnModel();
+        int idColumnIndex = tcm.getColumnIndex("ID");
+        int datePostedColumnIndex = tcm.getColumnIndex("Date Posted");
+        int rtNumColumnIndex = tcm.getColumnIndex("RT#");
+        int pendingRTColumnIndex = tcm.getColumnIndex("Pending RT");
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, idColumnIndex, 40);
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, datePostedColumnIndex, 125);
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, rtNumColumnIndex, 40);
+        GUIHelperMethods.setAllColumnWidthSizes(tcm, pendingRTColumnIndex, 90);
+    }
 
     public Integer[] getPanelAttributes() {
         return new Integer[]{STANDARD_PANEL_WIDTH, STANDARD_PANEL_HEIGHT, STANDARD_PANEL_MARGIN, STANDARD_PANEL_INSET};
@@ -132,7 +221,11 @@ public abstract class TweetDisplayBasePanel extends JPanel {
         for (HashMap<String, Object> row : rows) {
             TweetHolder tweet = ResultSetConversion.getTweet(row);
             String dateString = DATETIME_FORMAT.format(new Date(tweet.getCreatedAt().getTime()));
-            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount()});
+            if (TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE) {
+                dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString});
+            } else {
+                dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), dateString, tweet.getRetweetCount(), tweet.getLikeCount()});
+            }
         }
     }
 

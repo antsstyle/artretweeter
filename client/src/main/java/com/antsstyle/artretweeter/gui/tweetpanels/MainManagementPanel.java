@@ -20,11 +20,6 @@ public class MainManagementPanel extends javax.swing.JPanel {
 
     private static final Logger LOGGER = LogManager.getLogger(MainManagementPanel.class);
 
-    private int STANDARD_PANEL_WIDTH = 420;
-    private int STANDARD_PANEL_HEIGHT = 539;
-    private int STANDARD_PANEL_MARGIN = 2;
-    private int STANDARD_PANEL_INSET = 1;
-
     /**
      * Creates new form UltimatePanel
      */
@@ -33,13 +28,9 @@ public class MainManagementPanel extends javax.swing.JPanel {
     }
 
     public void initialise() {
-        mainTweetsPanel.initialise();
+        mainTweetsPanel.initialise(this);
         collectionsSubPanel.initialise();
         queueSubPanel.initialise();
-    }
-
-    public Integer[] getPanelAttributes() {
-        return new Integer[]{STANDARD_PANEL_WIDTH, STANDARD_PANEL_HEIGHT, STANDARD_PANEL_MARGIN, STANDARD_PANEL_INSET};
     }
 
     public JScrollPane[] getScrollPanes() {

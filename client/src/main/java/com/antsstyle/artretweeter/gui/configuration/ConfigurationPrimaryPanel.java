@@ -72,9 +72,9 @@ public class ConfigurationPrimaryPanel extends javax.swing.JPanel {
             }
         });
 
-        configTabbedPane.setMaximumSize(new java.awt.Dimension(810, 464));
-        configTabbedPane.setMinimumSize(new java.awt.Dimension(810, 464));
-        configTabbedPane.setPreferredSize(new java.awt.Dimension(810, 464));
+        configTabbedPane.setMaximumSize(new java.awt.Dimension(810, 681));
+        configTabbedPane.setMinimumSize(new java.awt.Dimension(810, 681));
+        configTabbedPane.setPreferredSize(new java.awt.Dimension(810, 681));
         configTabbedPane.addTab("Twitter", twitterConfigurationPanel);
         configTabbedPane.addTab("Misc", miscConfigurationPanel);
         configTabbedPane.addTab("Appearance", appearanceConfigurationPanel);
@@ -86,7 +86,7 @@ public class ConfigurationPrimaryPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(configTabbedPane, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(configTabbedPane, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -104,7 +104,7 @@ public class ConfigurationPrimaryPanel extends javax.swing.JPanel {
                     .addComponent(saveConfigChangesButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(configTabbedPane, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(configTabbedPane, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents

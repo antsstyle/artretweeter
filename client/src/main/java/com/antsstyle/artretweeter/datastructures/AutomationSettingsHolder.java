@@ -31,6 +31,16 @@ public class AutomationSettingsHolder {
     private Integer timezoneminuteoffset;
     private String includetextcondition;
     private String excludetextcondition;
+    private String metricsmeasurementtype;
+
+    public String getMetricsMeasurementType() {
+        return metricsmeasurementtype;
+    }
+
+    public AutomationSettingsHolder setMetricsMeasurementType(String metricsMeasurementType) {
+        this.metricsmeasurementtype = metricsMeasurementType;
+        return this;
+    }
 
     public String getIncludeTextCondition() {
         return includetextcondition;

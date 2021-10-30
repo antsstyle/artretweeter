@@ -165,7 +165,7 @@ function statusesLookup($userAuth) {
 
     $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
             $userAuth['access_token'], $userAuth['access_token_secret']);
-    $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
+    $results = queryTwitterUserAuth($connection, "statuses/lookup", "POST", $params, $userAuth, false, false);
     if ($connection->getLastHttpCode() == 200) {
         insertTweetsAndMetrics($results, $userAuth['twitter_id']);
     }

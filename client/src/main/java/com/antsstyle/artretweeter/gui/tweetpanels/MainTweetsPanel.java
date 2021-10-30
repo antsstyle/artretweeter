@@ -5,8 +5,9 @@
  */
 package com.antsstyle.artretweeter.gui.tweetpanels;
 
+import com.antsstyle.artretweeter.configuration.MiscConfig;
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.Account;
-import com.antsstyle.artretweeter.datastructures.CachedVariable;
 import com.antsstyle.artretweeter.datastructures.CollectionCurateParamsJSON;
 import com.antsstyle.artretweeter.datastructures.CollectionCurateRespJSON;
 import com.antsstyle.artretweeter.datastructures.CollectionOperation;
@@ -29,6 +30,7 @@ import com.antsstyle.artretweeter.gui.GUI;
 import com.antsstyle.artretweeter.gui.GUIHelperMethods;
 import com.antsstyle.artretweeter.gui.SetTableFilteringPanel;
 import com.antsstyle.artretweeter.gui.SetTableSortingPanel;
+import com.antsstyle.artretweeter.gui.TweetDisplayBasePanel;
 import com.antsstyle.artretweeter.serverapi.ServerAPI;
 import com.antsstyle.artretweeter.tools.FormatTools;
 import com.antsstyle.artretweeter.tools.RegularExpressions;
@@ -42,8 +44,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
-import javax.swing.DefaultComboBoxModel;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
@@ -58,52 +61,41 @@ import org.apache.logging.log4j.Logger;
  *
  * @author antss
  */
-public class MainTweetsPanel extends javax.swing.JPanel {
+public class MainTweetsPanel extends TweetDisplayBasePanel {
 
     private static final Logger LOGGER = LogManager.getLogger(MainTweetsPanel.class);
 
-    private Account currentlySelectedAccount;
-    private final DefaultComboBoxModel selectAccountBoxModel = new DefaultComboBoxModel();
     private final SetTableFilteringPanel setTableFilteringPanel = new SetTableFilteringPanel();
     private final SetTableSortingPanel setTableSortingPanel = new SetTableSortingPanel();
     private final ArrayList<TableFilterEntry> currentTableFilters = new ArrayList<>();
 
-    protected static final Account ALL_TWEETS_ACCOUNT = new Account()
-            .setScreenName("<show all tweets>");
+    private JScrollPane[] scrollPanes;
+    private JLabel labels;
 
-    protected static final Account NO_ACCOUNTS = new Account()
-            .setScreenName("<no accounts added>");
-
-    protected static final Account DB_ERROR_ACCOUNT = new Account()
-            .setScreenName("<database error>");
-
-    protected static final TwitterCollectionHolder SELECT_ACCOUNT_FIRST = new TwitterCollectionHolder()
-            .setName("<select an account first>");
-
-    protected static final TwitterCollectionHolder NO_COLLECTIONS = new TwitterCollectionHolder()
-            .setName("<none>");
-
-    protected static final TwitterCollectionHolder DB_ERROR_COLLECTION = new TwitterCollectionHolder()
-            .setName("<database error>");
+    private MainManagementPanel mainManagementPanel;
 
     /**
      * Creates new form MainTweetPanel
      */
     public MainTweetsPanel() {
         initComponents();
-        tweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
+        mainTweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (event.getValueIsAdjusting()) {
                 return;
             }
-            int[] rows = tweetsTable.getSelectedRows();
+            int[] rows = mainTweetsTable.getSelectedRows();
             if (rows.length != 1) {
                 return;
             }
-            GUIHelperMethods.showTweetPreview(tweetsTable);
+            GUIHelperMethods.showTweetPreview(mainTweetsTable);
         });
     }
 
-    public void initialise() {
+    public void initialise(MainManagementPanel mainManagementPanel) {
+        this.mainManagementPanel = mainManagementPanel;
+        assignVariables(mainTweetsTable, selectAccountComboBox, selectAccountBoxModel,
+                mainManagementPanel.getScrollPanes(), mainManagementPanel.getImageLabels());
+        setMetricsGUISettings();
         currentTableFilters.addAll(ConfigDB.getTweetManagementTableFilterSettings());
         refreshAccountBoxModel(true);
         GUIHelperMethods.setGUIColours(setTableSortingPanel);
@@ -114,12 +106,28 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         }
     }
 
+    public void setMetricsGUISettings() {
+        if (TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE) {
+            setTweetsTableMetricsDisabled();
+            disableMetricsSorting();
+        } else {
+            setTweetsTableMetricsEnabled();
+        }
+        mainTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        jScrollPane26.revalidate();
+        jScrollPane26.repaint();
+    }
+
+    private void disableMetricsSorting() {
+
+    }
+
     public Account getSelectedAccount() {
         return currentlySelectedAccount;
     }
 
     public JTable getTweetsTable() {
-        return tweetsTable;
+        return mainTweetsTable;
     }
 
     /**
@@ -131,7 +139,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
 
         jLabel2 = new javax.swing.JLabel();
         jScrollPane26 = new javax.swing.JScrollPane();
-        tweetsTable = new javax.swing.JTable();
+        mainTweetsTable = new javax.swing.JTable();
         selectAccountComboBox = new javax.swing.JComboBox<>();
         queueRetweetButton = new javax.swing.JButton();
         addTweetsToCurrentlySelectedCollectionButton = new javax.swing.JButton();
@@ -153,8 +161,8 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         jScrollPane26.setMinimumSize(new java.awt.Dimension(898, 184));
         jScrollPane26.setPreferredSize(new java.awt.Dimension(898, 184));
 
-        tweetsTable.setAutoCreateRowSorter(true);
-        tweetsTable.setModel(new javax.swing.table.DefaultTableModel(
+        mainTweetsTable.setAutoCreateRowSorter(true);
+        mainTweetsTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
@@ -177,29 +185,29 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                 return canEdit [columnIndex];
             }
         });
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        tweetsTable.getTableHeader().setReorderingAllowed(false);
-        jScrollPane26.setViewportView(tweetsTable);
-        if (tweetsTable.getColumnModel().getColumnCount() > 0) {
-            tweetsTable.getColumnModel().getColumn(0).setMinWidth(40);
-            tweetsTable.getColumnModel().getColumn(0).setPreferredWidth(40);
-            tweetsTable.getColumnModel().getColumn(0).setMaxWidth(40);
-            tweetsTable.getColumnModel().getColumn(2).setMinWidth(125);
-            tweetsTable.getColumnModel().getColumn(2).setPreferredWidth(125);
-            tweetsTable.getColumnModel().getColumn(2).setMaxWidth(125);
-            tweetsTable.getColumnModel().getColumn(3).setMinWidth(70);
-            tweetsTable.getColumnModel().getColumn(3).setPreferredWidth(70);
-            tweetsTable.getColumnModel().getColumn(3).setMaxWidth(70);
-            tweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
-            tweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
-            tweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
-            tweetsTable.getColumnModel().getColumn(5).setMinWidth(40);
-            tweetsTable.getColumnModel().getColumn(5).setPreferredWidth(40);
-            tweetsTable.getColumnModel().getColumn(5).setMaxWidth(40);
-            tweetsTable.getColumnModel().getColumn(6).setMinWidth(90);
-            tweetsTable.getColumnModel().getColumn(6).setPreferredWidth(90);
-            tweetsTable.getColumnModel().getColumn(6).setMaxWidth(90);
+        mainTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        mainTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        mainTweetsTable.getTableHeader().setReorderingAllowed(false);
+        jScrollPane26.setViewportView(mainTweetsTable);
+        if (mainTweetsTable.getColumnModel().getColumnCount() > 0) {
+            mainTweetsTable.getColumnModel().getColumn(0).setMinWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(0).setPreferredWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(0).setMaxWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(2).setMinWidth(125);
+            mainTweetsTable.getColumnModel().getColumn(2).setPreferredWidth(125);
+            mainTweetsTable.getColumnModel().getColumn(2).setMaxWidth(125);
+            mainTweetsTable.getColumnModel().getColumn(3).setMinWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(3).setPreferredWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(3).setMaxWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(5).setMinWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(5).setPreferredWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(5).setMaxWidth(40);
+            mainTweetsTable.getColumnModel().getColumn(6).setMinWidth(90);
+            mainTweetsTable.getColumnModel().getColumn(6).setPreferredWidth(90);
+            mainTweetsTable.getColumnModel().getColumn(6).setMaxWidth(90);
         }
 
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
@@ -423,21 +431,21 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             return;
         }
 
-        int[] rows = tweetsTable.getSelectedRows();
+        int[] rows = mainTweetsTable.getSelectedRows();
         if (rows.length == 0) {
             return;
         }
         int[] modelRows = new int[rows.length];
         for (int i = 0; i < rows.length; i++) {
-            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+            modelRows[i] = mainTweetsTable.convertRowIndexToModel(rows[i]);
         }
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
         HashMap<Long, CollectionOperation> curationParameters = new HashMap<>();
         ArrayList<Object> tweetDBParams = new ArrayList<>();
         ArrayList<Integer> tweetIDs = new ArrayList<>();
         HashMap<Integer, Integer> dbIDModelRowMap = new HashMap<>();
         for (int i = 0; i < modelRows.length; i++) {
-            Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRows[i], idColumnIndex);
+            Integer id = (Integer) mainTweetsTable.getModel().getValueAt(modelRows[i], idColumnIndex);
             if (!GUI.getMainManagementPanel().getCollectionsSubPanel().checkTweetInCollectionTable(id)) {
                 tweetDBParams.add(id);
                 tweetIDs.add(id);
@@ -597,7 +605,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
                     JOptionPane.showMessageDialog(GUI.getInstance(), statusMessage, "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+                DefaultTableModel dtm = (DefaultTableModel) mainTweetsTable.getModel();
                 TableTimestamp tableTimestamp;
                 try {
                     Date date = FormatTools.TWITTER_DATE_FORMAT.parse(status.getCreated_at());
@@ -624,19 +632,19 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }
 
     private void queueRetweet() {
-        int[] selectedRowsCheck = tweetsTable.getSelectedRows();
+        int[] selectedRowsCheck = mainTweetsTable.getSelectedRows();
         if (selectedRowsCheck.length > 1) {
             String msg = "Select only one tweet at a time to queue.";
             JOptionPane.showMessageDialog(GUI.getInstance(), msg, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        int row = tweetsTable.getSelectedRow();
+        int row = mainTweetsTable.getSelectedRow();
         if (row == -1) {
             return;
         }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
-        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        int modelRow = mainTweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
         TweetHolder tweet = ServerAPI.checkTweetCanBeQueued(currentlySelectedAccount, false, id);
         if (tweet == null) {
             return;
@@ -649,20 +657,20 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         OperationResult opResult = ServerAPI.queueRetweet(currentlySelectedAccount, tweet, time);
         if (opResult.wasSuccessful()) {
             TableTimestamp tableTimestamp = new TableTimestamp(time);
-            DBResponse updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE, 
+            DBResponse updateResp = CoreDB.insertIntoTable(DBTable.RETWEETQUEUE,
                     new String[]{"tweetid", "retweetingusertwitterid", "retweettime", "automated"},
                     new Object[]{tweet.getTweetID(), currentlySelectedAccount.getTwitterID(), time, "N"});
             if (updateResp.wasSuccessful()) {
                 DefaultTableModel queueDtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
 
                 queueDtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, false});
-                TableModel tm = tweetsTable.getModel();
-                int rowCount = tweetsTable.getRowCount();
-                Integer pendingRTColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Pending RT");
+                TableModel tm = mainTweetsTable.getModel();
+                int rowCount = mainTweetsTable.getRowCount();
+                Integer pendingRTColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Pending RT");
                 for (int i = 0; i < rowCount; i++) {
                     Integer idTest = (Integer) tm.getValueAt(i, idColumnIndex);
                     if (idTest.equals(id)) {
-                        tweetsTable.getModel().setValueAt(true, i, pendingRTColumnIndex);
+                        mainTweetsTable.getModel().setValueAt(true, i, pendingRTColumnIndex);
                         break;
                     }
                 }
@@ -703,7 +711,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_deleteTweetsFromTwitterButtonActionPerformed
 
     private void deleteTweetsFromArtRetweeter() {
-        int[] rows = tweetsTable.getSelectedRows();
+        int[] rows = mainTweetsTable.getSelectedRows();
         if (rows.length == 0) {
             return;
         }
@@ -717,12 +725,12 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         deleteTweetsFromArtRetweeterButton.setText("Deleting...");
         Integer[] modelRows = new Integer[rows.length];
         for (int i = 0; i < rows.length; i++) {
-            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+            modelRows[i] = mainTweetsTable.convertRowIndexToModel(rows[i]);
         }
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
         ArrayList<Integer> ids = new ArrayList<>();
         for (int modelRow : modelRows) {
-            ids.add((Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
+            ids.add((Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
         }
         ArrayList<Long> tweetIDs = TweetsDB.getTweetIDsByDatabaseIDs(ids);
         boolean success = false;
@@ -751,7 +759,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }
 
     private void deleteTweetsFromTwitter() {
-        int[] rows = tweetsTable.getSelectedRows();
+        int[] rows = mainTweetsTable.getSelectedRows();
         if (rows.length == 0) {
             return;
         }
@@ -764,12 +772,12 @@ public class MainTweetsPanel extends javax.swing.JPanel {
         }
         Integer[] modelRows = new Integer[rows.length];
         for (int i = 0; i < rows.length; i++) {
-            modelRows[i] = tweetsTable.convertRowIndexToModel(rows[i]);
+            modelRows[i] = mainTweetsTable.convertRowIndexToModel(rows[i]);
         }
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
         ArrayList<Integer> ids = new ArrayList<>();
         for (int modelRow : modelRows) {
-            ids.add((Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
+            ids.add((Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex));
         }
         ArrayList<Long> tweetIDs = TweetsDB.getTweetIDsByDatabaseIDs(ids);
         if (tweetIDs == null) {
@@ -863,7 +871,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             Integer id = (Integer) row.get("TWEETDATABASEID");
             queuedTweetIDs.add(id);
         }
-        DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+        DefaultTableModel dtm = (DefaultTableModel) mainTweetsTable.getModel();
         dtm.setRowCount(0);
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
@@ -878,8 +886,13 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             }
             Long retweetCount = (Long) row.get("NUMRETWEETS");
             TableTimestamp tableTimestamp = new TableTimestamp(tweet.getCreatedAt());
-            dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, tweet.getRetweetCount(), tweet.getLikeCount(),
-                retweetCount, queued});
+            if (TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE) {
+                dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, retweetCount, queued});
+            } else {
+                dtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp, tweet.getRetweetCount(), tweet.getLikeCount(),
+                    retweetCount, queued});
+            }
+
         }
     }
 
@@ -925,13 +938,13 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_viewOnTwitterButtonActionPerformed
 
     private void viewOnTwitter() {
-        int row = tweetsTable.getSelectedRow();
+        int row = mainTweetsTable.getSelectedRow();
         if (row == -1) {
             return;
         }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
-        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        int modelRow = mainTweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
         Long tweetID = TweetsDB.getTweetIDByDatabaseID(id);
         String url = "https://twitter.com/".concat(currentlySelectedAccount.getScreenName()).concat("/status/")
                 .concat(String.valueOf(tweetID));
@@ -973,7 +986,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }
 
     private void setTableSorting() {
-        setTableSortingPanel.setComboBoxSettings();
+        setTableSortingPanel.setSortOptions();
         int result = JOptionPane.showConfirmDialog(GUI.getInstance(), setTableSortingPanel, "Set Table Sorting", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             Pair<String[], String[]> userSettings = setTableSortingPanel.getUserSettings();
@@ -982,13 +995,11 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     }
 
     private void setTableSort(Pair<String[], String[]> userSettings, boolean updateDB) {
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
-        int tweetTextColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Tweet Text");
-        int datePostedColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Date Posted");
-        int retweetsColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Retweets");
-        int likesColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Likes");
-        int rtCountColumnIndex = tweetsTable.getColumnModel().getColumnIndex("RT#");
-        int pendingRTColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Pending RT");
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
+        int tweetTextColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Tweet Text");
+        int datePostedColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Date Posted");
+        int rtCountColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("RT#");
+        int pendingRTColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Pending RT");
         List<RowSorter.SortKey> sortKeys = new ArrayList<>();
         String newSortOrderInDB = "";
         String[] sortColumns = userSettings.getLeft();
@@ -1004,14 +1015,15 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             }
             if (sortColumn.equals("ID")) {
                 sortKeys.add(new RowSorter.SortKey(idColumnIndex, sortOrder));
-
             } else if (sortColumn.equals("Tweet Text")) {
                 sortKeys.add(new RowSorter.SortKey(tweetTextColumnIndex, sortOrder));
             } else if (sortColumn.equals("Date Posted")) {
                 sortKeys.add(new RowSorter.SortKey(datePostedColumnIndex, sortOrder));
-            } else if (sortColumn.equals("Retweets")) {
+            } else if (!TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE && sortColumn.equals("Retweets")) {
+                int retweetsColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Retweets");
                 sortKeys.add(new RowSorter.SortKey(retweetsColumnIndex, sortOrder));
-            } else if (sortColumn.equals("Likes")) {
+            } else if (!TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE && sortColumn.equals("Likes")) {
+                int likesColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Likes");
                 sortKeys.add(new RowSorter.SortKey(likesColumnIndex, sortOrder));
             } else if (sortColumn.equals("RT#")) {
                 sortKeys.add(new RowSorter.SortKey(rtCountColumnIndex, sortOrder));
@@ -1022,7 +1034,7 @@ public class MainTweetsPanel extends javax.swing.JPanel {
             }
             newSortOrderInDB = newSortOrderInDB.concat(sortColumn).concat(";").concat(sortOrderString).concat(";");
         }
-        tweetsTable.getRowSorter().setSortKeys(sortKeys);
+        mainTweetsTable.getRowSorter().setSortKeys(sortKeys);
         if (updateDB) {
             CachedVariableDB.updateConfigItem("artretweeter.managementtweettablesorting", newSortOrderInDB);
         }
@@ -1038,12 +1050,12 @@ public class MainTweetsPanel extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JScrollPane jScrollPane26;
+    protected javax.swing.JTable mainTweetsTable;
     private javax.swing.JButton queueRetweetButton;
     private javax.swing.JComboBox<String> selectAccountComboBox;
     private javax.swing.JButton setTableFilteringButton;
     private javax.swing.JButton setTableSortingButton;
     private javax.swing.JButton showDescriptionOfTableColumnsButton;
-    protected javax.swing.JTable tweetsTable;
     private javax.swing.JButton viewOnTwitterButton;
     // End of variables declaration//GEN-END:variables
 }

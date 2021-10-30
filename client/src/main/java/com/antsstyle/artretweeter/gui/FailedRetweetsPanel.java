@@ -43,7 +43,6 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
     public FailedRetweetsPanel() {
         initComponents();
         mainSelectAccountComboBox = selectAccountComboBox;
-        mainTweetsTable = tweetsTable;
     }
 
     public void initialise() {
@@ -55,15 +54,15 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         imageLabels[1] = tweetImageLabel2;
         imageLabels[2] = tweetImageLabel3;
         imageLabels[3] = tweetImageLabel4;
-        tweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
+        mainTweetsTable.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (event.getValueIsAdjusting()) {
                 return;
             }
-            int row = tweetsTable.getSelectedRow();
+            int row = mainTweetsTable.getSelectedRow();
             if (row == -1) {
                 return;
             }
-            GUIHelperMethods.showTweetPreview(tweetsTable, getPanelAttributes(), imagePanes, imageLabels);
+            GUIHelperMethods.showTweetPreview(mainTweetsTable, getPanelAttributes(), imagePanes, imageLabels);
         });
         refreshAccountBoxModel(true);
         refreshFailureCounter();
@@ -134,7 +133,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
             return;
         }
         SimpleDateFormat DATETIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+        DefaultTableModel dtm = (DefaultTableModel) mainTweetsTable.getModel();
         dtm.setRowCount(0);
         ArrayList<HashMap<String, Object>> rows = resp.getReturnedRows();
         for (HashMap<String, Object> row : rows) {
@@ -159,7 +158,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
 
         jLabel1 = new javax.swing.JLabel();
         jScrollPane26 = new javax.swing.JScrollPane();
-        tweetsTable = new javax.swing.JTable();
+        mainTweetsTable = new javax.swing.JTable();
         selectAccountComboBox = new javax.swing.JComboBox<>();
         jLabel2 = new javax.swing.JLabel();
         tweetImageScrollPane1 = new javax.swing.JScrollPane();
@@ -181,8 +180,8 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         jScrollPane26.setMinimumSize(new java.awt.Dimension(898, 184));
         jScrollPane26.setPreferredSize(new java.awt.Dimension(898, 184));
 
-        tweetsTable.setAutoCreateRowSorter(true);
-        tweetsTable.setModel(new javax.swing.table.DefaultTableModel(
+        mainTweetsTable.setAutoCreateRowSorter(true);
+        mainTweetsTable.setModel(new javax.swing.table.DefaultTableModel(
                 new Object[][]{},
                 new String[]{
                     "ID", "Failed Retweet ID", "Tweet Text", "Date Attempted", "Error Code", "Fail Reason"
@@ -203,25 +202,25 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
                 return canEdit[columnIndex];
             }
         });
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        tweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jScrollPane26.setViewportView(tweetsTable);
-        if (tweetsTable.getColumnModel().getColumnCount() > 0) {
-            tweetsTable.getColumnModel().getColumn(0).setMinWidth(60);
-            tweetsTable.getColumnModel().getColumn(0).setPreferredWidth(60);
-            tweetsTable.getColumnModel().getColumn(0).setMaxWidth(60);
-            tweetsTable.getColumnModel().getColumn(1).setMinWidth(120);
-            tweetsTable.getColumnModel().getColumn(1).setPreferredWidth(120);
-            tweetsTable.getColumnModel().getColumn(1).setMaxWidth(120);
-            tweetsTable.getColumnModel().getColumn(2).setMinWidth(300);
-            tweetsTable.getColumnModel().getColumn(2).setPreferredWidth(300);
-            tweetsTable.getColumnModel().getColumn(2).setMaxWidth(300);
-            tweetsTable.getColumnModel().getColumn(3).setMinWidth(120);
-            tweetsTable.getColumnModel().getColumn(3).setPreferredWidth(120);
-            tweetsTable.getColumnModel().getColumn(3).setMaxWidth(120);
-            tweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
-            tweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
-            tweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
+        mainTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        mainTweetsTable.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jScrollPane26.setViewportView(mainTweetsTable);
+        if (mainTweetsTable.getColumnModel().getColumnCount() > 0) {
+            mainTweetsTable.getColumnModel().getColumn(0).setMinWidth(60);
+            mainTweetsTable.getColumnModel().getColumn(0).setPreferredWidth(60);
+            mainTweetsTable.getColumnModel().getColumn(0).setMaxWidth(60);
+            mainTweetsTable.getColumnModel().getColumn(1).setMinWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(1).setPreferredWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(1).setMaxWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(2).setMinWidth(300);
+            mainTweetsTable.getColumnModel().getColumn(2).setPreferredWidth(300);
+            mainTweetsTable.getColumnModel().getColumn(2).setMaxWidth(300);
+            mainTweetsTable.getColumnModel().getColumn(3).setMinWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(3).setPreferredWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(3).setMaxWidth(120);
+            mainTweetsTable.getColumnModel().getColumn(4).setMinWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(4).setPreferredWidth(70);
+            mainTweetsTable.getColumnModel().getColumn(4).setMaxWidth(70);
         }
 
         selectAccountComboBox.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
@@ -374,17 +373,17 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        int row = tweetsTable.getSelectedRow();
+        int row = mainTweetsTable.getSelectedRow();
         if (row == -1) {
             return;
         }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Failed Retweet ID");
-        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        int modelRow = mainTweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Failed Retweet ID");
+        Integer id = (Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
         CoreDB.deleteFromTable(DBTable.FAILEDRETWEETS,
                 new String[]{"id"},
                 new Object[]{id});
-        DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+        DefaultTableModel dtm = (DefaultTableModel) mainTweetsTable.getModel();
         dtm.removeRow(modelRow);
     }
 
@@ -395,7 +394,7 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         CoreDB.deleteFromTable(DBTable.FAILEDRETWEETS,
                 new String[]{"retweetingusertwitterid"},
                 new Object[]{currentlySelectedAccount.getTwitterID()});
-        DefaultTableModel dtm = (DefaultTableModel) tweetsTable.getModel();
+        DefaultTableModel dtm = (DefaultTableModel) mainTweetsTable.getModel();
         dtm.setRowCount(0);
     }
 
@@ -403,13 +402,13 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
         if (currentlySelectedAccount.equals(NO_ACCOUNTS) || currentlySelectedAccount.equals(DB_ERROR_ACCOUNT)) {
             return;
         }
-        int row = tweetsTable.getSelectedRow();
+        int row = mainTweetsTable.getSelectedRow();
         if (row == -1) {
             return;
         }
-        int modelRow = tweetsTable.convertRowIndexToModel(row);
-        int idColumnIndex = tweetsTable.getColumnModel().getColumnIndex("ID");
-        Integer id = (Integer) tweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
+        int modelRow = mainTweetsTable.convertRowIndexToModel(row);
+        int idColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("ID");
+        Integer id = (Integer) mainTweetsTable.getModel().getValueAt(modelRow, idColumnIndex);
         TweetHolder tweet = ServerAPI.checkTweetCanBeQueued(currentlySelectedAccount, false, id);
         if (tweet == null) {
             return;
@@ -428,13 +427,13 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
                 DefaultTableModel queueDtm = (DefaultTableModel) GUI.getMainManagementPanel().getQueueSubPanel().getQueuedTweetsTable().getModel();
 
                 queueDtm.addRow(new Object[]{tweet.getId(), tweet.getFullTweetText(), tableTimestamp});
-                TableModel tm = tweetsTable.getModel();
-                int rowCount = tweetsTable.getRowCount();
-                Integer pendingRTColumnIndex = tweetsTable.getColumnModel().getColumnIndex("Pending RT");
+                TableModel tm = mainTweetsTable.getModel();
+                int rowCount = mainTweetsTable.getRowCount();
+                Integer pendingRTColumnIndex = mainTweetsTable.getColumnModel().getColumnIndex("Pending RT");
                 for (int i = 0; i < rowCount; i++) {
                     Integer idTest = (Integer) tm.getValueAt(i, idColumnIndex);
                     if (idTest.equals(id)) {
-                        tweetsTable.getModel().setValueAt(true, i, pendingRTColumnIndex);
+                        mainTweetsTable.getModel().setValueAt(true, i, pendingRTColumnIndex);
                         break;
                     }
                 }
@@ -491,6 +490,6 @@ public class FailedRetweetsPanel extends TweetDisplayBasePanel {
     protected javax.swing.JScrollPane tweetImageScrollPane2;
     protected javax.swing.JScrollPane tweetImageScrollPane3;
     protected javax.swing.JScrollPane tweetImageScrollPane4;
-    protected javax.swing.JTable tweetsTable;
+    protected javax.swing.JTable mainTweetsTable;
     // End of variables declaration//GEN-END:variables
 }

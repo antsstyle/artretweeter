@@ -18,10 +18,10 @@ public class AutomationDB {
 
     private static final Logger LOGGER = LogManager.getLogger(AutomationDB.class);
 
-    private static final String AUTOMATION_SETTINGS_MERGE_QUERY = "MERGE INTO userautomationsettings USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?))"
+    private static final String AUTOMATION_SETTINGS_MERGE_QUERY = "MERGE INTO userautomationsettings USING (VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?))"
             + " AS vals(usertwitterid,automationenabled,dayflags,hourflags,minuteflags,includedtext,excludedtext,retweetpercent,oldtweetcutoffdate,"
             + "oldtweetcutoffdateenabled,includedtextenabled,excludedtextenabled,timezonehouroffset,timezoneminuteoffset,includetextcondition,"
-            + "excludetextcondition) ON "
+            + "excludetextcondition,metricsmeasurementtype) ON "
             + "(userautomationsettings.usertwitterid = vals.usertwitterid)"
             + " WHEN MATCHED THEN UPDATE SET userautomationsettings.automationenabled=vals.automationenabled, "
             + "userautomationsettings.dayflags=vals.dayflags,userautomationsettings.hourflags=vals.hourflags,"
@@ -31,14 +31,15 @@ public class AutomationDB {
             + "userautomationsettings.oldtweetcutoffdateenabled=vals.oldtweetcutoffdateenabled,"
             + "userautomationsettings.includedtextenabled=vals.includedtextenabled, userautomationsettings.excludedtextenabled=vals.excludedtextenabled,"
             + "userautomationsettings.timezonehouroffset=vals.timezonehouroffset, userautomationsettings.timezoneminuteoffset=vals.timezoneminuteoffset,"
-            + "userautomationsettings.includetextcondition=vals.includetextcondition, userautomationsettings.excludetextcondition=vals.excludetextcondition"
+            + "userautomationsettings.includetextcondition=vals.includetextcondition, userautomationsettings.excludetextcondition=vals.excludetextcondition,"
+            + "userautomationsettings.metricsmeasurementtype=vals.metricsmeasurementtype"
             + " WHEN NOT MATCHED THEN INSERT (usertwitterid,automationenabled,dayflags,hourflags,minuteflags,includedtext,excludedtext,retweetpercent,"
             + "oldtweetcutoffdate,oldtweetcutoffdateenabled,includedtextenabled,excludedtextenabled, timezonehouroffset, timezoneminuteoffset, "
-            + "includetextcondition, excludetextcondition) VALUES "
+            + "includetextcondition, excludetextcondition, metricsmeasurementtype) VALUES "
             + "(vals.usertwitterid, vals.automationenabled, vals.dayflags, vals.hourflags, vals.minuteflags, "
             + "vals.includedtext, vals.excludedtext, vals.retweetpercent, "
             + "vals.oldtweetcutoffdate, vals.oldtweetcutoffdateenabled, vals.includedtextenabled, vals.excludedtextenabled, vals.timezonehouroffset, "
-            + "vals.timezoneminuteoffset, vals.includetextcondition, vals.excludetextcondition)";
+            + "vals.timezoneminuteoffset, vals.includetextcondition, vals.excludetextcondition, vals.metricsmeasurementtype)";
 
     public static boolean updateAutomationSettings(Object[] params) {
         return CoreDB.runCustomUpdate(AUTOMATION_SETTINGS_MERGE_QUERY, params);
@@ -49,7 +50,7 @@ public class AutomationDB {
         holder.getHourFlags(), holder.getMinuteFlags(), holder.getIncludedText(), holder.getExcludedText(), holder.getRetweetPercent(), 
         holder.getOldTweetCutoffDate(), holder.getOldTweetCutoffDateEnabled(), holder.getIncludedTextEnabled(), 
         holder.getExcludedTextEnabled(), holder.getTimeZoneHourOffset(), holder.getTimeZoneMinuteOffset(), holder.getIncludeTextCondition(),
-        holder.getExcludeTextCondition()};
+        holder.getExcludeTextCondition(), holder.getMetricsMeasurementType()};
         return updateAutomationSettings(params);
     }
 

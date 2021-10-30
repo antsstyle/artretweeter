@@ -27,5 +27,6 @@ public class MiscConfig extends ConfigurationModule {
 
     public static Path DEBUG_LAST_SERVER_REQUEST_OUTPUT_FILE_PATH
             = Paths.get(System.getProperty("user.dir")).resolve("lastserverrequest.txt");
+    
 
 }

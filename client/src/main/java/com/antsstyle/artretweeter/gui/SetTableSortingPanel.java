@@ -5,10 +5,17 @@
  */
 package com.antsstyle.artretweeter.gui;
 
+import com.antsstyle.artretweeter.configuration.TwitterConfig;
 import com.antsstyle.artretweeter.datastructures.CachedVariable;
 import com.antsstyle.artretweeter.db.CachedVariableDB;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import javax.swing.DefaultComboBoxModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  *
@@ -16,11 +23,36 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public class SetTableSortingPanel extends javax.swing.JPanel {
 
+    private static final Logger LOGGER = LogManager.getLogger(SetTableSortingPanel.class);
+
+    private static final List<String> metricsEnabledOptions
+            = Arrays.asList(new String[]{"ID", "Tweet Text", "Date Posted", "Retweets", "Likes", "RT#", "Pending RT"});
+
+    private static final List<String> metricsDisabledOptions
+            = Arrays.asList(new String[]{"ID", "Tweet Text", "Date Posted", "RT#", "Pending RT"});
+
     /**
      * Creates new form SetTableSortingPanel
      */
     public SetTableSortingPanel() {
         initComponents();
+        setSortOptions();
+    }
+
+    public final void setSortOptions() {
+        firstColumnSortComboBox.removeAllItems();
+        secondColumnSortComboBox.removeAllItems();
+        thirdColumnSortComboBox.removeAllItems();
+        if (TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE) {
+            ((DefaultComboBoxModel) firstColumnSortComboBox.getModel()).addAll(metricsDisabledOptions);
+            ((DefaultComboBoxModel) secondColumnSortComboBox.getModel()).addAll(metricsDisabledOptions);
+            ((DefaultComboBoxModel) thirdColumnSortComboBox.getModel()).addAll(metricsDisabledOptions);
+        } else {
+            ((DefaultComboBoxModel) firstColumnSortComboBox.getModel()).addAll(metricsEnabledOptions);
+            ((DefaultComboBoxModel) secondColumnSortComboBox.getModel()).addAll(metricsEnabledOptions);
+            ((DefaultComboBoxModel) thirdColumnSortComboBox.getModel()).addAll(metricsEnabledOptions);
+        }
+        setComboBoxSettings();
     }
 
     public Pair<String[], String[]> getUserSettings() {
@@ -39,12 +71,37 @@ public class SetTableSortingPanel extends javax.swing.JPanel {
         CachedVariable managementTweetTableSorting = CachedVariableDB.getCachedVariableByName("artretweeter.managementtweettablesorting");
         if (managementTweetTableSorting != null) {
             String[] items = StringUtils.split(managementTweetTableSorting.getValue(), ";");
-            firstColumnSortComboBox.setSelectedItem(items[0]);
+            if (TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE) {
+                if (items[0].equals("Retweets") || items[0].equals("Likes")) {
+                    firstColumnSortComboBox.setSelectedItem("Date Posted");
+                } else {
+                    firstColumnSortComboBox.setSelectedItem(items[0]);
+                }
+                if (items[2].equals("Retweets") || items[2].equals("Likes")) {
+                    secondColumnSortComboBox.setSelectedItem("Pending RT");
+                } else {
+                    secondColumnSortComboBox.setSelectedItem(items[2]);
+                }
+                if (items[4].equals("Retweets") || items[4].equals("Likes")) {
+                    thirdColumnSortComboBox.setSelectedItem("ID");
+                } else {
+                    thirdColumnSortComboBox.setSelectedItem(items[4]);
+                }
+            } else {
+                firstColumnSortComboBox.setSelectedItem(items[0]);
+                secondColumnSortComboBox.setSelectedItem(items[2]);
+                thirdColumnSortComboBox.setSelectedItem(items[4]);
+            }
             firstColumnSortOrderComboBox.setSelectedItem(items[1]);
-            secondColumnSortComboBox.setSelectedItem(items[2]);
             secondColumnSortOrderComboBox.setSelectedItem(items[3]);
-            thirdColumnSortComboBox.setSelectedItem(items[4]);
             thirdColumnSortOrderComboBox.setSelectedItem(items[5]);
+        } else {
+            firstColumnSortComboBox.setSelectedItem("Date Posted");
+            secondColumnSortComboBox.setSelectedItem("RT#");
+            thirdColumnSortComboBox.setSelectedItem("Pending RT");
+            firstColumnSortOrderComboBox.setSelectedItem("Descending");
+            secondColumnSortOrderComboBox.setSelectedItem("Ascending");
+            thirdColumnSortOrderComboBox.setSelectedItem("Descending");
         }
     }
 

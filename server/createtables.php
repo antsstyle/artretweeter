@@ -94,4 +94,6 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS userautomationsettings (
              timezoneminuteoffset INTEGER NOT NULL,
              includetextcondition VARCHAR(50) NOT NULL,
              excludetextcondition VARCHAR(50) NOT NULL,
+             adaptivertthreshold INTEGER,
+             metricsmeasurementtype VARCHAR(100) NOT NULL,
              CONSTRAINT uniquetwitterid UNIQUE (usertwitterid))");

@@ -41,7 +41,8 @@ public class ResultSetConversion {
                 .setTimeZoneHourOffset((Integer) row.get("TIMEZONEHOUROFFSET"))
                 .setTimeZoneMinuteOffset((Integer) row.get("TIMEZONEMINUTEOFFSET"))
                 .setIncludeTextCondition((String) row.get("INCLUDETEXTCONDITION"))
-                .setExcludeTextCondition((String) row.get("EXCLUDETEXTCONDITION"));
+                .setExcludeTextCondition((String) row.get("EXCLUDETEXTCONDITION"))
+                .setMetricsMeasurementType((String) row.get("METRICSMEASUREMENTTYPE"));
         return holder;
     }
 

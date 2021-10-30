@@ -7,6 +7,7 @@ package com.antsstyle.artretweeter.configuration;
 
 import com.antsstyle.artretweeter.db.CoreDB;
 import com.antsstyle.artretweeter.db.DBTable;
+import com.antsstyle.artretweeter.gui.GUI;
 import java.awt.Color;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -74,6 +75,10 @@ public final class Config {
                 for (String s : failedModuleCommits) {
                     LOGGER.error(s);
                 }
+            }
+            if (changeMappings.containsKey(TwitterConfig.P_DO_NOT_SHOW_METRICS_ANYWHERE)) {
+                GUI.getMainManagementPanel().getMainTweetsPanel().setMetricsGUISettings();
+                GUI.getAutomationPanel().setMetricsOptionsPanel(TwitterConfig.DO_NOT_SHOW_METRICS_ANYWHERE);
             }
             return successful;
         } catch (Exception e) {

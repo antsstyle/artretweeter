@@ -75,6 +75,14 @@ public class GUIHelperMethods {
 
     private static final HashMap<JComponent, Timer> timerMap = new HashMap<>();
 
+    public static final String wordWrapLabelHTML = "<html><body style='width: %1spx'>%1s";
+
+    public static void setAllColumnWidthSizes(TableColumnModel tcm, int columnIndex, int width) {
+        tcm.getColumn(columnIndex).setMinWidth(width);
+        tcm.getColumn(columnIndex).setPreferredWidth(width);
+        tcm.getColumn(columnIndex).setMaxWidth(width);
+    }
+
     public static void setOppositeColourDashedBorder(JLabel label) {
         if (SwingUtilities.isEventDispatchThread()) {
             Color color = label.getBackground();
@@ -269,7 +277,7 @@ public class GUIHelperMethods {
     }
 
     public static void showTweetPreview(JTable table) {
-        Integer[] panelAttributes = GUI.getMainManagementPanel().getPanelAttributes();
+        Integer[] panelAttributes = GUI.getMainManagementPanel().getMainTweetsPanel().getPanelAttributes();
         JScrollPane[] panes = GUI.getMainManagementPanel().getScrollPanes();
         JLabel[] labels = GUI.getMainManagementPanel().getImageLabels();
         showTweetPreview(table, panelAttributes, panes, labels);
