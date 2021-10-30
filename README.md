@@ -5,7 +5,7 @@ A tool for artists to use that allows you to automatically schedule retweets of 
 
 If you're using 64-bit Windows, you can download the "with-Java-for-Win64" zip from the latest release (see the right side of this page for the releases tab). Simply unzip and run the EXE.
 
-If you're using another operating system, download the zip without Java bundled, unzip it and run the jar file. You will need to install Java before you can run it (https://jdk.java.net/16/)
+If you're using another operating system, download the zip without Java bundled, unzip it and run the jar file. You will need to install Java before you can run it (https://jdk.java.net/)
 
 ## What are Twitter Collections?
 
