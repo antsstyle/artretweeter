@@ -5,5 +5,3 @@ require_once "../core.php";
 ArtRetweeter\postScheduledRetweets();
 
 ArtRetweeter\removeExpiredRetweets();
-
-ArtRetweeter\getTweetMetrics();

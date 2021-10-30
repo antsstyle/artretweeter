@@ -14,18 +14,18 @@ class StatusCodes {
     const QUERY_OK = 0;
     
     const errorArray = array (
-        TWITTER_API_ERROR => "Twitter API returned an error.",
-        SERVER_ERROR => "Internal server error.",
-        INVALID_INPUT => "Invalid input or parameters.",
-        DATABASE_ERROR => "A server database error occurred.",
-        INVALID_ACCESS_TOKEN => "Invalid or expired access token.",
-        TWITTER_RATE_LIMIT_EXCEEDED => "Twitter rate limit exceeded.",
-        ARTRETWEETER_RATE_LIMIT_EXCEEDED => "ArtRetweeter rate limit exceeded.",
-        USER_BANNED => "This user is banned from ArtRetweeter.",
-        QUERY_OK => "Query OK."
+        StatusCodes::TWITTER_API_ERROR => "Twitter API returned an error.",
+        StatusCodes::SERVER_ERROR => "Internal server error.",
+        StatusCodes::INVALID_INPUT => "Invalid input or parameters.",
+        StatusCodes::DATABASE_ERROR => "A server database error occurred.",
+        StatusCodes::INVALID_ACCESS_TOKEN => "Invalid or expired access token.",
+        StatusCodes::TWITTER_RATE_LIMIT_EXCEEDED => "Twitter rate limit exceeded.",
+        StatusCodes::ARTRETWEETER_RATE_LIMIT_EXCEEDED => "ArtRetweeter rate limit exceeded.",
+        StatusCodes::USER_BANNED => "This user is banned from ArtRetweeter.",
+        StatusCodes::QUERY_OK => "Query OK."
     );
     
     function getStatusMessage($statusCode) {
-        return errorArray[$statusCode];
+        return StatusCodes::errorArray[$statusCode];
     }
 }

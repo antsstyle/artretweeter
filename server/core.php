@@ -3,23 +3,10 @@
 namespace ArtRetweeter;
 
 require_once "credentials/apikeys.php";
-require_once "credentials/db.php";
+require_once "coredb.php";
 require_once "twitteroauth/vendor/autoload.php";
 
 use Abraham\TwitterOAuth\TwitterOAuth;
-
-$options = [
-    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-];
-
-try {
-    $databaseConnection = new \PDO("mysql:host=$servername;dbname=$database;port=$port", $username, $password, $options);
-} catch (Exception $e) {
-    echo encodeStatusInformation(StatusCodes::DATABASE_ERROR, "Failed to create database connection.");
-    exit();
-}
-
-$databaseConnection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
 function getTweetIDsForUser($userAuthTwitterID) {
     $selectQuery = "SELECT id,tweetid FROM tweets WHERE usertwitterid=? AND deletedflag=? ORDER BY id ASC";
@@ -42,6 +29,15 @@ function removeExpiredRetweets() {
     $GLOBALS['databaseConnection']->prepare($insertQuery)
             ->execute([-1, "Missed schedule", $time1HourAgo]);
     $GLOBALS['databaseConnection']->prepare("DELETE FROM scheduledretweets WHERE retweettime <= ?")->execute([$time1HourAgo]);
+}
+
+function deleteRetweet($userAuth, $tweetID) {
+    $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
+            $userAuth['access_token'], $userAuth['access_token_secret']);
+    $connection->setApiVersion('2');
+    $connection->setRetries(1, 1);
+    $query = "users/" . $userAuth['twitter_id'] . "/retweets/" . $tweetID;
+    $connection->delete($query);
 }
 
 function postScheduledRetweets() {
@@ -76,6 +72,7 @@ function postScheduledRetweets() {
             $GLOBALS['databaseConnection']->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$databaseID]);
             continue;
         }
+        deleteRetweet($userAuth, $tweetID);
         $params['id'] = $tweetID;
         $params['trim_user'] = 1;
         $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'], $accessToken, $accessTokenSecret);
@@ -674,8 +671,16 @@ function insertTweetsAndMetrics($tweets, $userTwitterID) {
         }
     }
     $GLOBALS['databaseConnection']->commit();
-    $returnArray['highestid'] = $highestID;
-    $returnArray['lowestid'] = $lowestID;
+    $returnArray = [];
+    if (isset($highestID)) {
+        $returnArray['highestid'] = $highestID;
+    }
+    if (isset($lowestID)) {
+        $returnArray['lowestid'] = $lowestID;
+    }
+    if (count($returnArray) == 0) {
+        $returnArray['novalidresults'] = true;
+    }
     return $returnArray;
 }
 
@@ -705,7 +710,7 @@ function getTweetMetrics() {
         }
         $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
                 $row['accesstoken'], $row['accesstokensecret']);
-        $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
+        $results = queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
         if ($connection->getLastHttpCode() == 200) {
             insertTweetsAndMetrics($results, $userAuth['twitter_id']);
         }
@@ -729,36 +734,79 @@ function scheduleAutomatedRetweets() {
     }
 }
 
-function getAllNewTweetsForUser($userAuth, $params) {
+function getAllNewTweetsForAllUsers() {
+    $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
+            . "WHERE automationenabled=?";
+    $stmt = $GLOBALS['databaseConnection']->prepare($query);
+    $success = $stmt->execute(["Y"]);
+    if (!$success) {
+        error_log("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
+        return;
+    }
+    while ($row = $stmt->fetch()) {
+        getAllNewTweetsForUser($row);
+    }
+}
+
+function getAllNewTweetsForUser($row) {
+    $params['count'] = 200;
+    $params['user_id'] = $row['usertwitterid'];
+    $params['include_rts'] = "false";
+    $params['trim_user'] = "true";
+    $params['tweet_mode'] = "extended";
     $resultCount = 1;
     $queryCount = 0;
     $reachedEnd = false;
-    while ($resultCount != 0) {
+    $userAuth['twitter_id'] = $row['usertwitterid'];
+    $userAuth['access_token'] = $row['accesstoken'];
+    $userAuth['access_token_secret'] = $row['accesstokensecret'];
+    if ($row['oldtweetlimitretrieved'] == "Y") {
+        if ($row['sinceid'] != null) {
+            $params['since_id'] = $row['sinceid'];
+        }
+    } else {
+        if ($row['maxid'] != null) {
+            $params['max_id'] = $row['maxid'];
+        }
+    }
+    $reachedEnd = false;
+    while ($resultCount != 0 && !$reachedEnd) {
         $connection = new TwitterOAuth($GLOBALS['consumer_key'], $GLOBALS['consumer_secret'],
                 $userAuth['access_token'], $userAuth['access_token_secret']);
-        $results = queryTwitterUserAuth($connection, "statuses/lookup", "GET", $params, $userAuth, false, false);
+        $results = queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
         $queryCount++;
         if ($connection->getLastHttpCode() == 200) {
             $resultCount = count($results);
             if ($resultCount == 0) {
+                error_log("Reached end.");
                 $reachedEnd = true;
-            }
-            $returnArray = insertTweetsAndMetrics($results, $userAuth['twitter_id']);
-            if (isset($params['max_id'])) {
-                $params['max_id'] = $returnArray['lowestid'] - 1;
             } else {
-                $params['since_id'] = $returnArray['highestid'];
+                $returnArray = insertTweetsAndMetrics($results, $userAuth['twitter_id']);
+                if (!$returnArray) {
+                    error_log("Empty or nonexistent return array - breaking loop.");
+                    break;
+                }
+                if (isset($returnArray['novalidresults']) && $returnArray['novalidresults']) {
+                    error_log("No more valid results, breaking loop.");
+                    break;
+                }
+                if ($row['oldtweetlimitretrieved'] == "N") {
+                    $params['max_id'] = $returnArray['lowestid'] - 1;
+                } else {
+                    $params['since_id'] = $returnArray['highestid'];
+                }
             }
         } else {
             break;
         }
         if ($queryCount > 35) {
+            error_log("35 user_timeline queries!");
             break;
         }
     }
     $query = "UPDATE users SET ";
     $updParams = [];
-    if ($reachedEnd && isset($params['max_id'])) {
+    if ($reachedEnd) {
         $query .= "oldtweetlimitretrieved=?, maxid=? ";
         array_push($updParams, "Y", $params['max_id']);
     } else if (isset($params['max_id'])) {
@@ -826,7 +874,7 @@ function shiftString($string, $shiftCount) {
 
 function commitAutomationSettingsInDB($aS) {
     // Get old automation settings: check if they existed, or were disabled. If so, schedule new automated retweets immediately
-    
+
     $userTimeZoneHour = $aS['timezonehouroffset'];
     $userTimeZoneMinute = $aS['timezoneminuteoffset'];
     $userOffsetSeconds = ($userTimeZoneHour * 3600) + ($userTimeZoneMinute * 60);
@@ -843,6 +891,11 @@ function commitAutomationSettingsInDB($aS) {
     } else {
         $oldTweetCutoffDate = null;
     }
+    if (!isset($aS['retweetpercent'])) {
+        $retweetPercent = null;
+    } else {
+        $retweetPercent = $aS['retweetpercent'];
+    }
     $query = "INSERT INTO userautomationsettings (usertwitterid,automationenabled,dayflags,hourflags,minuteflags,includedtext,excludedtext"
             . ",retweetpercent,oldtweetcutoffdate,oldtweetcutoffdateenabled,includedtextenabled,excludedtextenabled,timezonehouroffset,"
             . "timezoneminuteoffset,includetextcondition,excludetextcondition) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
@@ -853,10 +906,10 @@ function commitAutomationSettingsInDB($aS) {
     try {
         $success = $stmt->execute([$aS['usertwitterid'], $aS['automationenabled'],
             $aS['dayflags'], $hourFlags, $minuteFlags, $aS['includedtext'], $aS['excludedtext'],
-            $aS['retweetpercent'], $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
+            $retweetPercent, $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
             $aS['includedtextenabled'], $aS['excludedtextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
             $aS['excludetextcondition'], $aS['automationenabled'], $aS['dayflags'], $hourFlags, $minuteFlags,
-            $aS['includedtext'], $aS['excludedtext'], $aS['retweetpercent'], $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
+            $aS['includedtext'], $aS['excludedtext'], $retweetPercent, $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
             $aS['includedtextenabled'], $aS['excludedtextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
             $aS['excludetextcondition']]);
         if (!$success) {
@@ -977,7 +1030,20 @@ function queueAutomatedRetweets($userAuth) {
     //$medianRTs = $medianRow['medianrts'];
     $statsRow = $selectMeanStatsStmt->fetch();
     $meanRTs = $statsRow['avgrts'];
-    $retweetPercent = $settingsRow['retweetpercent'] / 100;
+    if ($settingsRow['metricsmeasurementtype'] == "Mean Average" && $settingsRow['retweetpercent'] != null) {
+        $retweetPercent = $settingsRow['retweetpercent'] / 100;
+        $retweetThreshold = $meanRTs * $retweetPercent;
+    }
+    else if ($settingsRow['metricsmeasurementtype'] == "Adaptive") {
+        $retweetThreshold = max(($meanRTs * 0.2), $settingsRow['adaptivertthreshold']);
+    } else {
+        $userTwitterID = $userAuth['twitter_id'];
+        $settingType = $settingsRow['metricsmeasurementtype'];
+        error_log("Incorrect automation settings for user ID: $userTwitterID. Settings row:");
+        error_log(print_r($settingsRow, true));
+        return;
+    }
+
     $minCreatedAt = $statsRow['mincr'];
     $maxCreatedAt = $statsRow['maxcr'];
     $seconds = $maxCreatedAt - $minCreatedAt;
@@ -991,7 +1057,7 @@ function queueAutomatedRetweets($userAuth) {
             . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
             . "GROUP BY tweetid HAVING COUNT(tweetid) > ?) "
             . "ORDER BY RAND()";
-    $selectMeanStatsParams[] = $meanRTs * $retweetPercent;
+    $selectMeanStatsParams[] = $retweetThreshold;
     $selectMeanStatsParams[] = $userAuth['twitter_id'];
     $selectMeanStatsParams[] = $userAuth['twitter_id'];
     $selectMeanStatsParams[] = $oneMonthAgo;
@@ -1007,10 +1073,11 @@ function queueAutomatedRetweets($userAuth) {
     }
     $tweetRows = $selectTweetsStmt->fetchAll();
     $tweetCount = count($tweetRows);
+
     //error_log("Total tweet count returned: $tweetCount");
     $tweetsPerDay = ceil($tweetCount / $daysBetweenTweets);
     $minuteValues = getMinuteValues($minuteFlags);
-    $i = 0;
+    $numScheduled = 0;
     //error_log("Tweets per day: $tweetsPerDay     Total count per day: $totalCountPerDay");
     if ($tweetCount == 0) {
         return;
@@ -1019,9 +1086,8 @@ function queueAutomatedRetweets($userAuth) {
     if ($scheduleType == "Random") {
         // Schedule randomly, once per hour
         $hourIndices = getHourFlagIndices($hourFlags);
-        $countOfHours = count($hourIndices);
         //error_log("Count of hour indices: $countOfHours");
-        while ($i < 10 && $i < $tweetCount && $i < $tweetsPerDay && count($hourIndices) > 0) {
+        while ($numScheduled < 10 && $numScheduled < $tweetCount && $numScheduled < $tweetsPerDay && count($hourIndices) > 0) {
             $nextHour = getRandomHourToAutomate($hourIndices);
             //error_log("Next hour: $nextHour");
             unset($hourIndices[array_search($nextHour, $hourIndices)]);
@@ -1033,8 +1099,8 @@ function queueAutomatedRetweets($userAuth) {
             //error_log("Next hour: $nextHour    Next minute: $minuteValue");
             $retweetTime->setTime($nextHour, $minuteValue);
             $retweetTimeStamp = $retweetTime->getTimestamp();
-            queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$i]['tweetid'], $retweetTimeStamp, true);
-            $i++;
+            queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp, true);
+            $numScheduled++;
         }
     } else {
         $start = strpos($hourFlags, "Y");
@@ -1044,14 +1110,14 @@ function queueAutomatedRetweets($userAuth) {
         $latestUsed = null;
         $interval = $maxDist / $totalCountPerDay;
         //error_log("Time interval: $interval");
-        while ($i < $tweetsPerDay && $i < $tweetCount && $i < 10) {
+        while ($numScheduled < $tweetsPerDay && $numScheduled < $tweetCount && $numScheduled < 10) {
             $minuteValue = getNextMinute($minuteValues);
             $retweetTime = new \DateTime();
             $retweetTime->add(new \DateInterval('P2D'));
             $retweetTime->setTime($nextHour, $minuteValue);
             $retweetTimeStamp = $retweetTime->getTimestamp();
-            queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$i]['tweetid'], $retweetTimeStamp, true);
-            $i++;
+            queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp, true);
+            $numScheduled++;
             $latestUsed = $nextHour;
             $nextHour = getNextHourToAutomate($hourFlags, $latestUsed, $interval);
         }
