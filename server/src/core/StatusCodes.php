@@ -1,6 +1,6 @@
 <?php
 
-namespace ArtRetweeter;
+namespace Antsstyle\ArtRetweeter\Core;
 
 class StatusCodes {
     const TWITTER_API_ERROR = -8;
@@ -25,7 +25,7 @@ class StatusCodes {
         StatusCodes::QUERY_OK => "Query OK."
     );
     
-    function getStatusMessage($statusCode) {
+    public static function getStatusMessage($statusCode) {
         return StatusCodes::errorArray[$statusCode];
     }
 }

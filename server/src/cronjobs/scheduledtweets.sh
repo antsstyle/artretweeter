@@ -4,4 +4,6 @@
     
 cd "$(dirname "$0")"
 
-php tweetmetrics.php
+cd "../"
+
+php cronjobs/ScheduledTweets.php

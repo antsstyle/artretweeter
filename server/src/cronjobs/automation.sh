@@ -4,4 +4,6 @@
     
 cd "$(dirname "$0")"
 
-php apischeduler.php
+cd "../"
+
+php cronjobs/Automation.php

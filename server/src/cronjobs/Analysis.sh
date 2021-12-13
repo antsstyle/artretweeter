@@ -4,4 +4,7 @@
     
 cd "$(dirname "$0")"
 
-php automation.php
+cd "../"
+
+php cronjobs/Analysis.php
+

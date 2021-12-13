@@ -1,10 +1,13 @@
 <?php
 
-namespace ArtRetweeter;
+namespace Antsstyle\ArtRetweeter\Core;
 
-require_once "core.php";
+use Antsstyle\ArtRetweeter\Core\CoreDB;
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS users (
+class CreateTables {
+
+    public static function createTables() {
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS users (
 		twitterid BIGINT NOT NULL PRIMARY KEY,
 		accesstoken VARCHAR(255) NOT NULL,
                 accesstokensecret VARCHAR(255) NOT NULL,
@@ -14,7 +17,7 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS users (
                 maxid BIGINT DEFAULT 0 NOT NULL,
                 CONSTRAINT users_uniquetwitterid UNIQUE (twitterid))");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS ratelimitrecords (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS ratelimitrecords (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		usertwitterid BIGINT NOT NULL,
 		endpoint VARCHAR(255) NOT NULL,
@@ -24,14 +27,14 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS ratelimitrecords (
                 timetoresetseconds INT NOT NULL,
                 CONSTRAINT ratelimitrecords_userauthunique UNIQUE (userid,endpoint))");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS retweetrecords (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS retweetrecords (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		usertwitterid BIGINT NOT NULL,
 		tweetid BIGINT NOT NULL,
                 retweetid BIGINT NOT NULL,
 		retweettime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 retweetingusertwitterid BIGINT NOT NULL,
                 tweetid BIGINT NOT NULL,
@@ -39,7 +42,7 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS scheduledretweets (
                 automated VARCHAR(1) NOT NULL,
                 ADD CONSTRAINT scheduledretweets_uniquescheduledtweet UNIQUE (retweetinguserid,tweetid))");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS failedretweets (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS failedretweets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 retweetingusertwitterid BIGINT NOT NULL,
                 tweetid BIGINT NOT NULL,
@@ -47,7 +50,7 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS failedretweets (
                 errorcode INT NOT NULL,
                 failreason VARCHAR(255) NOT NULL)");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS tweets (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS tweets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tweetid BIGINT NOT NULL,
                 usertwitterid BIGINT NOT NULL,
@@ -56,7 +59,7 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS tweets (
                 deletedflag VARCHAR(1) NOT NULL DEFAULT 'N',
                 CONSTRAINT tweets_uniquetweetid UNIQUE (tweetid))");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS tweetmetrics (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS tweetmetrics (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 tweetstableid INT NOT NULL,
                 retrievedtime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -66,17 +69,17 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS tweetmetrics (
                 CONSTRAINT tweetmetrics_tweettableidconstraint FOREIGN KEY (tweetstableid) REFERENCES tweets(id),
                 CONSTRAINT tweetmetrics_uniquetweetmetric UNIQUE (tweetstableid,retrievalmetric))");
 
-$databaseConnection->query("ALTER TABLE tweetmetrics ADD FOREIGN KEY (retrievalmetric) 
+        CoreDB::$databaseConnection->query("ALTER TABLE tweetmetrics ADD FOREIGN KEY (retrievalmetric) 
         REFERENCES retrievalmetrics(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS retrievalmetrics (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS retrievalmetrics (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		description VARCHAR(255) NOT NULL,
                 CONSTRAINT retrievalmetrics_uniqueretrievalmetric UNIQUE (description))");
 
-$databaseConnection->prepare("INSERT INTO retrievalmetrics (description) VALUES (?)")->execute(["Latest Metrics"]);
+        CoreDB::$databaseConnection->prepare("INSERT INTO retrievalmetrics (description) VALUES (?)")->execute(["Latest Metrics"]);
 
-$databaseConnection->query("CREATE TABLE IF NOT EXISTS userautomationsettings (
+        CoreDB::$databaseConnection->query("CREATE TABLE IF NOT EXISTS userautomationsettings (
              id INTEGER PRIMARY KEY, 
              usertwitterid BIGINT NOT NULL, 
              automationenabled VARCHAR(1) NOT NULL, 
@@ -97,3 +100,6 @@ $databaseConnection->query("CREATE TABLE IF NOT EXISTS userautomationsettings (
              adaptivertthreshold INTEGER,
              metricsmeasurementtype VARCHAR(100) NOT NULL,
              CONSTRAINT uniquetwitterid UNIQUE (usertwitterid))");
+    }
+
+}
