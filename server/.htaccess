@@ -11,4 +11,4 @@ RewriteRule ^(.*)$ $1.php
 
 Options -Indexes
 
-DirectoryIndex main.php
+DirectoryIndex index.php

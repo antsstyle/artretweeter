@@ -15,7 +15,7 @@ class RemoveAccount {
 
         if ($request_method == "POST") {
             if (is_null($access_token) || is_null($access_token_secret) || is_null($userAuthTwitterID)) {
-                echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
+                echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Parameters are not set correctly.");
                 exit;
             }
 

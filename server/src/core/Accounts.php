@@ -8,7 +8,7 @@ class Accounts {
 
     public static function removeAccount($userAuth) {
         if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-            echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
+            echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Parameters are not set correctly.");
             exit;
         }
 
@@ -19,8 +19,10 @@ class Accounts {
 
     public static function commitAutomationSettings($userAuth) {
         $automationSettings = json_decode(str_replace("%20", " ", filter_input(INPUT_POST, 'automation_settings', FILTER_SANITIZE_URL)), true);
+        error_log("Automation settings");
+        error_log(print_r($automationSettings, true));
         if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id'] || !$automationSettings) {
-            echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
+            echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Parameters are not set correctly.");
             exit;
         }
 
@@ -31,7 +33,7 @@ class Accounts {
 
     public static function getAutomationSettings($userAuth) {
         if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$userAuth['twitter_id']) {
-            echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Parameters are not set correctly.");
+            echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Parameters are not set correctly.");
             exit;
         }
 

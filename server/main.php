@@ -1,11 +1,13 @@
 <?php
-require 'vendor/autoload.php';
+
+require __DIR__ . '/vendor/autoload.php';
+;
 
 use Antsstyle\ArtRetweeter\Core\Accounts;
 use Antsstyle\ArtRetweeter\Core\Collections;
 use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\OAuth;
-use Antsstyle\ArtRetweeter\Core\StatusCodes;
+use Antsstyle\ArtRetweeter\Core\StatusCode;
 use Antsstyle\ArtRetweeter\Core\Statuses;
 
 class Main {
@@ -24,12 +26,12 @@ class Main {
         $userAuth['access_token_secret'] = $access_token_secret;
 
         if ($request_method != "POST") {
-            echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Invalid request type.");
+            echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Invalid request type.");
             exit();
         }
 
         if (!$artretweeter_endpoint && !$twitter_endpoint) {
-            echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "No endpoint was specified.");
+            echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "No endpoint was specified.");
             exit();
         }
 
@@ -116,7 +118,12 @@ class Main {
                 Statuses::statusesLookup($userAuth);
                 break;
             case "statuses/show":
-                Statuses::statusesShow($userAuth);
+                $id = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
+                if (!$userAuth['access_token'] || !$userAuth['access_token_secret'] || !$id || !$userAuth['twitter_id']) {
+                    echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Parameters are not set correctly.");
+                    exit;
+                }
+                Statuses::statusesShow($userAuth, $id);
                 break;
             case "statuses/unretweet":
                 Statuses::statusesUnretweet($userAuth);
@@ -125,7 +132,7 @@ class Main {
                 Statuses::statusesUserTimeline($userAuth);
                 break;
             default:
-                echo Core::encodeStatusInformation(StatusCodes::INVALID_INPUT, "Invalid endpoint, or endpoint not supported.");
+                echo Core::encodeStatusInformation(StatusCode::INVALID_INPUT, "Invalid endpoint, or endpoint not supported.");
                 break;
         }
     }
