@@ -1,12 +1,46 @@
+function disableSaveButton() {
+    document.getElementById("savesettingsbutton").disabled = true;
+}
+
+function enableSaveButton() {
+    document.getElementById("savesettingsbutton").disabled = false;
+}
+
+function showDisableAutomationWarning(showWarning) {
+    let warningDiv = document.getElementById("autowarningdiv");
+    if (showWarning === "Y") {
+        warningDiv.classList.toggle('transition');
+    }
+}
+
 function selectAllHours(selectAll) {
     let checkboxes = document.getElementsByClassName("hourcheckbox");
     for (i = 0; i < checkboxes.length; i++) {
         checkboxes[i].checked = selectAll;
     }
     if (selectAll === false) {
+        disableSaveButton();
         document.getElementById("hourintervalserrormsg").innerHTML = "You must select at least one hour interval.";
     } else {
+        enableSaveButton();
         document.getElementById("hourintervalserrormsg").innerHTML = "&nbsp;";
+    }
+}
+
+function checkValidMediaSettings() {
+    let checkboxes = document.getElementsByClassName("mediacheckbox");
+    let noneChecked = true;
+    for (i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked === true) {
+            noneChecked = false;
+        }
+    }
+    if (noneChecked) {
+        disableSaveButton();
+        document.getElementById("mediasettingserrormsg").innerHTML = "You must select at least one media type.";
+    } else {
+        enableSaveButton();
+        document.getElementById("mediasettingserrormsg").innerHTML = "&nbsp;";
     }
 }
 
@@ -19,9 +53,11 @@ function checkValidDays() {
         }
     }
     if (noneChecked) {
+        disableSaveButton();
         document.getElementById("dayintervalserrormsg").innerHTML = "You must select at least one day.";
     } else {
-        document.getElementById("dayintervalserrormsg").innerHTML = "&nbsp;";
+        enableSaveButton();
+        document.getElementById("dayintervalserrormsg").innerHTML = "";
     }
 }
 
@@ -34,8 +70,10 @@ function checkValidHours() {
         }
     }
     if (noneChecked) {
+        disableSaveButton();
         document.getElementById("hourintervalserrormsg").innerHTML = "You must select at least one hour interval.";
     } else {
+        enableSaveButton();
         document.getElementById("hourintervalserrormsg").innerHTML = "&nbsp;";
     }
 }
@@ -49,8 +87,10 @@ function checkValidMinutes() {
         }
     }
     if (noneChecked) {
+        disableSaveButton();
         document.getElementById("minuteintervalserrormsg").innerHTML = "You must select at least one minute interval.";
     } else {
+        enableSaveButton();
         document.getElementById("minuteintervalserrormsg").innerHTML = "&nbsp;";
     }
 }
@@ -61,23 +101,28 @@ function checkValidIncludeText(elementID, checkboxID, errorElementID) {
     let string = text.toString();
     let strlen = string.length;
     if (strlen === 0 && enabled) {
+        disableSaveButton();
         document.getElementById(errorElementID).innerHTML = "This field can't be empty when enabling this feature.";
         return;
     }
     if (strlen > 50) {
+        disableSaveButton();
         document.getElementById(errorElementID).innerHTML = "The text must be less than 50 characters.";
         return;
     }
     let words = string.split(' ');
     for (i = 0; i < words.length; i++) {
         if (words[i].startsWith("#") && words[i].length < 4) {
+            disableSaveButton();
             document.getElementById(errorElementID).innerHTML = "Words must be 3 or more characters each (excluding hashtag symbol).";
             return;
         } else if (!words[i].startsWith("#") && words[i].length < 3) {
+            disableSaveButton();
             document.getElementById(errorElementID).innerHTML = "Words must be 3 or more characters each (excluding hashtag symbol).";
             return;
         }
     }
+    enableSaveButton();
     document.getElementById(errorElementID).innerHTML = "&nbsp;";
 }
 
@@ -85,13 +130,16 @@ function checkValidRetweetPercent(elementID, errorElementID) {
     let text = document.getElementById(elementID).value;
     let percentage = parseInt(text);
     if (isNaN(percentage)) {
+        disableSaveButton();
         document.getElementById(errorElementID).innerHTML = "Enter only numbers, no text.";
         return;
     }
     if (percentage < 20 || percentage > 75) {
+        disableSaveButton();
         document.getElementById(errorElementID).innerHTML = "You must enter a number between 20 and 75.";
         return;
     }
+    enableSaveButton();
     document.getElementById(errorElementID).innerHTML = "&nbsp;";
 }
 
@@ -154,15 +202,15 @@ function getUserAutomationSettings(id) {
                         document.getElementById("ignoreoldtweets").checked = false;
                     }
 
-                    let includedtextenabled = json.includedtextenabled;
-                    if (includedtextenabled === "Y") {
+                    let includetextenabled = json.includetextenabled;
+                    if (includetextenabled === "Y") {
                         document.getElementById("includetextenabled").checked = true;
                     } else {
                         document.getElementById("includetextenabled").checked = false;
                     }
 
-                    let excludedtextenabled = json.excludedtextenabled;
-                    if (excludedtextenabled === "Y") {
+                    let excludetextenabled = json.excludetextenabled;
+                    if (excludetextenabled === "Y") {
                         document.getElementById("excludetextenabled").checked = true;
                     } else {
                         document.getElementById("excludetextenabled").checked = false;
@@ -182,14 +230,14 @@ function getUserAutomationSettings(id) {
                         document.getElementById("excludetextoperation").checked = false;
                     }
 
-                    let includedtext = json.includedtext;
-                    if (includedtext !== null) {
-                        document.getElementById("includetext").value = includedtext;
+                    let includetext = json.includetext;
+                    if (includetext !== null) {
+                        document.getElementById("includetext").value = includetext;
                     }
 
-                    let excludedtext = json.excludedtext;
-                    if (excludedtext !== null) {
-                        document.getElementById("excludetext").value = excludedtext;
+                    let excludetext = json.excludetext;
+                    if (excludetext !== null) {
+                        document.getElementById("excludetext").value = excludetext;
                     }
 
                     let retweetpercent = json.retweetpercent;
@@ -205,6 +253,26 @@ function getUserAutomationSettings(id) {
                         document.getElementById("metricsmethod").value = "adaptive";
                     }
 
+                    let imagesenabled = json.imagesenabled;
+                    if (imagesenabled === "Y") {
+                        document.getElementById("imagesenabled").checked = true;
+                    } else {
+                        document.getElementById("imagesenabled").checked = false;
+                    }
+
+                    let gifsenabled = json.gifsenabled;
+                    if (gifsenabled === "Y") {
+                        document.getElementById("gifsenabled").checked = true;
+                    } else {
+                        document.getElementById("gifsenabled").checked = false;
+                    }
+
+                    let videosenabled = json.videosenabled;
+                    if (videosenabled === "Y") {
+                        document.getElementById("videosenabled").checked = true;
+                    } else {
+                        document.getElementById("videosenabled").checked = false;
+                    }
 
                     date = json.oldtweetcutoffdate;
                     let dbHourOffset = parseInt(json.timezonehouroffset);

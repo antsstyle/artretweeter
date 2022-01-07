@@ -34,6 +34,45 @@ body {
     content: "\2796"; /* Unicode character for "minus" sign (-) */
 }
 
+.collapsible:after {
+    content: '\02795'; /* Unicode character for "plus" sign (+) */
+    font-size: 13px;
+    color: white;
+    float: right;
+    margin-left: 5px;
+}
+
+.active:after {
+    content: "\2796"; /* Unicode character for "minus" sign (-) */
+}
+
+.collapsiblemenuitem {
+    background-color: #252525;
+    color: #c0c0c0;
+    font-size: 16px;
+    font-family: verdana;
+    cursor: pointer;
+    padding: 10px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+}
+
+.activemenuitem, .collapsiblemenuitem:hover {
+
+}
+
+.collapsiblemenuitem:after {
+    content: '\02795'; /* Unicode character for "plus" sign (+) */
+    float: right;
+    margin-left: 5px;
+}
+
+.activemenuitem:after {
+    content: "\2796"; /* Unicode character for "minus" sign (-) */
+}
+
 .content {
     padding: 0 10px;
     max-height: 0;
@@ -116,7 +155,7 @@ input[type=submit] {
 /* The sidebar menu */
 .sidenav {
     height: 100%; /* Full-height: remove this if you want "auto" height */
-    width: 160px; /* Set the width of the sidebar */
+    width: 240px; /* Set the width of the sidebar */
     position: fixed; /* Fixed Sidebar (stay in place on scroll) */
     z-index: 1; /* Stay on top */
     top: 0; /* Stay at the top */
@@ -142,7 +181,7 @@ input[type=submit] {
 
 /* Style page content */
 .main {
-    margin-left: 160px; /* Same as the width of the sidebar */
+    margin-left: 240px; /* Same as the width of the sidebar */
     padding: 0px 10px;
 }
 
@@ -150,13 +189,13 @@ input[type=submit] {
 @media screen and (max-width: 600px) {
     .sidenav {
         padding-top: 15px;
-        width: 100px;
+        width: 150px;
     }
     .sidenav a {
         font-size: 14px;
     }
     .main {
-        margin-left: 100px;
+        margin-left: 150px;
     }
 }
 
@@ -216,7 +255,7 @@ button.reschedulebutton {
 }
 
 button.deletequeueentrybutton {
-    
+
 }
 
 input[type=date].rescheduledate {
@@ -226,7 +265,7 @@ input[type=date].rescheduledate {
 }
 
 div.operationresult {
-    
+
 }
 
 div.rescheduleresultdiv {
@@ -246,4 +285,31 @@ div.retweettime {
     padding: 0;
     margin: 0;
     display: inline;
+}
+
+div.deleteresultdiv {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.deleteresultdiv.transition {
+    padding: 0;
+    height: 16px;
+    transition: all 0.3s linear;
+}
+
+div.disableautomationwarningdiv {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.disableautomationwarningdiv.transition {
+    padding: 0;
+    height: 16px;
+    transition: all 0.3s linear;
+    color: orangered;
 }

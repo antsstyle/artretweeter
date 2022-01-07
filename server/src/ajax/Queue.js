@@ -87,15 +87,16 @@ function deleteQueueEntry(id, userid) {
     xmlhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
             var json = this.responseText;
+            let resultDiv = document.getElementById("dresultdiv_".concat(id.toString()));
             if (json === "") {
-                alert("Invalid request ID. Try again.");
+                resultDiv.innerHTML = "Invalid request ID. Try again.";
             } else if (json === "false") {
-                alert("A database error occurred, try refreshing the page and trying again.");
+                resultDiv.innerHTML = "A database error occurred, try refreshing the page and trying again.";
             } else if (json === "0") {
-                alert("The entry was not found - nothing was deleted.");
+                resultDiv.innerHTML = "The entry was not found - nothing was deleted.";
             } else {
-                let queueDiv = document.getElementById(id);
-                queueDiv.innerHTML = "Queued entry deleted successfully.";
+                let entryDiv = document.getElementById(id);
+                entryDiv.innerHTML = "Queued entry deleted successfully.";
             }
         }
     };
@@ -131,20 +132,20 @@ function rescheduleQueueEntry(id, userid) {
     xmlhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
             var json = this.responseText;
-            let queueDiv = document.getElementById("rresultdiv_".concat(id.toString()));
+            let resultDiv = document.getElementById("rresultdiv_".concat(id.toString()));
             if (json === "Success") {
-                queueDiv.innerHTML = "Queued entry rescheduled successfully. Refresh the page if you want to see the updated queue order.";
+                resultDiv.innerHTML = "Queued entry rescheduled successfully. Refresh the page if you want to see the updated queue order.";
                 let rTimeDiv = document.getElementById("rtimediv_".concat(id.toString()));
                 rTimeDiv.innerHTML = time;
             } else if (json === "Database error") {
-                queueDiv.innerHTML = "A database error occurred, try refreshing the page and trying again.";
+                resultDiv.innerHTML = "A database error occurred, try refreshing the page and trying again.";
             } else if (json === "Record does not exist") {
-                queueDiv.innerHTML = "The entry was not found - could not reschedule.";
+                resultDiv.innerHTML = "The entry was not found - could not reschedule.";
             } else {
-                queueDiv.innerHTML = "Invalid request ID. Try again.";
+                resultDiv.innerHTML = "Invalid request ID. Try again.";
             }
-            if (!queueDiv.classList.contains('transition')) {
-                queueDiv.classList.add('transition');
+            if (!resultDiv.classList.contains('transition')) {
+                resultDiv.classList.add('transition');
             }
         }
     };

@@ -32,6 +32,14 @@ if ($userInfo === false) {
     header("Location: $errorURL", true, 302);
     exit();
 }
+
+$userAutomationSettings = Core::getAutomationSettings($_SESSION['usertwitterid']);
+$showWarning = "N";
+if (!is_null($userAutomationSettings) && $userAutomationSettings !== false) {
+    if ($userAutomationSettings['automationenabled'] === "Y") {
+        $showWarning = "Y";
+    }
+}
 ?>
 
 
@@ -56,8 +64,10 @@ if ($userInfo === false) {
             <form action="savesettings" method="post">
                 <h2>Automated Retweeting</h2>
                 <div class="formsection" style="max-width:600px;">
-                    <input type="checkbox" id="enableautomatedretweeting" name="enableautomatedretweeting" value="enable_automated_retweeting">
+                    <input type="checkbox" id="enableautomatedretweeting" name="enableautomatedretweeting" value="enable_automated_retweeting"
+                           onclick="showDisableAutomationWarning('<?php echo $showWarning; ?>')">
                     <label for="enableautomatedretweeting"> Enable automated retweeting </label><br/>
+                    <div class="disableautomationwarningdiv" id="autowarningdiv">Note: disabling automated retweeting will remove all currently queued retweets.</div>
                 </div>
                 <h3>Search Settings</h3>
                 <div class="formsection" style="max-width:600px;">
@@ -118,12 +128,24 @@ if ($userInfo === false) {
                         </select>
                     </div>
                 </div>
-                <br/><br/>
-                <h3>Day and Time Settings</h3>
-                <div id="dayintervalserrormsg" class="errormsg">
-                    &nbsp;
+                <h3>Media Settings</h3>
+                By default, ArtRetweeter will only consider your tweets which have images in them for retweeting. If you want it to consider tweets 
+                which contain videos or GIFs (and/or exclude tweets with images), you can change that here.
+                <div id="mediasettingserrormsg" class="errormsg">&nbsp;</div>
+                <div class="formsection" style="max-width:600px;">
+                    <input type="checkbox" id="imagesenabled" name="imagesenabled" value="images_enabled" checked="checked" 
+                           class="mediacheckbox" onclick="checkValidMediaSettings()">   
+                    <label for="imagesenabled"> Image tweets </label>
+                    <input type="checkbox" id="gifsenabled" name="gifsenabled" value="gifs_enabled" 
+                           class="mediacheckbox" onclick="checkValidMediaSettings()">   
+                    <label for="gifsenabled"> GIF tweets </label>
+                    <input type="checkbox" id="videosenabled" name="videosenabled" value="videos_enabled" 
+                           class="mediacheckbox" onclick="checkValidMediaSettings()">   
+                    <label for="videosenabled"> Video tweets </label>
                 </div>
+                <h3>Day and Time Settings</h3>
                 <h4>Day Settings</h4>
+                <div id="dayintervalserrormsg" class="errormsg"></div>
                 <div class="formsection" style="max-width:600px;">
                     <input type="checkbox" id="mondayenabled" name="mondayenabled" value="monday_enabled" checked="checked" 
                            class="daycheckbox" onclick="checkValidDays()">
@@ -266,28 +288,13 @@ if ($userInfo === false) {
                 <br/><br/>
                 <div class="container">
                     <div class="center">
-                        <input type="submit" value="Save Settings">
+                        <input type="submit" id="savesettingsbutton" value="Save Settings">
                     </div>
                 </div>
 
             </form>
         </p>
     </div>
-    <script>
-        var coll = document.getElementsByClassName("collapsible");
-        var i;
-
-        for (i = 0; i < coll.length; i++) {
-            coll[i].addEventListener("click", function () {
-                this.classList.toggle("active");
-                var content = this.nextElementSibling;
-                if (content.style.maxHeight) {
-                    content.style.maxHeight = null;
-                } else {
-                    content.style.maxHeight = content.scrollHeight + "px";
-                }
-            });
-        }
-    </script>
+    <script src="src/ajax/Collapsibles.js"></script>
 </body>
 </html>

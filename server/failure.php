@@ -19,4 +19,5 @@ use Antsstyle\ArtRetweeter\Core\Core;
             <a href="https://twitter.com/antsstyle">@antsstyle</a> if the problem persists.
         </div>
     </body>
+    <script src="src/ajax/Collapsibles.js"></script>
 </html>

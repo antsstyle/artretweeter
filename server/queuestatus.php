@@ -52,7 +52,9 @@ if ($userInfo !== false && $userInfo !== null) {
                 . "Go back to the homepage to try"
                 . " again, or contact <a href=$adminURL>$adminName</a> on Twitter if the problem persists.";
             } else if ($queuedRetweets === null) {
-                echo "You do not currently have any tweets scheduled for retweeting.";
+                echo "You do not currently have any tweets scheduled for retweeting."
+                . "<br/><br/>If you have just enabled automated retweeting for the first time, it usually takes 15-30 minutes for ArtRetweeter to"
+                . " queue retweets for your account; check this page again later.";
             } else if ($queuedRetweets === false || count($queuedRetweets) === 0) {
                 echo "A database error occurred whilst attempting to load your queued retweets.<br/><br/>"
                 . "Go back to the homepage to try"
@@ -109,7 +111,8 @@ if ($userInfo !== false && $userInfo !== null) {
                             . "<button type=\"button\" class=\"deletequeueentrybutton_confirm\" id=\"deleteconfirm_$scheduledID\" "
                             . "onclick=\"deleteQueueEntry('$scheduledID', '$userTwitterID')\">Yes</button>"
                             . "<button type=\"button\" class=\"deletequeueentrybutton_cancel\" id=\"deletecancel_$scheduledID\" "
-                            . "onclick=\"toggleDeleteVisibility('$scheduledID')\">No</button>";
+                            . "onclick=\"toggleDeleteVisibility('$scheduledID')\">No</button>"
+                            . "<div class=\"deleteresultdiv\" id=\"dresultdiv_$scheduledID\"></div>";
                     $echoStr .= "</div></div><br/>";
                     echo $echoStr;
                 }
@@ -117,4 +120,5 @@ if ($userInfo !== false && $userInfo !== null) {
             ?>
         </div>
     </body>
+    <script src="src/ajax/Collapsibles.js"></script>
 </html>

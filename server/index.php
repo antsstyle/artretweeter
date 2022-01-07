@@ -1,7 +1,8 @@
 <?php
-require __DIR__ . '/vendor/autoload.php';;
+require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Abraham\TwitterOAuth\TwitterOAuth;
@@ -36,6 +37,11 @@ try {
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@antsstyle" />
+        <meta name="twitter:title" content="ArtRetweeter, an auto-retweeting app for artists" />
+        <meta name="twitter:description" content="ArtRetweeter can automatically retweet your art for you, without the need to schedule retweets manually." />
+        <meta name="twitter:image" content="<?php echo Config::CARD_IMAGE_URL; ?>" />
     </head>
     <title>
         ArtRetweeter
@@ -45,7 +51,8 @@ try {
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             <p>
-                This app can automatically retweet your art posts, based on specific criteria or filters.
+                This app can automatically retweet your art posts, based on specific criteria or filters. You don't have to schedule retweets manually - 
+                given some parameters to decide how it should retweet, it will do that for you.
             </p>
             <p>
                 Once you sign in, you will be taken to the settings page where you can decide what conditions to set. 
@@ -65,14 +72,16 @@ try {
                 <h3>How does this app know which of my posts are art and which aren't?</h3>
                 <p>
                     It can't know with 100% certainty - but it gets it right the vast majority of the time. It automatically filters out tweets
-                    with the following criteria:<br/><br/>
+                    with the following criteria:<br/>
                 <ul>
                     <li>
                         Tweets which are replies to other tweets (unless the tweet is you replying to yourself), e.g. reaction GIFs posted to friends
                     </li>
+                    <br/>
                     <li>
-                        Tweets that don't contain images, e.g. text tweets or tweets with GIFs/videos in them
+                        Tweets that don't contain images, or that don't contain media types you want to retweet (this is customisable in the options)
                     </li>
+                    <br/>
                     <li>
                         Tweets that are below a certain threshold of retweets (this is calculated dynamically according to your average retweets, and is 
                         scaled down - as such, it won't miss low-engagement art posts, but it will miss e.g. food pics or other image-containing tweets 
@@ -86,21 +95,6 @@ try {
                 </p>
             </div>
         </div>
-        <script>
-            var coll = document.getElementsByClassName("collapsible");
-            var i;
-
-            for (i = 0; i < coll.length; i++) {
-                coll[i].addEventListener("click", function () {
-                    this.classList.toggle("active");
-                    var content = this.nextElementSibling;
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + "px";
-                    }
-                });
-            }
-        </script>
     </body>
+    <script src="src/ajax/Collapsibles.js"></script>
 </html>

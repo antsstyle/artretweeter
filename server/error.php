@@ -30,4 +30,5 @@ $errorMessage = filter_input(INPUT_POST, "errormsg", FILTER_SANITIZE_STRING);
             ?>
         </div>
     </body>
+    <script src="src/ajax/Collapsibles.js"></script>
 </html>

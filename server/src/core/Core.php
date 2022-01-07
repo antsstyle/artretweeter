@@ -48,10 +48,26 @@ class Core {
     }
 
     public static function echoSidebar() {
-        echo "<div class = \"sidenav\"><a href=\"" . Config::HOMEPAGE_URL . "\">Home</a>"
-        . "<a href=\"" . Config::SETTINGSPAGE_URL . "\">Settings</a>"
-        . "<a href=\"" . Config::QUEUESTATUS_URL . "\">Queue Status</a>"
-        . "</div>";
+        echo "<div class=\"sidenav\">
+                <button class=\"collapsiblemenuitem\" id=\"mainmenu\"><b>Home</b></button>
+                <div class=\"content\">
+                    <a href=\"https://antsstyle.com/\">About</a>
+                    <a href=\"https://antsstyle.com/apps\">Apps</a>
+                </div>
+                <br/>
+                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu\"><b>ArtRetweeter</b></button>
+                <div class=\"content\" style=\"max-height: 100%\">
+                    <a href=\"https://antsstyle.com/artretweeter\">Home</a>
+                    <a href=\"https://antsstyle.com/artretweeter/settings\">Settings</a>
+                    <a href=\"https://antsstyle.com/artretweeter/queuestatus\">Queue Status</a>
+                </div>
+                <br/>
+                <button class=\"collapsiblemenuitem\" id=\"nftcryptoblockermenu\"><b>NFT Artist & Cryptobro Blocker</b></button>
+                <div class=\"content\">
+                    <a href=\"https://antsstyle.com/nftcryptoblocker/\">Home</a>
+                    <a href=\"https://antsstyle.com/nftcryptoblocker/settings\">Settings</a>
+                </div>
+            </div>";
     }
 
     public static function convertServerTimeStringToUserTime($timeString, $userHourOffset, $userMinuteOffset) {
@@ -684,7 +700,7 @@ class Core {
         return $results;
     }
 
-    public static function insertTweetsAndMetrics($tweets, $userTwitterID) {
+    public static function insertTweetsAndMetrics($tweets, $userTwitterID, $imagesEnabled = "Y", $gifsEnabled = "N", $videosEnabled = "N") {
         $selectQuery = "SELECT id FROM retrievalmetrics WHERE description=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute(["Latest Metrics"]);
@@ -719,7 +735,14 @@ class Core {
             if (!$tweet->extended_entities->media) {
                 continue;
             }
-            if ($tweet->extended_entities->media[0]->type != "photo") {
+            $mediaType = $tweet->extended_entities->media[0]->type;
+            if ($mediaType === "photo" && $imagesEnabled !== "Y") {
+                continue;
+            }
+            if ($mediaType === "animated_gif" && $gifsEnabled !== "Y") {
+                continue;
+            }
+            if ($mediaType === "video" && $videosEnabled !== "Y") {
                 continue;
             }
             if ($tweet->retweeted_status) {
@@ -745,10 +768,10 @@ class Core {
             }
             $tweetJson = json_encode($tweet);
             try {
-                $stmt = CoreDB::$databaseConnection->prepare("INSERT IGNORE INTO tweets
-            (tweetid,usertwitterid,createdat,fulltweettext,tweetjson) 
-	VALUES (?,?,?,?,?)");
-                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $tweet->full_text, $tweetJson]);
+                $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweets
+            (tweetid,usertwitterid,createdat,fulltweettext,tweetjson,mediatype) 
+	VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE fulltweettext=?");
+                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $tweet->full_text, $tweetJson, $mediaType, $tweet->full_text]);
             } catch (\PDOException $e) {
                 error_log("Failed to insert tweet: $e");
             }
@@ -801,39 +824,6 @@ class Core {
         return $returnArray;
     }
 
-    public static function getTweetMetrics() {
-        $selectQuery = "SELECT * FROM userautomationsettings WHERE automationenabled=?";
-        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
-        $success = $selectStmt->execute(["Y"]);
-        if (!$success) {
-            error_log("Failed to get users to retrieve tweets for, cannot continue.");
-            return;
-        }
-        $params['count'] = 200;
-        $params['include_rts'] = "false";
-        $params['trim_user'] = "true";
-        $params['tweet_mode'] = "extended";
-        while ($row = $selectStmt->fetch()) {
-            $params['user_id'] = $row['twitterid'];
-            $userAuth['twitter_id'] = $row['twitterid'];
-            $userAuth['access_token'] = $row['accesstoken'];
-            $userAuth['access_token_secret'] = $row['accesstokensecret'];
-            if ($row['oldtweetlimitretrieved']) {
-                $params['since_id'] = $row['sinceid'];
-                unset($params['max_id']);
-            } else {
-                $params['max_id'] = $row['maxid'];
-                unset($params['since_id']);
-            }
-            $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
-                    $row['accesstoken'], $row['accesstokensecret']);
-            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
-            if ($connection->getLastHttpCode() == 200) {
-                Core::insertTweetsAndMetrics($results, $userAuth['twitter_id']);
-            }
-        }
-    }
-
     public static function scheduleAutomatedRetweets() {
         $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
                 . "WHERE automationenabled=?";
@@ -865,25 +855,25 @@ class Core {
         }
     }
 
-    public static function getAllNewTweetsForUser($row) {
+    public static function getAllNewTweetsForUser($userRow) {
         $params['count'] = 200;
-        $params['user_id'] = $row['usertwitterid'];
+        $params['user_id'] = $userRow['usertwitterid'];
         $params['include_rts'] = "false";
         $params['trim_user'] = "true";
         $params['tweet_mode'] = "extended";
         $resultCount = 1;
         $queryCount = 0;
         $reachedEnd = false;
-        $userAuth['twitter_id'] = $row['usertwitterid'];
-        $userAuth['access_token'] = $row['accesstoken'];
-        $userAuth['access_token_secret'] = $row['accesstokensecret'];
-        if ($row['oldtweetlimitretrieved'] == "Y") {
-            if ($row['sinceid'] != null) {
-                $params['since_id'] = $row['sinceid'];
+        $userAuth['twitter_id'] = $userRow['usertwitterid'];
+        $userAuth['access_token'] = $userRow['accesstoken'];
+        $userAuth['access_token_secret'] = $userRow['accesstokensecret'];
+        if ($userRow['oldtweetlimitretrieved'] == "Y") {
+            if ($userRow['sinceid'] != null) {
+                $params['since_id'] = $userRow['sinceid'];
             }
         } else {
-            if ($row['maxid'] != null) {
-                $params['max_id'] = $row['maxid'];
+            if ($userRow['maxid'] != null) {
+                $params['max_id'] = $userRow['maxid'];
             }
         }
         $reachedEnd = false;
@@ -898,7 +888,8 @@ class Core {
                     error_log("Reached end.");
                     $reachedEnd = true;
                 } else {
-                    $returnArray = Core::insertTweetsAndMetrics($results, $userAuth['twitter_id']);
+                    $returnArray = Core::insertTweetsAndMetrics($results, $userRow['usertwitterid'], $userRow['imagesenabled'],
+                                    $userRow['gifsenabled'], $userRow['videosenabled']);
                     if (!$returnArray) {
                         error_log("Empty or nonexistent return array - breaking loop.");
                         break;
@@ -907,7 +898,7 @@ class Core {
                         error_log("No more valid results, breaking loop.");
                         break;
                     }
-                    if ($row['oldtweetlimitretrieved'] == "N") {
+                    if ($userRow['oldtweetlimitretrieved'] == "N") {
                         $params['max_id'] = $returnArray['lowestid'] - 1;
                     } else {
                         $params['since_id'] = $returnArray['highestid'];
@@ -1091,22 +1082,37 @@ class Core {
         } else {
             $retweetPercent = $aS['retweetpercent'];
         }
-        $query = "INSERT INTO userautomationsettings (usertwitterid,automationenabled,dayflags,hourflags,minuteflags,includedtext,excludedtext"
-                . ",retweetpercent,oldtweetcutoffdate,oldtweetcutoffdateenabled,includedtextenabled,excludedtextenabled,timezonehouroffset,"
-                . "timezoneminuteoffset,includetextcondition,excludetextcondition,metricsmeasurementtype) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-                . "ON DUPLICATE KEY UPDATE automationenabled=?, dayflags=?, hourflags=?, minuteflags=?, includedtext=?, excludedtext=?, retweetpercent=?,"
-                . "oldtweetcutoffdate=?, oldtweetcutoffdateenabled=?, includedtextenabled=?, excludedtextenabled=?, timezonehouroffset=?, "
-                . "timezoneminuteoffset=?, includetextcondition=?, excludetextcondition=?, metricsmeasurementtype=?";
+        /**
+         * TEMPORARY: Remove when Java client is retired
+         */
+        if (!isset($aS['imagesenabled'])) {
+            $aS['imagesenabled'] = "Y";
+        }
+        if (!isset($aS['gifsenabled'])) {
+            $aS['gifsenabled'] = "N";
+        }
+        if (!isset($aS['videosenabled'])) {
+            $aS['videosenabled'] = "N";
+        }
+        $query = "INSERT INTO userautomationsettings (usertwitterid,automationenabled,dayflags,hourflags,minuteflags,includetext,excludetext"
+                . ",retweetpercent,oldtweetcutoffdate,oldtweetcutoffdateenabled,includetextenabled,excludetextenabled,timezonehouroffset,"
+                . "timezoneminuteoffset,includetextcondition,excludetextcondition,metricsmeasurementtype,imagesenabled,gifsenabled,videosenabled) "
+                . "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                . "ON DUPLICATE KEY UPDATE automationenabled=?, dayflags=?, hourflags=?, minuteflags=?, includetext=?, excludetext=?, retweetpercent=?,"
+                . "oldtweetcutoffdate=?, oldtweetcutoffdateenabled=?, includetextenabled=?, excludetextenabled=?, timezonehouroffset=?, "
+                . "timezoneminuteoffset=?, includetextcondition=?, excludetextcondition=?, metricsmeasurementtype=?, imagesenabled=?, gifsenabled=?, "
+                . "videosenabled=?";
         $stmt = CoreDB::$databaseConnection->prepare($query);
         try {
             $success = $stmt->execute([$aS['usertwitterid'], $aS['automationenabled'],
-                $aS['dayflags'], $hourFlags, $minuteFlags, $aS['includedtext'], $aS['excludedtext'],
+                $aS['dayflags'], $hourFlags, $minuteFlags, $aS['includetext'], $aS['excludetext'],
                 $retweetPercent, $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
-                $aS['includedtextenabled'], $aS['excludedtextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
-                $aS['excludetextcondition'], $aS['metricsmeasurementtype'], $aS['automationenabled'], $aS['dayflags'], $hourFlags, $minuteFlags,
-                $aS['includedtext'], $aS['excludedtext'], $retweetPercent, $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
-                $aS['includedtextenabled'], $aS['excludedtextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
-                $aS['excludetextcondition'], $aS['metricsmeasurementtype']]);
+                $aS['includetextenabled'], $aS['excludetextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
+                $aS['excludetextcondition'], $aS['metricsmeasurementtype'], $aS['imagesenabled'], $aS['gifsenabled'], $aS['videosenabled'],
+                $aS['automationenabled'], $aS['dayflags'], $hourFlags, $minuteFlags, $aS['includetext'], $aS['excludetext'], $retweetPercent,
+                $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'], $aS['includetextenabled'], $aS['excludetextenabled'], $userTimeZoneHour,
+                $userTimeZoneMinute, $aS['includetextcondition'], $aS['excludetextcondition'], $aS['metricsmeasurementtype'],
+                $aS['imagesenabled'], $aS['gifsenabled'], $aS['videosenabled']]);
             error_log("Automation enabled:");
             error_log($aS['automationenabled']);
             error_log("Automation was disabled: $automationWasDisabled");
@@ -1161,10 +1167,12 @@ class Core {
             return;
         }
         $lastScheduleServerDate = $settingsRow['lastscheduleserverdate'];
-        $lastScheduleServerDate = strtotime($lastScheduleServerDate);
-        $yesterday = strtotime("-1 day +15 minutes");
-        if ($lastScheduleServerDate > $yesterday) {
-            return;
+        if (!is_null($lastScheduleServerDate)) {
+            $lastScheduleServerDate = strtotime($lastScheduleServerDate);
+            $yesterday = strtotime("-1 day +15 minutes");
+            if ($lastScheduleServerDate > $yesterday) {
+                return;
+            }
         }
         $dayFlags = $settingsRow['dayflags'];
         $hourFlags = $settingsRow['hourflags'];
@@ -1186,22 +1194,25 @@ class Core {
             $selectMeanStatsQuery .= " AND createdat >= ?";
             $selectMeanStatsParams[] = $settingsRow['oldtweetscutoffdate'];
         }
-        if ($settingsRow['includedtextenabled'] == 'Y') {
-            if ($settingsRow['includedtextcondition'] == "This exact phrase") {
+        if ($settingsRow['includetextenabled'] === 'Y') {
+            if ($settingsRow['includetextcondition'] === "This exact phrase") {
                 $selectMeanStatsQuery .= " AND fulltweettext LIKE ?";
                 $selectMeanStatsParams[] = "%" . $settingsRow['includedText'] . "%";
             } else {
-                $includedWords = explode(" ", $settingsRow['includedtext']);
+                $includedWords = explode(" ", $settingsRow['includetext']);
                 $selectMeanStatsQuery .= " AND (";
                 foreach ($includedWords as $includedWord) {
-                    if ($settingsRow['includedtextcondition'] == "All of these words") {
+                    if ($includedWord == "") {
+                        continue;
+                    }
+                    if ($settingsRow['includetextcondition'] == "All of these words") {
                         $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
                     } else {
                         $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
                     }
                     $selectMeanStatsParams[] = "%" . $includedWord . "%";
                 }
-                if ($settingsRow['includedtextcondition'] == "All of these words") {
+                if ($settingsRow['includetextcondition'] == "All of these words") {
                     $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
                 } else {
                     $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
@@ -1209,22 +1220,25 @@ class Core {
                 $selectMeanStatsQuery .= ")";
             }
         }
-        if ($settingsRow['excludedtextenabled'] == 'Y') {
-            if ($settingsRow['excludedtextcondition'] == "This exact phrase") {
+        if ($settingsRow['excludetextenabled'] == 'Y') {
+            if ($settingsRow['excludetextcondition'] === "This exact phrase") {
                 $selectMeanStatsQuery .= " AND fulltweettext NOT LIKE ?";
                 $selectMeanStatsParams[] = "%" . $settingsRow['excludedText'] . "%";
             } else {
-                $excludedWords = explode(" ", $settingsRow['excludedtext']);
+                $excludedWords = explode(" ", $settingsRow['excludetext']);
                 $selectMeanStatsQuery .= " AND (";
                 foreach ($excludedWords as $excludedWord) {
-                    if ($settingsRow['excludedtextcondition'] == "All of these words") {
+                    if ($excludedWord == "") {
+                        continue;
+                    }
+                    if ($settingsRow['excludetextcondition'] === "All of these words") {
                         $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? AND ";
                     } else {
                         $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? OR ";
                     }
                     $selectMeanStatsParams[] = "%" . $excludedWord . "%";
                 }
-                if ($settingsRow['excludedtextcondition'] == "All of these words") {
+                if ($settingsRow['excludetextcondition'] === "All of these words") {
                     $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
                 } else {
                     $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
@@ -1232,7 +1246,7 @@ class Core {
                 $selectMeanStatsQuery .= ")";
             }
         }
-        if ($settingsRow['blockedhandlesenabled'] == 'Y') {
+        if ($settingsRow['blockedhandlesenabled'] === 'Y') {
             $blockedHandlesStmt = CoreDB::$databaseConnection->prepare("SELECT * FROM userblockedhandles WHERE usertwitterid=?");
             $success = $blockedHandlesStmt->execute([$userAuth['twitter_id']]);
             if (!$success) {
@@ -1253,7 +1267,6 @@ class Core {
         }
 
         $selectMeanStatsStmt = CoreDB::$databaseConnection->prepare($selectMeanStatsQuery);
-        //error_log($selectMeanStatsQuery);
         $success = $selectMeanStatsStmt->execute($selectMeanStatsParams);
         if (!$success) {
             error_log("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
@@ -1304,6 +1317,10 @@ class Core {
         $selectMeanStatsParams[] = $userAuth['twitter_id'];
         $selectMeanStatsParams[] = $oneYearAgo;
         $selectMeanStatsParams[] = 2;
+        if ($userAuth['twitter_id'] == 2248634958) {
+            error_log("AUTO QUERY: $selectTweetsQuery");
+            error_log(print_r($selectMeanStatsParams, true));
+        }
         $selectTweetsStmt = CoreDB::$databaseConnection->prepare($selectTweetsQuery);
         //error_log("Select tweets query: $selectTweetsQuery");
         $success = $selectTweetsStmt->execute($selectMeanStatsParams);

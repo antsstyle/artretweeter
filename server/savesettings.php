@@ -164,6 +164,37 @@ function saveAutomationSettings($userTwitterID) {
         return "Invalid metrics method setting.";
     }
 
+    $imagesEnabled = filter_input(INPUT_POST, "imagesenabled", FILTER_SANITIZE_STRING);
+    if (is_null($imagesEnabled)) {
+        $imagesEnabled = "N";
+    } else if ($imagesEnabled === "images_enabled") {
+        $imagesEnabled = "Y";
+    } else {
+        error_log("Invalid images enabled setting.");
+        return "Invalid images enabled setting.";
+    }
+
+    $gifsEnabled = filter_input(INPUT_POST, "gifsenabled", FILTER_SANITIZE_STRING);
+    if (is_null($gifsEnabled)) {
+        $gifsEnabled = "N";
+    } else if ($gifsEnabled === "gifs_enabled") {
+        $gifsEnabled = "Y";
+    } else {
+        error_log("Invalid gifs enabled setting.");
+        return "Invalid gifs enabled setting.";
+    }
+
+    $videosEnabled = filter_input(INPUT_POST, "videosenabled", FILTER_SANITIZE_STRING);
+    if (is_null($videosEnabled)) {
+        $videosEnabled = "N";
+    } else if ($videosEnabled === "videos_enabled") {
+        $videosEnabled = "Y";
+    } else {
+        error_log("Invalid videos enabled setting.");
+        return "Invalid videos enabled setting.";
+    }
+
+
     $dayFlags = "";
 
     $mondayEnabled = filter_input(INPUT_POST, "mondayenabled", FILTER_SANITIZE_STRING);
@@ -353,18 +384,21 @@ function saveAutomationSettings($userTwitterID) {
     $aS['dayflags'] = $dayFlags;
     $aS['automationenabled'] = $enableAutomation;
     $aS['usertwitterid'] = $userTwitterID;
-    $aS['includedtextenabled'] = $includeTextEnabled;
-    $aS['excludedtextenabled'] = $excludeTextEnabled;
+    $aS['includetextenabled'] = $includeTextEnabled;
+    $aS['excludetextenabled'] = $excludeTextEnabled;
     $aS['includetextcondition'] = $includeTextOperation;
     $aS['excludetextcondition'] = $excludeTextOperation;
-    $aS['includedtext'] = $includeText;
-    $aS['excludedtext'] = $excludeText;
+    $aS['includetext'] = $includeText;
+    $aS['excludetext'] = $excludeText;
     $aS['oldtweetcutoffdateenabled'] = $ignoreOldTweets;
     $aS['oldtweetcutoffdate'] = $ignoreOldTweetsDate;
     $aS['timezonehouroffset'] = $hourOffset;
     $aS['timezoneminuteoffset'] = $minuteOffset;
     $aS['metricsmeasurementtype'] = $metricsMethod;
     $aS['retweetpercent'] = $metricsPercent;
+    $aS['imagesenabled'] = $imagesEnabled;
+    $aS['gifsenabled'] = $gifsEnabled;
+    $aS['videosenabled'] = $videosEnabled;
 
     $automationSavedSuccess = Core::commitAutomationSettingsInDB($aS, false);
     return $automationSavedSuccess;
@@ -400,4 +434,5 @@ $result = saveAutomationSettings($userTwitterID);
             ?>
         </div>
     </body>
+    <script src="src/ajax/Collapsibles.js"></script>
 </html>
