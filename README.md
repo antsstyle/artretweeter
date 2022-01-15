@@ -1,11 +1,9 @@
 # ArtRetweeter
 A tool for artists to use, focused on enabling automatically scheduled retweets of your art (or manually scheduled if you prefer), and allowing use of the Twitter Collections feature.
 
-## Downloading and using ArtRetweeter
+## Using ArtRetweeter
 
-If you're using 64-bit Windows, you can download the "with-Java-for-Win64" zip from the latest release (see the right side of this page for the releases tab). Simply unzip and run the EXE.
-
-If you're using another operating system, download the zip without Java bundled, unzip it and run the jar file. You will need to install Java before you can run it (https://jdk.java.net/)
+You can use ArtRetweeter here: https://antsstyle.com/artretweeter/
 
 ## What are Twitter Collections?
 
