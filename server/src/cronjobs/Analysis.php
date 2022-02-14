@@ -2,6 +2,8 @@
 
 namespace Antsstyle\ArtRetweeter\Cronjobs;
 
+set_time_limit(0);
+
 chdir(dirname(__DIR__, 2));
 
 $dir = getcwd();

@@ -41,7 +41,9 @@ if ($userInfo !== false && $userInfo !== null) {
         <div class="main">
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
-            <h2>Retweet Queue</h2>
+            <h2>Artist Retweet Queue</h2>
+            <b>This page shows your queued retweets for your own account. If you want to see your queued retweets for other accounts, 
+                go to the <a href=<?php echo Config::NONARTISTQUEUESTATUS_URL ?>>Non-Artists Queue Status</a> page.</b><br/><br/>
             <?php
             if ($userInfo === false) {
                 echo "A database error occurred whilst attempting to load your queued retweets.<br/><br/>"

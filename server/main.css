@@ -81,6 +81,10 @@ body {
     transition: max-height 0.2s ease-out;
 }
 
+div.subtitle {
+    text-align: center;
+}
+
 div.start {
 
 }
@@ -312,4 +316,23 @@ div.disableautomationwarningdiv.transition {
     height: 16px;
     transition: all 0.3s linear;
     color: orangered;
+}
+
+
+.dblisttable {
+    padding: 5px;
+    font-size: 12px;
+}
+
+tr {
+    border: 1px solid blue;
+}
+
+td {
+    border: 1px solid blue;
+    padding: 5px;
+}
+
+th {
+    border: 1px solid blue;
 }

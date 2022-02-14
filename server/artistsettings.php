@@ -56,12 +56,17 @@ if (!is_null($userAutomationSettings) && $userAutomationSettings !== false) {
         <div class="main">
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
+            <div class="subtitle">
+                <h2>Artist Settings</h2> 
+            </div>
+
             <div class="start">
-                Twitter authentication successful. Choose the settings you want below and press the 'Save Settings' button at the bottom of the page
-                (if you already have saved settings, they will be preselected).
+                <b>This page shows your settings for retweeting yourself. If you want to change your settings for retweeting other artists, go to the 
+                    <a href=<?php echo Config::ARTISTSETTINGSPAGE_URL ?>>Artist Settings</a> page.</b>
+                <br/><br/>
             </div>
             <p>
-            <form action="savesettings" method="post">
+            <form action="saveartistsettings" method="post">
                 <h2>Automated Retweeting</h2>
                 <div class="formsection" style="max-width:600px;">
                     <input type="checkbox" id="enableautomatedretweeting" name="enableautomatedretweeting" value="enable_automated_retweeting"
@@ -106,15 +111,12 @@ if (!is_null($userAutomationSettings) && $userAutomationSettings !== false) {
                     <button type="button" class="collapsible">Metrics Options (hidden by default, click to show)</button>
                     <div class="content" style="width:100%;">
                         <p style="width:90%;">
-                            It is highly recommended that you enable the metrics options below, as they are the primary way to ensure 
+                            The metrics options below are the primary way to ensure 
                             ArtRetweeter will not select non-art image tweets (e.g pictures of gacha rolls, food, selfies...) to retweet.
                             <br/><br/>
                             For most users, it is easiest to stick with the "Adaptive" option. Note that the "Adaptive" option doesn't make use of the 
                             retweet percentage you give - that's only applicable to the "Mean Average" option.
                         </p>
-                        <input type="checkbox" id="excludetweetsmetrics" name="excludetweetsmetrics" value="exclude_tweets_metrics"
-                               checked="checked">
-                        <label for="excludetweetsmetrics"> Exclude tweets in the bottom % of your tweet engagement (20-75%) </label><br/>
                         <div id="metricspercenterrormsg" class="errormsg">
                             &nbsp;
                         </div>

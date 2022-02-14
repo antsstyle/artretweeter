@@ -2,6 +2,7 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\Config;
 ?>
 <html>
     <head>
@@ -16,7 +17,7 @@ use Antsstyle\ArtRetweeter\Core\Core;
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             Something went wrong authenticating your account via Twitter. <br/><br/>Please try again or contact 
-            <a href="https://twitter.com/antsstyle">@antsstyle</a> if the problem persists.
+            <a href="<?php echo Config::ADMIN_URL; ?>"><?php echo Config::ADMIN_NAME;?></a> if the problem persists.
         </div>
     </body>
     <script src="src/ajax/Collapsibles.js"></script>

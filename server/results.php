@@ -18,6 +18,12 @@ if (!$_SESSION['oauth_token']) {
     exit();
 }
 
+if ($_SESSION['usertwitterid']) {
+    $location = Config::HOMEPAGE_URL . "loginsuccess";
+    header("Location: $location", true, 302);
+    exit();
+}
+
 $request_token = [];
 $request_token['oauth_token'] = $_SESSION['oauth_token'];
 $request_token['oauth_token_secret'] = $_SESSION['oauth_token_secret'];
@@ -43,15 +49,19 @@ try {
     exit();
 }
 
+$artistSettingsPageURL = Config::ARTISTSETTINGSPAGE_URL;
+$nonArtistSettingsPageURL = Config::NONARTISTSETTINGSPAGE_URL;
+
 if (isset($access_token)) {
     $success = CoreDB::insertUserInformation($access_token);
     if ($success) {
         $_SESSION['usertwitterid'] = $access_token['user_id'];
-        $location = Config::SETTINGSPAGE_URL;
+        $location = Config::HOMEPAGE_URL . "loginsuccess";
         header("Location: $location", true, 302);
     } else {
         $location = Config::HOMEPAGE_URL . "failure";
         header("Location: $location", true, 302);
+        exit();
     }
 }
 

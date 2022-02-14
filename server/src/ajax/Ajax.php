@@ -30,6 +30,14 @@ class Ajax {
 
 
         switch ($request) {
+            case "usernonartistautomationsettings":
+                $automationSettings = Core::getNonArtistAutomationSettings($userTwitterID);
+                if (!$automationSettings) {
+                    echo "";
+                } else {
+                    echo json_encode($automationSettings);
+                }
+                break;
             case "userautomationsettings":
                 $automationSettings = Core::getAutomationSettings($userTwitterID);
                 if (!$automationSettings) {

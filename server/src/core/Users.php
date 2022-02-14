@@ -4,10 +4,13 @@ namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Abraham\TwitterOAuth\TwitterOAuth;
 
 class Users {
+    
+    public static $logger;
 
     public static function retrieveUserTwitterHandle($userAuth) {
         Core::validateUserAuth($userAuth);
@@ -20,11 +23,9 @@ class Users {
         $response = $connection->get($query, $params);
         $statusCode = Core::checkResponseHeadersForErrors($connection);
         if ($statusCode->httpCode != StatusCode::HTTP_QUERY_OK || $statusCode->twitterCode != StatusCode::ARTRETWEETER_QUERY_OK) {
-            error_log(print_r($statusCode, true));
             return;
         }
         $screenName = $response->data->username;
-        error_log(print_r($response->data, true));
         $updQuery = "UPDATE users SET screenname=? WHERE twitterid=?";
         $updStmt = CoreDB::$databaseConnection->prepare($updQuery);
         $updStmt->execute([$screenName, $userAuth['twitter_id']]);
@@ -32,3 +33,5 @@ class Users {
     }
 
 }
+
+Users::$logger = LogManager::getLogger("Users");

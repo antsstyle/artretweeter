@@ -3,12 +3,15 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\StatusCode;
-use Antsstyle\ArtRetweeter\Core\Config;
+use Antsstyle\ArtRetweeter\Core\CachedVariables;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Abraham\TwitterOAuth\TwitterOAuth;
 
 class Core {
+
+    public static $logger;
 
     public static function checkResponseHeadersForErrors($connection, $userTwitterID = null) {
         $headers = $connection->getLastXHeaders();
@@ -19,18 +22,18 @@ class Core {
                 $error = $requestBody->errors[0];
                 $errorCode = $error->code;
                 if ($errorCode == StatusCode::TWITTER_INVALID_ACCESS_TOKEN) {
-                    error_log("Deleting user, invalid access token.");
+                    Core::$logger->info("Deleting user, invalid access token.");
                     //CoreDB::deleteUser($userTwitterID);
                 }
                 if ($errorCode == StatusCode::TWITTER_USER_ACCOUNT_LOCKED) {
                     CoreDB::setUserLocked("Y", $userTwitterID);
                 }
                 if ($httpCode == StatusCode::HTTP_TOO_MANY_REQUESTS) {
-                    error_log("Warning: rate limits exceeded, received error 429!");
+                    Core::$logger->critical("Rate limits exceeded, received error 429!");
                 }
                 if (!(($httpCode >= 500 && $httpCode <= 599) || ($httpCode >= 200 && $httpCode <= 299))) {
-                    error_log("Response headers contained HTTP code: $httpCode, error code: $errorCode. Response body was:");
-                    error_log(print_r($connection->getLastBody(), true));
+                    Core::$logger->error("Response headers contained HTTP code: $httpCode, error code: $errorCode. Response body was:");
+                    Core::$logger->error(print_r($connection->getLastBody(), true));
                 }
                 return new StatusCode($httpCode, $errorCode);
             }
@@ -41,7 +44,7 @@ class Core {
         }
         if ($headers['x_rate_limit_remaining'] == 0) {
             $apiPath = $connection->getLastApiPath();
-            error_log("Reached rate limit zero. API path was: $apiPath");
+            Core::$logger->info("Reached rate limit zero. API path was: $apiPath");
             return new StatusCode(200, StatusCode::ARTRETWEETER_RATE_LIMIT_ZERO);
         }
         return new StatusCode(200, 0);
@@ -58,8 +61,9 @@ class Core {
                 <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu\"><b>ArtRetweeter</b></button>
                 <div class=\"content\" style=\"max-height: 100%\">
                     <a href=\"https://antsstyle.com/artretweeter\">Home</a>
-                    <a href=\"https://antsstyle.com/artretweeter/settings\">Settings</a>
-                    <a href=\"https://antsstyle.com/artretweeter/queuestatus\">Queue Status</a>
+                    <a href=\"https://antsstyle.com/artretweeter/info\">Info & FAQ</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/artistsettings\">Artist Settings</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/artistqueuestatus\">Artist Queue Status</a>
                 </div>
                 <br/>
                 <button class=\"collapsiblemenuitem\" id=\"nftcryptoblockermenu\"><b>NFT Artist & Cryptobro Blocker</b></button>
@@ -68,6 +72,126 @@ class Core {
                     <a href=\"https://antsstyle.com/nftcryptoblocker/settings\">Settings</a>
                 </div>
             </div>";
+    }
+
+    public static function scheduleAllUserArtistRetweets() {
+        $now = date("Y-m-d H:i:s");
+        $selectQuery = "SELECT * FROM userartistautomationsettings WHERE automationenabled=? "
+                . "AND (nextserverscheduledate IS NULL OR nextserverscheduledate <= ?)";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute(["Y", $now]);
+        if (!$success) {
+            Core::$logger->critical("Failed to get all user artist automation settings!");
+            return;
+        }
+        $rows = $selectStmt->fetchAll();
+        error_log("Num users: " . count($rows));
+        $nonArtistRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_THRESHOLD);
+        if (is_null($nonArtistRTThreshold)) {
+            Core::$logger->critical("Unable to get non-artist retweets threshold - cannot schedule non-artist retweets!");
+            return;
+        } else if ($nonArtistRTThreshold === false) {
+            $nonArtistRTThreshold = 0.25;
+            CoreDB::updateCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_THRESHOLD, "0.25");
+        }
+        foreach ($rows as $row) {
+            Core::scheduleUserArtistRetweets($row, $nonArtistRTThreshold);
+        }
+    }
+
+    public static function scheduleUserArtistRetweets($userRow, $nonArtistRTThreshold) {
+        $userMaxDailyLimit = 10;
+        $dayFlags = $userRow['dayflags'];
+        $hourFlags = $userRow['hourflags'];
+        $dayCount = substr_count($dayFlags, 'Y');
+        $hourCount = substr_count($hourFlags, 'Y');
+        if ($dayCount == 0 || $hourCount == 0) {
+            Core::$logger->error("User has invalid artist automation settings, cannot continue.");
+            return;
+        }
+        error_log("User day flags: $dayFlags     User hour flags: $hourFlags");
+        $today = date("N") - 1;
+        $twoDaysFromNow = $today + 2;
+        if ($twoDaysFromNow >= 7) {
+            $twoDaysFromNow -= 7;
+        }
+        $dayFlag = substr($dayFlags, $twoDaysFromNow, 1);
+        if ($dayFlag !== "Y") {
+            Core::$logger->debug("Two days from now: $twoDaysFromNow. Today: $today. Dayflags: $dayFlags");
+            return;
+        }
+        $limitPerDay = min($hourCount, $userMaxDailyLimit);
+        $totalCountPerDay = $limitPerDay * ($dayCount / 7);
+        $selectQuery = "SELECT * FROM userartistretweetsettings INNER JOIN artists "
+                . "ON userartistretweetsettings.artisttwitterid=artists.twitterid WHERE userartistretweetsettings.usertwitterid=? "
+                . "ORDER BY totalretweeted ASC, RAND()";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userRow['usertwitterid']]);
+        if (!$success) {
+            Core::$logger->error("Failed to get user artist results for user ID: " . $userRow['usertwitterid']);
+            return;
+        }
+        $rows = $selectStmt->fetchAll();
+        if (count($rows) === 0) {
+            return;
+        }
+        $totalArtistTweetCount = 0;
+        foreach ($rows as $row) {
+            $tweetRows = Core::getUserArtistEligibleTweets($userRow['usertwitterid'], $row, $nonArtistRTThreshold);
+            error_log("Eligible tweets for artist " . $row['twitterid'] . ": " . count($tweetRows));
+            $totalArtistTweetCount += count($tweetRows);
+            if (count($tweetRows) > 0) {
+                $tweetRowsArray[] = $tweetRows;
+            }
+        }
+        $tweetsAvailablePerArtist = $totalCountPerDay / $totalArtistTweetCount;
+        if ($tweetsAvailablePerArtist >= 1) {
+            $maxTweetsPerArtist = 1;
+        } else {
+            $maxTweetsPerArtist = 2;
+        }
+        $artistIndex = 0;
+        $scheduledTweets = 0;
+        $hourIndices = Core::getHourFlagIndices($hourFlags);
+        error_log("Limit per day: $limitPerDay");
+        error_log("Count of tweet rows array: " . count($tweetRowsArray));
+        $endReached = false;
+        while ($scheduledTweets < $limitPerDay && ($artistIndex < count($tweetRowsArray)) && !$endReached) {
+            $artistRows = $tweetRowsArray[$artistIndex];
+            for ($i = 0; $i < $maxTweetsPerArtist; $i++) {
+                $tweetIDToSchedule = $artistRows[$i]['tweetid'];
+                $tweetAuthorID = $artistRows[$i]['usertwitterid'];
+                $nextHour = Core::getRandomHourToAutomate($hourIndices);
+                $minute = rand(0, 59);
+                unset($hourIndices[array_search($nextHour, $hourIndices)]);
+                $hourIndices = array_values($hourIndices);
+                $retweetTime = new \DateTime();
+                $retweetTime->add(new \DateInterval('P2D'));
+                $retweetTime->setTime($nextHour, $minute);
+                $retweetTimeStamp = $retweetTime->getTimestamp();
+                Core::queueRetweetInDB($userRow['usertwitterid'], $tweetAuthorID, $tweetIDToSchedule, $retweetTimeStamp);
+                $scheduledTweets++;
+                if (count($hourIndices) === 0) {
+                    $endReached = true;
+                    break;
+                }
+            }
+            $artistIndex++;
+        }
+        if (!is_null($userRow['nextserverscheduledate'])) {
+            $scheduleHour = date("H", strtotime($userRow['nextserverscheduledate']));
+            $scheduleMinute = date("i", strtotime($userRow['nextserverscheduledate']));
+        } else {
+            $scheduleHour = date("H");
+            $scheduleMinute = date("i");
+        }
+        $nextServerScheduleDate = new \DateTime();
+        $nextServerScheduleDate->add(new \DateInterval('P1D'));
+        $nextServerScheduleDate->setTime($scheduleHour, $scheduleMinute);
+        $nextServerScheduleDate = date("Y-m-d H:i:s", $nextServerScheduleDate->getTimestamp());
+        $updateQuery = "UPDATE userartistautomationsettings SET nextserverscheduledate=? WHERE usertwitterid=?";
+        $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+        $success = $updateStmt->execute([$nextServerScheduleDate, $userRow['usertwitterid']]);
     }
 
     public static function convertServerTimeStringToUserTime($timeString, $userHourOffset, $userMinuteOffset) {
@@ -90,19 +214,6 @@ class Core {
         return $timeString;
     }
 
-    public static function getTweetIDsForUser($userAuthTwitterID) {
-        $selectQuery = "SELECT id,tweetid FROM tweets WHERE usertwitterid=? AND deletedflag=? ORDER BY id ASC";
-        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
-        $success = $selectStmt->execute([$userAuthTwitterID, "N"]);
-        if (!$success) {
-            $returnArray['tweetids'] = false;
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $returnArray);
-        } else {
-            $returnArray['tweetids'] = $selectStmt->fetchAll();
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK, $returnArray);
-        }
-    }
-
     public static function removeExpiredRetweets() {
         $time1HourAgo = date('Y-m-d H:i:s', strtotime('-1 hour', time()));
         $insertQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
@@ -122,18 +233,27 @@ class Core {
         $connection->delete($query);
     }
 
+    public static function getUserTwitterObjectByHandle($userAuth, $twitterHandle) {
+        $params['screen_name'] = $twitterHandle;
+        $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+                $userAuth['access_token'], $userAuth['access_token_secret']);
+        $connection->setRetries(1, 1);
+        $queryResult = Core::queryTwitterUserAuth($connection, "users/show", "GET", $params, $userAuth);
+        return $queryResult;
+    }
+
     public static function postScheduledRetweets() {
         $retweetEndpoint = "statuses/retweet";
         $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-5 minutes', time()));
         $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+5 minutes', time()));
         $selectQuery = "SELECT scheduledretweets.id,tweetid,retweettime,accesstoken,accesstokensecret,"
-                . "retweetingusertwitterid FROM scheduledretweets INNER JOIN users ON "
+                . "retweetingusertwitterid,tweetauthorid FROM scheduledretweets INNER JOIN users ON "
                 . "scheduledretweets.retweetingusertwitterid = users.twitterid WHERE retweettime >= ? "
                 . "AND retweettime <= ?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$time5MinsAgo, $time5MinsFromNow]);
         if (!$success) {
-            error_log("Failed to get scheduled retweet information!");
+            Core::$logger->error("Failed to get scheduled retweet information!");
             return;
         }
         while ($row = $selectStmt->fetch()) {
@@ -145,12 +265,18 @@ class Core {
             $userAuth['twitter_id'] = $row['retweetingusertwitterid'];
             $userAuth['access_token'] = $accessToken;
             $userAuth['access_token_secret'] = $accessTokenSecret;
-            $retweetRecordResults = Core::checkUserCanQueueNewRetweet($userAuth['twitter_id'], $retweetTime, false);
+            $tweetAuthorID = $row['tweetauthorid'];
+            if ($row['retweetingusertwitterid'] === $tweetAuthorID) {
+                $selfRetweet = true;
+            } else {
+                $selfRetweet = false;
+            }
+            $retweetRecordResults = Core::checkUserCanQueueNewRetweet($userAuth['twitter_id'], $retweetTime);
             if (!$retweetRecordResults) {
                 CoreDB::$databaseConnection->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$databaseID]);
                 continue;
             }
-            $canRetweetThisTweetResults = Core::checkUserCanRetweetOldTweet($userAuth['twitter_id'], $retweetTime, $tweetID, false);
+            $canRetweetThisTweetResults = Core::checkUserCanRetweetOldTweet($userAuth['twitter_id'], $retweetTime, $tweetID);
             if (!$canRetweetThisTweetResults) {
                 CoreDB::$databaseConnection->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$databaseID]);
                 continue;
@@ -160,7 +286,7 @@ class Core {
             $params['trim_user'] = 1;
             $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret, $accessToken, $accessTokenSecret);
             $connection->setRetries(1, 1);
-            $queryResult = Core::queryTwitterUserAuth($connection, $retweetEndpoint, "POST", $params, $userAuth, false, false);
+            $queryResult = Core::queryTwitterUserAuth($connection, $retweetEndpoint, "POST", $params, $userAuth);
             $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
                     . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
                     . "? FROM scheduledretweets WHERE id=?";
@@ -182,84 +308,33 @@ class Core {
                     $originalStatus = $queryResult->retweeted_status;
                     $retweetedStatusID = $queryResult->id;
                     $originalTweetID = $originalStatus->id;
-                    Core::updateRetweetRecordsInDB($userAuth['twitter_id'], $originalTweetID, $retweetedStatusID, $retweetTime);
+                    Core::updateRetweetRecordsInDB($userAuth['twitter_id'], $originalTweetID, $retweetedStatusID, $retweetTime,
+                            $tweetAuthorID, $selfRetweet);
                 }
             }
             CoreDB::$databaseConnection->prepare("DELETE FROM scheduledretweets WHERE id=?")->execute([$databaseID]);
         }
     }
 
-    public static function getQueueStatusInDB($userAuthTwitterID) {
-        $scheduledRetweetsStmt = CoreDB::$databaseConnection->prepare("SELECT retweetingusertwitterid,"
-                . "tweetid,UNIX_TIMESTAMP(retweettime) AS rttime,automated FROM scheduledretweets WHERE retweetingusertwitterid=?");
-        $scheduledTableSuccess = $scheduledRetweetsStmt->execute([$userAuthTwitterID]);
-        if (!$scheduledTableSuccess) {
-            $returnArray['scheduledretweets'] = false;
-        } else {
-            $returnArray['scheduledretweets'] = $scheduledRetweetsStmt->fetchAll();
-        }
-        $failedRetweetsStmt = CoreDB::$databaseConnection->prepare("SELECT retweetingusertwitterid,"
-                . "tweetid,UNIX_TIMESTAMP(retweettime) AS rttime,errorcode,failreason FROM failedretweets WHERE retweetingusertwitterid=?");
-        $failTableSuccess = $failedRetweetsStmt->execute([$userAuthTwitterID]);
-        if (!$failTableSuccess) {
-            $returnArray['failedretweets'] = false;
-        } else {
-            $returnArray['failedretweets'] = $failedRetweetsStmt->fetchAll();
-            CoreDB::$databaseConnection->prepare("DELETE FROM failedretweets WHERE retweetingusertwitterid=?")->execute([$userAuthTwitterID]);
-        }
-        if ($failTableSuccess && $scheduledTableSuccess) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK, $returnArray);
-        } else {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $returnArray);
-        }
-    }
-
-    public static function getTweetRetweetStatusInDB($userAuthTwitterID) {
-        $recordsStmt = CoreDB::$databaseConnection->prepare("SELECT tweetid,UNIX_TIMESTAMP(scheduledretweettime) AS rttime FROM retweetrecords "
-                . "WHERE usertwitterid=?");
-        $recordsSuccess = $recordsStmt->execute([$userAuthTwitterID]);
-        if (!$recordsSuccess) {
-            $returnArray['retweetrecords'] = false;
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $returnArray);
-        } else {
-            $returnArray['retweetrecords'] = $recordsStmt->fetchAll();
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK, $returnArray);
-        }
-    }
-
-    public static function queueRetweetInDB($userAuthTwitterID, $tweetID, $retweetTime, $automated = false) {
-        if (!Core::checkUserCanQueueNewRetweet($userAuthTwitterID, $retweetTime, !$automated)) {
+    public static function queueRetweetInDB($userAuthTwitterID, $tweetAuthorID, $tweetID, $retweetTime) {
+        if (!Core::checkUserCanQueueNewRetweet($userAuthTwitterID, $retweetTime)) {
             return false;
         }
-        if (!Core::checkUserCanRetweetOldTweet($userAuthTwitterID, $retweetTime, $tweetID, !$automated)) {
+        if (!Core::checkUserCanRetweetOldTweet($userAuthTwitterID, $retweetTime, $tweetID)) {
             return false;
         }
         $timeString = date('Y-m-d H:i:s', $retweetTime);
-        $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO scheduledretweets (retweetingusertwitterid,tweetid,retweettime,automated) "
-                . "VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE retweetingusertwitterid=?, tweetid=?, retweettime=?, automated=?");
-        $success = $stmt->execute([$userAuthTwitterID, $tweetID, $timeString, $automated ? "Y" : "N",
-            $userAuthTwitterID, $tweetID, $timeString, $automated ? "Y" : "N"]);
-        if (!$automated) {
-            Core::encodeSuccessInformation($success);
-        } else {
-            return $success;
-        }
-    }
+        $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO scheduledretweets (retweetingusertwitterid,tweetauthorid,tweetid,retweettime,automated) "
+                . "VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE retweetingusertwitterid=?, tweetauthorid=?, tweetid=?, retweettime=?, automated=?");
+        $success = $stmt->execute([$userAuthTwitterID, $tweetAuthorID, $tweetID, $timeString, "N",
+            $userAuthTwitterID, $tweetAuthorID, $tweetID, $timeString, "N"]);
 
-    public static function unqueueRetweetFromDB($userAuthTwitterID, $tweetID) {
-        $success = CoreDB::$databaseConnection->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=? AND tweetid=?")
-                ->execute([$userAuthTwitterID, $tweetID]);
-        echo Core::encodeSuccessInformation($success);
-    }
-
-    public static function deleteAccount($userAuthTwitterID) {
-        $success = CoreDB::$databaseConnection->prepare("DELETE FROM users WHERE twitterid=?")
-                ->execute([$userAuthTwitterID]);
-        echo Core::encodeSuccessInformation($success);
+        return $success;
     }
 
     public static function getUserInfo($userTwitterID) {
-        $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users WHERE twitterid=?");
+        $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users LEFT JOIN "
+                . "userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid WHERE twitterid=?");
         $success = $stmt->execute([$userTwitterID]);
         if (!$success) {
             return false;
@@ -272,28 +347,26 @@ class Core {
     }
 
     public static function validateUserAuth($userAuth) {
+        if ($userAuth === APIKeys::bearer_token) {
+            return true;
+        }
         $bannedStmt = CoreDB::$databaseConnection->prepare("SELECT * FROM bannedusers WHERE twitterid=?");
         $success = $bannedStmt->execute([$userAuth['twitter_id']]);
         if (!$success) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, "Database error executing query.");
-            exit();
+            return false;
         }
         $bannedResults = $bannedStmt->fetch();
         if ($bannedResults) {
-            $banReason = $bannedResults['reason'];
-            echo Core::encodeStatusInformation(StatusCode::USER_BANNED, "This user is banned from ArtRetweeter. Reason: $banReason");
-            exit();
+            return false;
         }
         $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users WHERE twitterid=? AND accesstoken=? AND accesstokensecret=?");
         $success = $stmt->execute([$userAuth['twitter_id'], $userAuth['access_token'], $userAuth['access_token_secret']]);
         if (!$success) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, "Database error executing query.");
-            exit();
+            return false;
         }
         $results = $stmt->fetch();
         if (!$results) {
-            echo Core::encodeStatusInformation(StatusCode::TWITTER_INVALID_ACCESS_TOKEN, "Invalid or nonexistent access token.");
-            exit();
+            return false;
         }
     }
 
@@ -304,7 +377,7 @@ class Core {
                     $response['user_id'], $response['oauth_token'], $response['oauth_token_secret']]);
     }
 
-    public static function checkUserCanRetweetOldTweet($userTwitterID, $retweetTime, $tweetID, $echoAndExit = true) {
+    public static function checkUserCanRetweetOldTweet($userTwitterID, $retweetTime, $tweetID) {
         $date30DaysAgo = date("Y-m-d H:i:s", strtotime('-30 days', $retweetTime));
         $date1YearAgo = date("Y-m-d H:i:s", strtotime('-1 year', $retweetTime));
         // Limit users to retweeting the same tweet only once per month, and not more than 3 times per year
@@ -318,20 +391,11 @@ class Core {
         $records30DaysStmt->bindValue(4, $per30DaysLimit, \PDO::PARAM_INT);
         $records30DaysSuccess = $records30DaysStmt->execute();
         if (!$records30DaysSuccess) {
-            error_log("Failed to get retweet records to check monthly limits.");
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $records30DaysSuccess->errorInfo());
-                exit();
-            }
+            Core::$logger->error("Failed to get retweet records to check monthly limits.");
             return false;
         }
         $records30DaysResults = $records30DaysStmt->fetchAll();
         if ($records30DaysResults && (count($records30DaysResults) >= $per30DaysLimit)) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_RATE_LIMIT_EXCEEDED,
-                        "Too many retweets of this tweet in the last 30 days.");
-                exit();
-            }
             return false;
         }
 
@@ -344,30 +408,21 @@ class Core {
         $recordsYearStmt->bindValue(4, $perYearLimit, \PDO::PARAM_INT);
         $recordsYearSuccess = $recordsYearStmt->execute();
         if (!$recordsYearSuccess) {
-            error_log("Failed to get retweet records to check yearly limits.");
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $recordsYearStmt->errorInfo());
-                exit();
-            }
+            Core::$logger->error("Failed to get retweet records to check yearly limits.");
             return false;
         }
         $recordsYearResults = $recordsYearStmt->fetchAll();
         if ($recordsYearResults && (count($recordsYearResults) >= $perYearLimit)) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_RATE_LIMIT_EXCEEDED,
-                    "Too many retweets of this tweet in the last 12 months.");
-            exit();
+            return false;
         }
         return true;
     }
 
-    public static function getNumTweetsAtExactTime($table, $userTwitterID, $retweetTime, $echoAndExit = true) {
+    public static function getNumTweetsAtExactTime($table, $userTwitterID, $retweetTime) {
         if ($table == "scheduledretweets") {
             $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM retweetrecords WHERE usertwitterid=? AND retweettime=?");
         } else if ($table == "retweetrecords") {
             $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM scheduledretweets WHERE retweetingusertwitterid=? AND retweettime=?");
-        } else if ($echoAndExit) {
-            echo Core::encodeStatusInformation("Internal server error - an invalid table was specified for retrieving tweets at an exact time.");
-            exit();
         } else {
             return false;
         }
@@ -375,10 +430,6 @@ class Core {
         $stmt->bindValue(2, $retweetTime);
         $success = $stmt->execute();
         if (!$success) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $stmt->errorInfo());
-                exit();
-            }
             return $stmt->errorInfo();
         }
         $results = $stmt->fetchAll();
@@ -389,7 +440,7 @@ class Core {
         }
     }
 
-    public static function getNumTweetsInTimeInterval($userTwitterID, $retweetTime, $timeInterval, $limit, $echoAndExit = true,
+    public static function getNumTweetsInTimeInterval($userTwitterID, $retweetTime, $timeInterval, $limit,
             $rescheduledTweetID = null) {
         $intervalStart = date("Y-m-d H:i:s", strtotime("-" . $timeInterval, $retweetTime));
         $intervalEnd = date("Y-m-d H:i:s", strtotime("+" . $timeInterval, $retweetTime));
@@ -412,10 +463,6 @@ class Core {
         }
         $success = $stmt->execute();
         if (!$success) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $stmt->errorInfo());
-                exit();
-            }
             return $stmt->errorInfo();
         }
         $scheduledTimes = $stmt->fetchAll();
@@ -437,10 +484,6 @@ class Core {
         }
         $success = $stmt->execute();
         if (!$success) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $stmt->errorInfo());
-                exit();
-            }
             return $stmt->errorInfo();
         }
         $recordTimes = $stmt->fetchAll();
@@ -464,11 +507,6 @@ class Core {
                     $firstTimestampCounter++;
                 }
                 if ($rollingCounter == $limit) {
-                    if ($echoAndExit) {
-                        echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_RATE_LIMIT_EXCEEDED,
-                                "Too many retweets in $timeInterval period.");
-                        exit();
-                    }
                     return "Too many retweets in $timeInterval period.";
                 }
             }
@@ -476,48 +514,42 @@ class Core {
         return true;
     }
 
-    public static function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $echoAndExit = true, $rescheduledTweetID = null) {
+    public static function checkUserCanQueueNewRetweet($userTwitterID, $retweetTime, $rescheduledTweetID = null) {
         $RTTime = date("Y-m-d H:i:s", $retweetTime);
         $perDayLimit = 10;
         $perHourLimit = 2;
 
-        $recordsNowResults = Core::getNumTweetsAtExactTime("retweetrecords", $userTwitterID, $RTTime, $echoAndExit);
+        $recordsNowResults = Core::getNumTweetsAtExactTime("retweetrecords", $userTwitterID, $RTTime);
         if ($recordsNowResults) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_RATE_LIMIT_EXCEEDED,
-                        "You cannot schedule two retweets to be posted at the same time.");
-                exit();
-            }
             return "You cannot schedule two retweets to be posted at the same time.";
         }
 
-        $queueNowResults = Core::getNumTweetsAtExactTime("scheduledretweets", $userTwitterID, $RTTime, $echoAndExit);
+        $queueNowResults = Core::getNumTweetsAtExactTime("scheduledretweets", $userTwitterID, $RTTime);
         if ($queueNowResults) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_RATE_LIMIT_EXCEEDED,
-                        "You cannot schedule two retweets to be posted at the same time.");
-                exit();
-            }
             return "You cannot schedule two retweets to be posted at the same time.";
         }
 
-        $result = Core::getNumTweetsInTimeInterval($userTwitterID, $retweetTime, "1 hour", $perHourLimit, $echoAndExit, $rescheduledTweetID);
+        $result = Core::getNumTweetsInTimeInterval($userTwitterID, $retweetTime, "1 hour", $perHourLimit, $rescheduledTweetID);
         if ($result !== true) {
             return $result;
         }
-        $result = Core::getNumTweetsInTimeInterval($userTwitterID, $retweetTime, "24 hours", $perDayLimit, $echoAndExit, $rescheduledTweetID);
+        $result = Core::getNumTweetsInTimeInterval($userTwitterID, $retweetTime, "24 hours", $perDayLimit, $rescheduledTweetID);
         if ($result !== true) {
             return $result;
         }
         return true;
     }
 
-    public static function updateRetweetRecordsInDB($userTwitterID, $tweetID, $retweetID, $scheduledTime) {
+    public static function updateRetweetRecordsInDB($userTwitterID, $tweetID, $retweetID, $scheduledTime, $tweetAuthorID, $selfRetweet) {
         $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweetid,retweettime,scheduledretweettime) 
 	VALUES (?,?,?,?,?)");
         $currentTime = date("Y-m-d H:i:s", time());
-        $success = $stmt->execute([$userTwitterID, $tweetID, $retweetID, $currentTime, $scheduledTime]);
-        return $success;
+        $stmt->execute([$userTwitterID, $tweetID, $retweetID, $currentTime, $scheduledTime]);
+        if (!$selfRetweet) {
+            $stmt = CoreDB::$databaseConnection->prepare("UPDATE userartistretweetsettings SET totalretweeted=totalretweeted+1 WHERE usertwitterid=? "
+                    . "AND artisttwitterid=?");
+            $stmt->execute([$userTwitterID, $tweetAuthorID]);
+        }
     }
 
     public static function encodeDBResponseInformation($dbResult) {
@@ -532,26 +564,11 @@ class Core {
         return json_encode($results);
     }
 
-    public static function encodeSuccessInformation($success) {
-        if ($success) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK);
-        } else {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR);
-        }
-    }
-
-    public static function encodeStatusInformation($code, $msg = null) {
-        $results['statuscode'] = $code;
-        if ($msg == null) {
-            $results['message'] = StatusCode::getStatusMessage($code);
-        } else {
-            $results['message'] = $msg;
-        }
-        return json_encode($results);
-    }
-
     public static function updateUserRateLimitInDB($userTwitterID, $endpoint, $headers) {
         if (!isset($headers['x_rate_limit_remaining']) || !isset($headers['x_rate_limit_limit']) || !isset($headers['x_rate_limit_reset'])) {
+            return true;
+        }
+        if ($userTwitterID === APIKeys::bearer_token) {
             return true;
         }
         $maxLimit = $headers['x_rate_limit_limit'];
@@ -565,65 +582,47 @@ class Core {
         return $success;
     }
 
-    public static function checkUserRateLimitInDB($userTwitterID, $endpoint, $echoAndExit = true) {
+    public static function checkUserRateLimitInDB($userTwitterID, $endpoint) {
         $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM ratelimitrecords WHERE usertwitterid=? AND endpoint=?");
         $success = $stmt->execute([$userTwitterID, $endpoint]);
         if (!$success) {
-            error_log("Failed to get user rate limit records.");
-            if ($echoAndExit) {
-                echo Core::encodeErrorInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $stmt->errorInfo());
-                exit();
-            }
+            Core::$logger->error("Failed to get user rate limit records.");
             return true;
         }
         $result = $stmt->fetch();
 
         if ($result && $result['remaininglimit'] < 5) {
-            if ($echoAndExit) {
-                echo Core::encodeStatusInformation(StatusCode::TWITTER_RATE_LIMIT_EXCEEDED);
-                exit();
-            }
             return false;
         } else {
             return true;
         }
     }
 
-    public static function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params, $userAuth, $paramsIsJsonData = false,
-            $echoAndExit = true) {
-        $userAuthTwitterID = $userAuth['twitter_id'];
-        Core::validateUserAuth($userAuth);
-        Core::checkUserRateLimitInDB($userAuthTwitterID, $endpoint, $echoAndExit);
+    public static function queryTwitterUserAuth($connection, $endpoint, $httpRequestType, $params, $userAuth) {
+        if ($userAuth !== APIKeys::bearer_token) {
+            $userAuthTwitterID = $userAuth['twitter_id'];
+            Core::validateUserAuth($userAuth);
+            Core::checkUserRateLimitInDB($userAuthTwitterID, $endpoint);
+        }
         if ($httpRequestType == 'GET') {
-            if ($paramsIsJsonData) {
-                $result = $connection->get($endpoint, $params, true);
+            $result = $connection->get($endpoint, $params);
+        } else {
+            $result = $connection->post($endpoint, $params);
+        }
+        if ($userAuth !== APIKeys::bearer_token) {
+            if (Core::checkIfUserAccessTokenInvalid($result)) {
+                Core::$logger->error("Invalid access token detected for user ID: $userAuthTwitterID, disabling any automation.");
+                $query = "UPDATE userautomationsettings SET automationenabled=? WHERE usertwitterid=?";
+                $stmt = CoreDB::$databaseConnection->prepare($query);
+                $stmt->execute(["N", $userAuthTwitterID]);
+                $deleteAutomatedRetweetsQuery = "DELETE FROM scheduledretweets WHERE retweetingusertwitterid=? AND automated=?";
+                $stmt = CoreDB::$databaseConnection->prepare($deleteAutomatedRetweetsQuery);
+                $stmt->execute([$userAuthTwitterID, "N"]);
             } else {
-                $result = $connection->get($endpoint, $params);
-            }
-        } else {
-            if ($paramsIsJsonData) {
-                $result = $connection->post($endpoint, $params, true);
-            } else {
-                $result = $connection->post($endpoint, $params);
+                Core::updateUserRateLimitInDB($userAuthTwitterID, $endpoint, $connection->getLastXHeaders());
             }
         }
-        if (Core::checkIfUserAccessTokenInvalid($result)) {
-            error_log("Invalid access token detected for user ID: $userAuthTwitterID, disabling any automation.");
-            $query = "UPDATE userautomationsettings SET automationenabled=? WHERE usertwitterid=?";
-            $stmt = CoreDB::$databaseConnection->prepare($query);
-            $stmt->execute(["N", $userAuthTwitterID]);
-            $deleteAutomatedRetweetsQuery = "DELETE FROM scheduledretweets WHERE retweetingusertwitterid=? AND automated=?";
-            $stmt = CoreDB::$databaseConnection->prepare($deleteAutomatedRetweetsQuery);
-            $stmt->execute([$userAuthTwitterID, "N"]);
-        } else {
-            Core::updateUserRateLimitInDB($userAuthTwitterID, $endpoint, $connection->getLastXHeaders());
-        }
-        if ($echoAndExit) {
-            echo Core::encodeTwitterResponseInformation($connection, $result);
-            exit();
-        } else {
-            return $result;
-        }
+        return $result;
     }
 
     public static function checkIfUserAccessTokenInvalid($result) {
@@ -639,28 +638,6 @@ class Core {
         return false;
     }
 
-    public static function removeAccountFromDB($twitterID) {
-        $success['failure_queue_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM failedretweets WHERE retweetingusertwitterid=?")
-                ->execute([$twitterID]);
-        $success['schedule_queue_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=?")
-                ->execute([$twitterID]);
-        $success['user_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM users WHERE twitterid=?")
-                ->execute([$twitterID]);
-        $success['metrics_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM tweetmetrics WHERE tweetstableid IN (SELECT id FROM tweets WHERE usertwitterid=?)")
-                ->execute([$twitterID]);
-        $success['tweets_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM tweets WHERE usertwitterid=?")
-                ->execute([$twitterID]);
-        $success['automation_settings_cleared'] = CoreDB::$databaseConnection
-                ->prepare("DELETE FROM userautomationsettings WHERE usertwitterid=?")
-                ->execute([$twitterID]);
-        Core::encodeSuccessInformation($success);
-    }
-
     public static function getTweetMetricsToRefresh($userTwitterID, $startTweetID, $metricsType) {
         $selectQuery = "SELECT *,(SELECT description FROM retrievalmetrics WHERE retrievalmetrics.id=tweetmetrics.retrievalmetric) "
                 . "AS description FROM tweetmetrics WHERE usertwitterid=? AND tweetid > ? "
@@ -669,7 +646,7 @@ class Core {
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$userTwitterID, $startTweetID, $metricsType]);
         if (!$success) {
-            error_log("Failed to retrieve tweet metrics from database. User twitter ID: $userTwitterID     Starting tweetID: $startTweetID");
+            Core::$logger->error("Failed to retrieve tweet metrics from database. User twitter ID: $userTwitterID     Starting tweetID: $startTweetID");
             return;
         }
         $rows = $selectStmt->fetchAll();
@@ -700,17 +677,51 @@ class Core {
         return $results;
     }
 
+    public static function fixTweetText() {
+        $selectQuery = "SELECT * FROM tweets WHERE tweetjson IS NOT NULL AND fixed=? LIMIT 25000";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute(["N"]);
+        if (!$success) {
+            Core::$logger->error("Failed to get tweets to fix");
+            return;
+        }
+        while ($row = $selectStmt->fetch()) {
+            $rowID = $row['id'];
+            $tweet = json_decode($row['tweetjson']);
+            $fullText = $tweet->full_text;
+            $media = $tweet->entities->media;
+            for ($j = 0; $j < count($media); $j++) {
+                $url = $media[$j]->url;
+                $fullText = str_replace($url, "", $fullText);
+            }
+            $urls = $tweet->entities->urls;
+            for ($j = 0; $j < count($urls); $j++) {
+                $url = $urls[$j]->url;
+                $extendedUrl = $urls[$j]->expanded_url;
+                $fullText = str_replace($url, $extendedUrl, $fullText);
+            }
+            $updateQuery = "UPDATE tweets SET fulltweettext=?, fixed=? WHERE id=?";
+            $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+            try {
+                $success = $updateStmt->execute([$fullText, "Y", $rowID]);
+            } catch (\Exception $e) {
+                error_log("Tweet ID: " . $tweet->id);
+                error_log("Full tweet text too long: $fullText");
+            }
+        }
+    }
+
     public static function insertTweetsAndMetrics($tweets, $userTwitterID, $imagesEnabled = "Y", $gifsEnabled = "N", $videosEnabled = "N") {
         $selectQuery = "SELECT id FROM retrievalmetrics WHERE description=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute(["Latest Metrics"]);
         if (!$success) {
-            error_log("Failed to get metrics type, cannot insert tweets.");
+            Core::$logger->error("Failed to get metrics type, cannot insert tweets.");
             return;
         }
         $metricID = $selectStmt->fetchColumn();
         if (!$metricID) {
-            error_log("No metrics type found, cannot insert tweets.");
+            Core::$logger->error("No metrics type found, cannot insert tweets.");
             return;
         }
 
@@ -718,7 +729,7 @@ class Core {
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$userTwitterID, "Y"]);
         if (!$success) {
-            error_log("Failed to get delete-flagged tweets for user, cannot insert tweets.");
+            Core::$logger->error("Failed to get delete-flagged tweets for user, cannot insert tweets.");
             return;
         }
 
@@ -771,9 +782,9 @@ class Core {
                 $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweets
             (tweetid,usertwitterid,createdat,fulltweettext,tweetjson,mediatype) 
 	VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE fulltweettext=?");
-                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $tweet->full_text, $tweetJson, $mediaType, $tweet->full_text]);
+                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $fullText, $tweetJson, $mediaType, $fullText]);
             } catch (\PDOException $e) {
-                error_log("Failed to insert tweet: $e");
+                Core::$logger->error("Failed to insert tweet: " . print_r($e, true));
             }
             if ($stmt->rowCount()) {
                 try {
@@ -783,7 +794,7 @@ class Core {
                     $stmt->execute([$timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
                         $tweet->retweet_count, $timeNow]);
                 } catch (\PDOException $e) {
-                    error_log("Failed to insert tweet metrics for new tweet: $e");
+                    Core::$logger->error("Failed to insert tweet metrics for new tweet: " . print_r($e, true));
                 }
             } else {
                 $stmt = CoreDB::$databaseConnection->prepare("SELECT id FROM tweets WHERE tweetid=?");
@@ -796,7 +807,7 @@ class Core {
                     $stmt->execute([$tweetsTableID, $timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
                         $tweet->retweet_count, $timeNow]);
                 } catch (\PDOException $e) {
-                    error_log("Failed to insert tweet metrics for existing tweet: $e");
+                    Core::$logger->error("Failed to insert tweet metrics for existing tweet: " . print_r($e, true));
                 }
             }
             if (!isset($highestID)) {
@@ -830,7 +841,7 @@ class Core {
         $stmt = CoreDB::$databaseConnection->prepare($query);
         $success = $stmt->execute(["Y"]);
         if (!$success) {
-            error_log("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
+            Core::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
             return;
         }
         while ($row = $stmt->fetch()) {
@@ -847,12 +858,96 @@ class Core {
         $stmt = CoreDB::$databaseConnection->prepare($query);
         $success = $stmt->execute(["Y"]);
         if (!$success) {
-            error_log("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
+            Core::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
             return;
         }
         while ($row = $stmt->fetch()) {
             Core::getAllNewTweetsForUser($row);
         }
+    }
+
+    public static function getAllNewTweetsForAllArtists() {
+        $now = date("Y-m-d H:i:s");
+        $query = "SELECT * FROM artists WHERE (nextcheckdate IS NULL OR nextcheckdate < ?)";
+        $stmt = CoreDB::$databaseConnection->prepare($query);
+        $success = $stmt->execute([$now]);
+        if (!$success) {
+            Core::$logger->error("Failed to acquire list of artists to get tweets for, cannot continue.");
+            return;
+        }
+        while ($row = $stmt->fetch()) {
+            Core::getAllNewTweetsForArtist($row);
+        }
+    }
+
+    public static function getAllNewTweetsForArtist($artistRow) {
+        $params['count'] = 200;
+        $params['user_id'] = $artistRow['twitterid'];
+        $params['include_rts'] = "false";
+        $params['trim_user'] = "true";
+        $params['tweet_mode'] = "extended";
+        if ($artistRow['oldtweetlimitretrieved'] === "N" && !is_null($artistRow['maxid'])) {
+            $params['max_id'] = $artistRow['maxid'];
+        }
+        if (!is_null($artistRow['sinceid'])) {
+            $params['since_id'] = $artistRow['sinceid'];
+        }
+        $resultCount = 1;
+        $queryCount = 0;
+        $reachedEnd = false;
+        $reachedEnd = false;
+        while ($resultCount != 0 && !$reachedEnd) {
+            $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+                    null, APIKeys::bearer_token);
+            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, APIKeys::bearer_token);
+            $queryCount++;
+            if ($connection->getLastHttpCode() == 200) {
+                $resultCount = count($results);
+                if ($resultCount == 0) {
+                    $reachedEnd = true;
+                } else {
+                    $returnArray = Core::insertTweetsAndMetrics($results, $artistRow['twitterid'], $artistRow['imagesenabled'],
+                                    $artistRow['gifsenabled'], $artistRow['videosenabled']);
+                    if (!$returnArray) {
+                        Core::$logger->error("Empty or nonexistent return array - breaking loop.");
+                        break;
+                    }
+                    if (isset($returnArray['novalidresults']) && $returnArray['novalidresults']) {
+                        break;
+                    }
+                    if ($artistRow['oldtweetlimitretrieved'] == "N") {
+                        $params['max_id'] = $returnArray['lowestid'] - 1;
+                    } else {
+                        $params['since_id'] = $returnArray['highestid'];
+                    }
+                }
+            } else {
+                break;
+            }
+            if ($queryCount > 35) {
+                Core::$logger->critical("35 user_timeline queries!");
+                break;
+            }
+        }
+        $nextCheckDateRatio = ceil(24 / max($queryCount, 1));
+        $nextCheckDate = date("Y-m-d H:i:s", strtotime("+$nextCheckDateRatio hours"));
+        $query = "UPDATE artists SET ";
+        $updParams = [];
+        if ($reachedEnd) {
+            $query .= "oldtweetlimitretrieved=?, maxid=?, nextcheckdate=? ";
+            array_push($updParams, "Y", $params['max_id'], $nextCheckDate);
+        } else if (isset($params['max_id'])) {
+            $query .= "maxid=?, nextcheckdate=? ";
+            array_push($updParams, $params['max_id'], $nextCheckDate);
+        } else {
+            $query .= "sinceid=?, nextcheckdate=? ";
+            array_push($updParams, $params['since_id'], $nextCheckDate);
+        }
+        $query .= "WHERE twitterid=?";
+        array_push($updParams, $artistRow['twitterid']);
+
+        $stmt = CoreDB::$databaseConnection->prepare($query);
+        return $stmt->execute($updParams);
     }
 
     public static function getAllNewTweetsForUser($userRow) {
@@ -880,22 +975,20 @@ class Core {
         while ($resultCount != 0 && !$reachedEnd) {
             $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
                     $userAuth['access_token'], $userAuth['access_token_secret']);
-            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth, false, false);
+            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth);
             $queryCount++;
             if ($connection->getLastHttpCode() == 200) {
                 $resultCount = count($results);
                 if ($resultCount == 0) {
-                    error_log("Reached end.");
                     $reachedEnd = true;
                 } else {
                     $returnArray = Core::insertTweetsAndMetrics($results, $userRow['usertwitterid'], $userRow['imagesenabled'],
                                     $userRow['gifsenabled'], $userRow['videosenabled']);
                     if (!$returnArray) {
-                        error_log("Empty or nonexistent return array - breaking loop.");
+                        Core::$logger->error("Empty or nonexistent return array - breaking loop.");
                         break;
                     }
                     if (isset($returnArray['novalidresults']) && $returnArray['novalidresults']) {
-                        error_log("No more valid results, breaking loop.");
                         break;
                     }
                     if ($userRow['oldtweetlimitretrieved'] == "N") {
@@ -908,7 +1001,7 @@ class Core {
                 break;
             }
             if ($queryCount > 35) {
-                error_log("35 user_timeline queries!");
+                Core::$logger->critical("35 user_timeline queries!");
                 break;
             }
         }
@@ -930,6 +1023,34 @@ class Core {
 
         $stmt = CoreDB::$databaseConnection->prepare($query);
         return $stmt->execute($updParams);
+    }
+
+    public static function getNonArtistAutomationSettings($userTwitterID) {
+        $selectQuery = "SELECT * FROM userartistautomationsettings WHERE usertwitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userTwitterID]);
+        if (!$success) {
+            return false;
+        }
+        $row = $selectStmt->fetch();
+        if (!$row) {
+            return null;
+        } else {
+            $userTimeZoneHour = $row['timezonehouroffset'];
+            $userTimeZoneMinute = $row['timezoneminuteoffset'];
+            $userOffsetSeconds = ($userTimeZoneHour * 3600) + ($userTimeZoneMinute * 60);
+            $now = new \DateTime();
+            $serverTimeZone = new \DateTimeZone(date_default_timezone_get());
+            $serverOffsetSeconds = $serverTimeZone->getOffset($now);
+            $timeDiffSeconds = $serverOffsetSeconds - $userOffsetSeconds;
+            $timeDiffHours = intval(floor($timeDiffSeconds / 3600));
+            if ($row['oldtweetcutoffdate'] !== null) {
+                $oldTweetCutoffDate = date("Y-m-d H:i:s", strtotime($row['oldtweetcutoffdate']) - $timeDiffSeconds);
+                $row['oldtweetcutoffdate'] = $oldTweetCutoffDate;
+            }
+            $row['hourflags'] = Core::shiftString($row['hourflags'], $timeDiffHours);
+            return $row;
+        }
     }
 
     public static function getAutomationSettings($userTwitterID) {
@@ -962,37 +1083,6 @@ class Core {
         }
     }
 
-    public static function getAutomationSettingsInDB($userAuth) {
-        $selectQuery = "SELECT * FROM userautomationsettings WHERE usertwitterid=?";
-        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
-        $success = $selectStmt->execute([$userAuth['twitter_id']]);
-        if (!$success) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $selectStmt->errorInfo());
-            return;
-        }
-        $row = $selectStmt->fetch();
-        if (!$row) {
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK, $row);
-        } else {
-            $userTimeZoneHour = $row['timezonehouroffset'];
-            $userTimeZoneMinute = $row['timezoneminuteoffset'];
-            $userOffsetSeconds = ($userTimeZoneHour * 3600) + ($userTimeZoneMinute * 60);
-            $now = new \DateTime();
-            $serverTimeZone = new \DateTimeZone(date_default_timezone_get());
-            $serverOffsetSeconds = $serverTimeZone->getOffset($now);
-            $timeDiffSeconds = $serverOffsetSeconds - $userOffsetSeconds;
-            $timeDiffHours = intval(floor($timeDiffSeconds / 3600));
-            $timeDiffMinutes = intval(floor(($timeDiffSeconds % 3600) / 60));
-            if ($row['oldtweetcutoffdate'] !== null) {
-                $oldTweetCutoffDate = date("Y-m-d H:i:s", strtotime($row['oldtweetcutoffdate']) - $timeDiffSeconds);
-                $row['oldtweetcutoffdate'] = $oldTweetCutoffDate;
-            }
-            $row['hourflags'] = Core::shiftString($row['hourflags'], $timeDiffHours);
-            $row['minuteflags'] = Core::shiftString($row['minuteflags'], $timeDiffMinutes / 15);
-            echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_QUERY_OK, $row);
-        }
-    }
-
     public static function shiftString($string, $shiftCount) {
         if ($shiftCount == 0) {
             return $string;
@@ -1014,19 +1104,14 @@ class Core {
         return $string;
     }
 
-    public static function commitAutomationSettingsInDB($aS, $echo = true) {
+    public static function commitNonArtistAutomationSettingsInDB($aS) {
         // Get old automation settings: check if they existed, or were disabled. If so, schedule new automated retweets immediately
-        $selectQuery = "SELECT * FROM userautomationsettings WHERE usertwitterid=?";
+        $selectQuery = "SELECT * FROM userartistautomationsettings WHERE usertwitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $result = $selectStmt->execute([$aS['usertwitterid']]);
         if (!$result) {
-            error_log("Failed to retrieve previous automation settings");
-            if ($echo) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $selectStmt->errorInfo());
-            } else {
-                return StatusCode::ARTRETWEETER_DATABASE_ERROR;
-            }
-            return;
+            Core::$logger->error("Failed to retrieve previous automation settings");
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
         }
         $oldRow = $selectStmt->fetch();
         $oldSettingsExist = true;
@@ -1045,13 +1130,113 @@ class Core {
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $result = $selectStmt->execute([$aS['usertwitterid']]);
         if (!$result) {
-            error_log("Failed to retrieve current scheduled retweet count");
-            if ($echo) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $selectStmt->errorInfo());
-            } else {
+            Core::$logger->error("Failed to retrieve current scheduled retweet count");
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
+        }
+        $currentScheduledRetweetCount = $selectStmt->fetchColumn();
+        $scheduleNewRetweetsNow = false;
+        $lastScheduleServerDate = strtotime($lastScheduleServerDate);
+        $yesterday = strtotime("-1 day");
+        if ($oldRow && $oldRow['automationenabled'] === "N" && $aS['automationenabled'] === "Y" &&
+                ($currentScheduledRetweetCount === 0 || (is_null($lastScheduleServerDate) || $lastScheduleServerDate <= $yesterday))) {
+            $scheduleNewRetweetsNow = true;
+        }
+        $userTimeZoneHour = $aS['timezonehouroffset'];
+        $userTimeZoneMinute = $aS['timezoneminuteoffset'];
+        $userOffsetSeconds = ($userTimeZoneHour * 3600) + ($userTimeZoneMinute * 60);
+        $now = new \DateTime();
+        $serverTimeZone = new \DateTimeZone(date_default_timezone_get());
+        $serverOffsetSeconds = $serverTimeZone->getOffset($now);
+        $timeDiffSeconds = $serverOffsetSeconds - $userOffsetSeconds;
+        $timeDiffHours = intval(floor($timeDiffSeconds / 3600));
+        $hourFlags = Core::shiftString($aS['hourflags'], -$timeDiffHours);
+        if (isset($aS['oldtweetcutoffdate'])) {
+            $oldTweetCutoffDate = date("Y-m-d H:i:s", strtotime($aS['oldtweetcutoffdate']) + $timeDiffSeconds);
+        } else {
+            $oldTweetCutoffDate = null;
+        }
+        /**
+         * TEMPORARY: Remove when Java client is retired
+         */
+        if (!isset($aS['imagesenabled'])) {
+            $aS['imagesenabled'] = "Y";
+        }
+        if (!isset($aS['gifsenabled'])) {
+            $aS['gifsenabled'] = "N";
+        }
+        if (!isset($aS['videosenabled'])) {
+            $aS['videosenabled'] = "N";
+        }
+        $query = "INSERT INTO userartistautomationsettings (usertwitterid,automationenabled,dayflags,hourflags,includetext,excludetext"
+                . ",oldtweetcutoffdate,oldtweetcutoffdateenabled,includetextenabled,excludetextenabled,timezonehouroffset,"
+                . "timezoneminuteoffset,includetextcondition,excludetextcondition,imagesenabled,gifsenabled,videosenabled) "
+                . "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                . "ON DUPLICATE KEY UPDATE automationenabled=?, dayflags=?, hourflags=?, includetext=?, excludetext=?, "
+                . "oldtweetcutoffdate=?, oldtweetcutoffdateenabled=?, includetextenabled=?, excludetextenabled=?, timezonehouroffset=?, "
+                . "timezoneminuteoffset=?, includetextcondition=?, excludetextcondition=?, imagesenabled=?, gifsenabled=?, "
+                . "videosenabled=?";
+        $stmt = CoreDB::$databaseConnection->prepare($query);
+        try {
+            $success = $stmt->execute([$aS['usertwitterid'], $aS['automationenabled'],
+                $aS['dayflags'], $hourFlags, $aS['includetext'], $aS['excludetext'],
+                $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'],
+                $aS['includetextenabled'], $aS['excludetextenabled'], $userTimeZoneHour, $userTimeZoneMinute, $aS['includetextcondition'],
+                $aS['excludetextcondition'], $aS['imagesenabled'], $aS['gifsenabled'], $aS['videosenabled'],
+                $aS['automationenabled'], $aS['dayflags'], $hourFlags, $aS['includetext'], $aS['excludetext'],
+                $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'], $aS['includetextenabled'], $aS['excludetextenabled'], $userTimeZoneHour,
+                $userTimeZoneMinute, $aS['includetextcondition'], $aS['excludetextcondition'],
+                $aS['imagesenabled'], $aS['gifsenabled'], $aS['videosenabled']]);
+            if (!$success) {
+                Core::$logger->error("Failed to insert artist automation settings");
                 return StatusCode::ARTRETWEETER_DATABASE_ERROR;
-            }
-            return;
+            } else if ($aS['automationenabled'] === "N") {
+                $deleteQuery = "DELETE FROM scheduledretweets WHERE retweetingusertwitterid=? AND automated=?";
+                $deleteStmt = CoreDB::$databaseConnection->prepare($deleteQuery);
+                $success = $deleteStmt->execute([$aS['usertwitterid'], "Y"]);
+            } /* else if ($scheduleNewRetweetsNow) {
+              $selectStmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users WHERE twitterid=?");
+              $result = $selectStmt->execute([$aS['usertwitterid']]);
+              $userRow = $selectStmt->fetch();
+              $userAuth['twitter_id'] = $aS['usertwitterid'];
+              $userAuth['access_token'] = $userRow['accesstoken'];
+              $userAuth['access_token_secret'] = $userRow['accesstokensecret'];
+              Core::scheduleUserArtistRetweets($userRow);
+              } */
+        } catch (PDOException $e) {
+            Core::$logger->error("Failed to insert automation settings: " . print_r($e, true));
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
+        }
+        return StatusCode::ARTRETWEETER_QUERY_OK;
+    }
+
+    public static function commitAutomationSettingsInDB($aS) {
+        // Get old automation settings: check if they existed, or were disabled. If so, schedule new automated retweets immediately
+        $selectQuery = "SELECT * FROM userautomationsettings WHERE usertwitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $result = $selectStmt->execute([$aS['usertwitterid']]);
+        if (!$result) {
+            Core::$logger->error("Failed to retrieve previous automation settings");
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
+        }
+        $oldRow = $selectStmt->fetch();
+        $oldSettingsExist = true;
+        $automationWasDisabled = false;
+        $lastScheduleServerDate = null;
+        if (!$oldRow) {
+            $oldSettingsExist = false;
+            $automationWasDisabled = true;
+        } else if ($oldRow && $oldRow['automationenabled'] === "N") {
+            $automationWasDisabled = true;
+            $lastScheduleServerDate = $oldRow['lastscheduleserverdate'];
+        } else {
+            $lastScheduleServerDate = $oldRow['lastscheduleserverdate'];
+        }
+        $selectQuery = "SELECT COUNT(*) AS c FROM scheduledretweets WHERE retweetingusertwitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $result = $selectStmt->execute([$aS['usertwitterid']]);
+        if (!$result) {
+            Core::$logger->error("Failed to retrieve current scheduled retweet count");
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
         }
         $currentScheduledRetweetCount = $selectStmt->fetchColumn();
         $scheduleNewRetweetsNow = false;
@@ -1113,17 +1298,12 @@ class Core {
                 $oldTweetCutoffDate, $aS['oldtweetcutoffdateenabled'], $aS['includetextenabled'], $aS['excludetextenabled'], $userTimeZoneHour,
                 $userTimeZoneMinute, $aS['includetextcondition'], $aS['excludetextcondition'], $aS['metricsmeasurementtype'],
                 $aS['imagesenabled'], $aS['gifsenabled'], $aS['videosenabled']]);
-            error_log("Automation enabled:");
-            error_log($aS['automationenabled']);
-            error_log("Automation was disabled: $automationWasDisabled");
+            Core::$logger->debug("Automation enabled:");
+            Core::$logger->debug($aS['automationenabled']);
+            Core::$logger->debug("Automation was disabled: $automationWasDisabled");
             if (!$success) {
-                error_log("Failed to insert automation settings");
-                if ($echo) {
-                    echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $stmt->errorInfo());
-                } else {
-                    return StatusCode::ARTRETWEETER_DATABASE_ERROR;
-                }
-                return;
+                Core::$logger->error("Failed to insert automation settings");
+                return StatusCode::ARTRETWEETER_DATABASE_ERROR;
             } else if ($aS['automationenabled'] === "N") {
                 $deleteQuery = "DELETE FROM scheduledretweets WHERE retweetingusertwitterid=? AND automated=?";
                 $deleteStmt = CoreDB::$databaseConnection->prepare($deleteQuery);
@@ -1138,19 +1318,108 @@ class Core {
                 Core::queueAutomatedRetweets($userAuth);
             }
         } catch (PDOException $e) {
-            error_log("Failed to insert automation settings: $e");
-            if ($echo) {
-                echo Core::encodeStatusInformation(StatusCode::ARTRETWEETER_DATABASE_ERROR, $e);
+            Core::$logger->error("Failed to insert automation settings: " . print_r($e, true));
+            return StatusCode::ARTRETWEETER_DATABASE_ERROR;
+        }
+        return StatusCode::ARTRETWEETER_QUERY_OK;
+    }
+
+    public static function getUserArtistEligibleTweets($userTwitterID, $artistRow, $nonArtistRTThreshold) {
+        $selectMeanStatsQuery = "SELECT AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr "
+                . "FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=?";
+        $selectMeanStatsParams[] = $artistRow['twitterid'];
+
+        $oldTweetsCutoffDate = date("Y-m-d H:i:s", strtotime("-1 year"));
+        $selectMeanStatsQuery .= " AND createdat >= ?";
+        $selectMeanStatsParams[] = $oldTweetsCutoffDate;
+
+        if ($artistRow['includetextenabled'] === 'Y' && !is_null($artistRow['includetext'])) {
+            if ($artistRow['includetextcondition'] === "This exact phrase") {
+                $selectMeanStatsQuery .= " AND fulltweettext LIKE ?";
+                $selectMeanStatsParams[] = "%" . $artistRow['includetext'] . "%";
             } else {
-                return StatusCode::ARTRETWEETER_DATABASE_ERROR;
+                $includedWords = explode(" ", $artistRow['includetext']);
+                $selectMeanStatsQuery .= " AND (";
+                foreach ($includedWords as $includedWord) {
+                    if ($includedWord == "") {
+                        continue;
+                    }
+                    if ($artistRow['includetextcondition'] == "All of these words") {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
+                    } else {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
+                    }
+                    $selectMeanStatsParams[] = "%" . $includedWord . "%";
+                }
+                if ($artistRow['includetextcondition'] == "All of these words") {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
+                } else {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
+                }
+                $selectMeanStatsQuery .= ")";
             }
+        }
+        if ($artistRow['excludetextenabled'] == 'Y' && !is_null($artistRow['excludetext'])) {
+            if ($artistRow['excludetextcondition'] === "This exact phrase") {
+                $selectMeanStatsQuery .= " AND fulltweettext NOT LIKE ?";
+                $selectMeanStatsParams[] = "%" . $artistRow['excludetext'] . "%";
+            } else {
+                $excludedWords = explode(" ", $artistRow['excludetext']);
+                $selectMeanStatsQuery .= " AND (";
+                foreach ($excludedWords as $excludedWord) {
+                    if ($excludedWord == "") {
+                        continue;
+                    }
+                    if ($artistRow['excludetextcondition'] === "All of these words") {
+                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? AND ";
+                    } else {
+                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? OR ";
+                    }
+                    $selectMeanStatsParams[] = "%" . $excludedWord . "%";
+                }
+                if ($artistRow['excludetextcondition'] === "All of these words") {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
+                } else {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
+                }
+                $selectMeanStatsQuery .= ")";
+            }
+        }
+        $selectMeanStatsStmt = CoreDB::$databaseConnection->prepare($selectMeanStatsQuery);
+        $success = $selectMeanStatsStmt->execute($selectMeanStatsParams);
+        if (!$success) {
+            Core::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
             return;
         }
-        if ($echo) {
-            Core::encodeSuccessInformation($success);
-        } else {
-            return StatusCode::ARTRETWEETER_QUERY_OK;
+        $statsRow = $selectMeanStatsStmt->fetch();
+        $meanRTs = $statsRow['avgrts'];
+
+        $retweetThreshold = max(($meanRTs * $nonArtistRTThreshold), $artistRow['adaptivertthreshold']);
+
+        $oneYearAgo = date("Y-m-d H:i:s", strtotime("-1 year"));
+        $oneMonthAgo = date("Y-m-d H:i:s", strtotime("-1 month"));
+        $selectTweetsQuery = str_replace("AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr",
+                "*", $selectMeanStatsQuery);
+        $selectTweetsQuery .= " AND retweets >=? AND tweetid NOT IN (SELECT tweetid FROM scheduledretweets WHERE retweetingusertwitterid=?) "
+                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ?) "
+                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
+                . "GROUP BY tweetid HAVING COUNT(tweetid) > ?) "
+                . "ORDER BY RAND()";
+        $selectMeanStatsParams[] = $retweetThreshold;
+        $selectMeanStatsParams[] = $userTwitterID;
+        $selectMeanStatsParams[] = $userTwitterID;
+        $selectMeanStatsParams[] = $oneMonthAgo;
+        $selectMeanStatsParams[] = $userTwitterID;
+        $selectMeanStatsParams[] = $oneYearAgo;
+        $selectMeanStatsParams[] = 2;
+        $selectTweetsStmt = CoreDB::$databaseConnection->prepare($selectTweetsQuery);
+        $success = $selectTweetsStmt->execute($selectMeanStatsParams);
+        if (!$success) {
+            Core::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
+            return;
         }
+        $tweetRows = $selectTweetsStmt->fetchAll();
+        return $tweetRows;
     }
 
     public static function queueAutomatedRetweets($userAuth) {
@@ -1158,12 +1427,12 @@ class Core {
         $updateStmt = CoreDB::$databaseConnection->prepare($selectSettingsQuery);
         $success = $updateStmt->execute([$userAuth['twitter_id']]);
         if (!$success) {
-            error_log("Failed to get user ID to queue automated retweets for, cannot continue.");
+            Core::$logger->error("Failed to get user ID to queue automated retweets for, cannot continue.");
             return;
         }
         $settingsRow = $updateStmt->fetch();
         if (!$settingsRow) {
-            error_log("No automation settings are available for this user, cannot continue.");
+            Core::$logger->error("No automation settings are available for this user, cannot continue.");
             return;
         }
         $lastScheduleServerDate = $settingsRow['lastscheduleserverdate'];
@@ -1181,7 +1450,17 @@ class Core {
         $hourCount = substr_count($hourFlags, 'Y');
         $minuteCount = substr_count($minuteFlags, 'Y');
         if ($dayCount == 0 || $hourCount == 0 || $minuteCount == 0) {
-            error_log("User has invalid automation settings, cannot continue.");
+            Core::$logger->error("User has invalid automation settings, cannot continue.");
+            return;
+        }
+        $today = date("N") - 1;
+        $twoDaysFromNow = $today + 2;
+        if ($twoDaysFromNow > 7) {
+            $twoDaysFromNow -= 7;
+        }
+        $dayFlag = substr($dayFlags, $twoDaysFromNow, 1);
+        if ($dayFlag !== "Y") {
+            Core::$logger->debug("Two days from now: $twoDaysFromNow. Today: $today. Dayflags: $dayFlags");
             return;
         }
         $limitPerDay = min($hourCount, 10);
@@ -1194,10 +1473,10 @@ class Core {
             $selectMeanStatsQuery .= " AND createdat >= ?";
             $selectMeanStatsParams[] = $settingsRow['oldtweetscutoffdate'];
         }
-        if ($settingsRow['includetextenabled'] === 'Y') {
+        if ($settingsRow['includetextenabled'] === 'Y' && !is_null($settingsRow['includetext'])) {
             if ($settingsRow['includetextcondition'] === "This exact phrase") {
                 $selectMeanStatsQuery .= " AND fulltweettext LIKE ?";
-                $selectMeanStatsParams[] = "%" . $settingsRow['includedText'] . "%";
+                $selectMeanStatsParams[] = "%" . $settingsRow['includetext'] . "%";
             } else {
                 $includedWords = explode(" ", $settingsRow['includetext']);
                 $selectMeanStatsQuery .= " AND (";
@@ -1220,10 +1499,10 @@ class Core {
                 $selectMeanStatsQuery .= ")";
             }
         }
-        if ($settingsRow['excludetextenabled'] == 'Y') {
+        if ($settingsRow['excludetextenabled'] == 'Y' && !is_null($settingsRow['excludetext'])) {
             if ($settingsRow['excludetextcondition'] === "This exact phrase") {
                 $selectMeanStatsQuery .= " AND fulltweettext NOT LIKE ?";
-                $selectMeanStatsParams[] = "%" . $settingsRow['excludedText'] . "%";
+                $selectMeanStatsParams[] = "%" . $settingsRow['excludetext'] . "%";
             } else {
                 $excludedWords = explode(" ", $settingsRow['excludetext']);
                 $selectMeanStatsQuery .= " AND (";
@@ -1250,7 +1529,7 @@ class Core {
             $blockedHandlesStmt = CoreDB::$databaseConnection->prepare("SELECT * FROM userblockedhandles WHERE usertwitterid=?");
             $success = $blockedHandlesStmt->execute([$userAuth['twitter_id']]);
             if (!$success) {
-                error_log("Failed to get user blocked handles, cannot continue.");
+                Core::$logger->error("Failed to get user blocked handles, cannot continue.");
                 return;
             }
             $blockedHandles = $blockedHandlesStmt->fetchAll();
@@ -1262,27 +1541,16 @@ class Core {
             if (strlen($regexp) > 0) {
                 $regexp = substr($regexp, 0, -1);
             }
-            error_log("Regexp: $regexp");
+            Core::$logger->debug("Regexp: $regexp");
             $selectMeanStatsParams[] = $regexp;
         }
 
         $selectMeanStatsStmt = CoreDB::$databaseConnection->prepare($selectMeanStatsQuery);
         $success = $selectMeanStatsStmt->execute($selectMeanStatsParams);
         if (!$success) {
-            error_log("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
+            Core::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
             return;
         }
-        /* $selectMedianStatsQuery = "SET @rowindex := -1; SELECT AVG(retweets) AS medianrts FROM (SELECT @rowindex:=@rowindex + 1 AS rowindex,
-          retweets FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=? ORDER BY retweets) AS g WHERE
-          g.rowindex IN (FLOOR(@rowindex / 2) , CEIL(@rowindex / 2))";
-          $selectMedianStatsStmt = CoreDB::$databaseConnection->prepare($selectMedianStatsQuery);
-          $success = $selectMedianStatsStmt->execute($userAuth['twitter_id']);
-          if (!$success) {
-          error_log("Failed to get median statistics for user, cannot continue with automated retweet scheduling.");
-          return;
-          }
-          $medianRow = $selectMedianStatsStmt->fetch(); */
-        //$medianRTs = $medianRow['medianrts'];
         $statsRow = $selectMeanStatsStmt->fetch();
         $meanRTs = $statsRow['avgrts'];
         if ($settingsRow['metricsmeasurementtype'] == "Mean Average" && $settingsRow['retweetpercent'] != null) {
@@ -1292,8 +1560,8 @@ class Core {
             $retweetThreshold = max(($meanRTs * 0.2), $settingsRow['adaptivertthreshold']);
         } else {
             $userTwitterID = $userAuth['twitter_id'];
-            error_log("Incorrect automation settings for user ID: $userTwitterID. Settings row:");
-            error_log(print_r($settingsRow, true));
+            Core::$logger->error("Incorrect automation settings for user ID: $userTwitterID. Settings row:");
+            Core::$logger->error(print_r($settingsRow, true));
             return;
         }
 
@@ -1317,25 +1585,19 @@ class Core {
         $selectMeanStatsParams[] = $userAuth['twitter_id'];
         $selectMeanStatsParams[] = $oneYearAgo;
         $selectMeanStatsParams[] = 2;
-        if ($userAuth['twitter_id'] == 2248634958) {
-            error_log("AUTO QUERY: $selectTweetsQuery");
-            error_log(print_r($selectMeanStatsParams, true));
-        }
         $selectTweetsStmt = CoreDB::$databaseConnection->prepare($selectTweetsQuery);
         //error_log("Select tweets query: $selectTweetsQuery");
         $success = $selectTweetsStmt->execute($selectMeanStatsParams);
         if (!$success) {
-            error_log("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
+            Core::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
             return;
         }
         $tweetRows = $selectTweetsStmt->fetchAll();
         $tweetCount = count($tweetRows);
 
-        //error_log("Total tweet count returned: $tweetCount");
         $tweetsPerDay = ceil($tweetCount / $daysBetweenTweets);
         $minuteValues = Core::getMinuteValues($minuteFlags);
         $numScheduled = 0;
-        //error_log("Tweets per day: $tweetsPerDay     Total count per day: $totalCountPerDay");
         if ($tweetCount == 0) {
             return;
         }
@@ -1356,7 +1618,7 @@ class Core {
                 //error_log("Next hour: $nextHour    Next minute: $minuteValue");
                 $retweetTime->setTime($nextHour, $minuteValue);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
-                Core::queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp, true);
+                Core::queueRetweetInDB($userAuth['twitter_id'], $userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
                 $numScheduled++;
             }
         } else {
@@ -1373,7 +1635,7 @@ class Core {
                 $retweetTime->add(new \DateInterval('P2D'));
                 $retweetTime->setTime($nextHour, $minuteValue);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
-                Core::queueRetweetInDB($userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp, true);
+                Core::queueRetweetInDB($userAuth['twitter_id'], $userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
                 $numScheduled++;
                 $latestUsed = $nextHour;
                 $nextHour = Core::getNextHourToAutomate($hourFlags, $latestUsed, $interval);
@@ -1447,3 +1709,5 @@ class Core {
     }
 
 }
+
+Core::$logger = LogManager::getLogger("Core");
