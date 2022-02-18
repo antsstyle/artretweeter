@@ -44,8 +44,6 @@ $result = UserSettings::saveAutomationSettings($userTwitterID);
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             <?php
-            $homepage = Config::HOMEPAGE_URL;
-            $settingspage = Config::ARTISTSETTINGSPAGE_URL;
             $adminURL = Config::ADMIN_URL;
             $adminName = Config::ADMIN_NAME;
             if ($result === StatusCode::ARTRETWEETER_QUERY_OK) {

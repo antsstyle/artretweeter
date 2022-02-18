@@ -73,6 +73,26 @@ class CoreDB {
         return $success;
     }
 
+    public static function getLatestMetricsTypeID() {
+        $metricTypesSelectQuery = "SELECT * FROM retrievalmetrics";
+        $metricTypesSelectStmt = CoreDB::$databaseConnection->prepare($metricTypesSelectQuery);
+        $success = $metricTypesSelectStmt->execute();
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get metrics type, cannot calculate metrics.");
+            return null;
+        }
+        while ($row = $metricTypesSelectStmt->fetch()) {
+            if ($row['description'] === "Latest Metrics") {
+                $metricID = $row['id'];
+            }
+        }
+        if (!isset($metricID)) {
+            CoreDB::$logger->critical("Could not find ID for latest metrics retrieval metric type - cannot compute adaptive analytics.");
+            return null;
+        }
+        return $metricID;
+    }
+
     public static function submitArtistForApproval($userAuth, $artistTwitterHandle) {
         $selectQuery = "SELECT * FROM artistsubmissions WHERE screenname=? AND submittedbyusertwitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
@@ -157,8 +177,16 @@ class CoreDB {
         if (is_null($maxRetweetingLimit) || $maxRetweetingLimit === false) {
             return null;
         }
-        if ($retweetingCount >= $maxRetweetingLimit && $operation === "Enable") {
-            return "You are already retweeting the maximum number of artists allowed.";
+        $selectQuery = "SELECT paiduser FROM users WHERE twitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userTwitterID]);
+        if (!$success) {
+            return null;
+        }
+        $paidUser = $selectStmt->fetchColumn();
+        if ($retweetingCount >= $maxRetweetingLimit && $operation === "Enable" && $paidUser !== "Y") {
+            return "You are already retweeting the maximum number of artists allowed. To increase your limit, you can "
+                    . "<a href=\"" . Config::HOMEPAGE_URL . "subscribe\">subscribe</a>.";
         }
 
         if ($operation === "Enable") {

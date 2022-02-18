@@ -9,7 +9,7 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 
 Session::checkSession();
 
-$_SESSION['artretweeterpage'] = "artists";
+$_SESSION['artretweeterpage'] = "nonartists";
 
 if (!$_SESSION['usertwitterid']) {
     $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret);
@@ -55,11 +55,11 @@ if (!$_SESSION['usertwitterid']) {
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             <p>
-                This app can automatically retweet your art posts, based on specific criteria or filters. You don't have to schedule retweets manually - 
-                given some parameters to decide how it should retweet, it will do that for you.
+                This app can automatically retweet artists for you. All you need to do is tell it which artists you'd like to retweet, save your settings 
+                for retweet times, and it will do the rest for you.
             </p>
             <p>
-                Once you sign in, you can configure your retweet settings. 
+                Once you sign in, you can configure your retweet settings, and add artists you want to retweet.
                 The app won't retweet anything until you have saved your settings.
             </p>
             <p>
@@ -82,6 +82,9 @@ if (!$_SESSION['usertwitterid']) {
                 Hosting this app costs money, and developing this app is taking a lot of my time at the moment. If you'd like to support me, 
                 <a href="https://patreon.com/antsstyle" target="_blank">I have a patreon here.</a> I'd be very grateful for your support! It will 
                 allow me to pay for the hosting costs and spend more time on developing this app and others.
+                <br/><br/>
+                In addition, pledging to the $3 tier or higher on Patreon comes with the benefits of being subscribed to ArtRetweeter as a paid user, 
+                so you can retweet more artists and more often.
                 <br/><br/>
                 <a href="https://www.patreon.com/bePatron?u=406925" data-patreon-widget-type="become-patron-button">Become a Patron!</a>
                 <script async src="https://c6.patreon.com/becomePatronButton.bundle.js"></script>

@@ -62,7 +62,7 @@ if ($userInfo !== false && $userInfo !== null) {
                 . "Go back to the homepage to try"
                 . " again, or contact <a href=$adminURL>$adminName</a> on Twitter if the problem persists.";
             } else {
-                echo "These are the tweets currently scheduled for retweeting on your account.<br/><br/>";
+                echo "These are the tweets currently scheduled for retweeting on your account, soonest first.<br/><br/>";
                 foreach ($queuedRetweets as $queuedRetweet) {
                     $scheduledID = $queuedRetweet['schid'];
                     $retweetTime = $queuedRetweet['retweettime'];

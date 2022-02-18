@@ -62,7 +62,7 @@ if (!is_null($userAutomationSettings) && $userAutomationSettings !== false) {
 
             <div class="start">
                 <b>This page shows your settings for retweeting yourself. If you want to change your settings for retweeting other artists, go to the 
-                    <a href=<?php echo Config::ARTISTSETTINGSPAGE_URL ?>>Artist Settings</a> page.</b>
+                    <a href=<?php echo Config::NONARTISTSETTINGSPAGE_URL ?>>Non-Artist Settings</a> page.</b>
                 <br/><br/>
             </div>
             <p>

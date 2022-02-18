@@ -2,7 +2,8 @@
     "require": {
         "abraham/twitteroauth": "^3.1",
         "monolog/monolog": "^2.3",
-        "patreon/patreon": "^1.0"
+        "patreon/patreon": "^1.0",
+        "paypal/rest-api-sdk-php": "*"
     },
     "autoload": {
         "psr-4": {

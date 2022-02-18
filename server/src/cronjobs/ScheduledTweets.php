@@ -13,5 +13,3 @@ require $dir . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Core;
 
 Core::postScheduledRetweets();
-
-Core::removeExpiredRetweets();

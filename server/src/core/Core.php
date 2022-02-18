@@ -58,12 +58,22 @@ class Core {
                     <a href=\"https://antsstyle.com/apps\">Apps</a>
                 </div>
                 <br/>
-                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu\"><b>ArtRetweeter</b></button>
+                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu\"><b>ArtRetweeter (for artists)</b></button>
                 <div class=\"content\" style=\"max-height: 100%\">
                     <a href=\"https://antsstyle.com/artretweeter\">Home</a>
-                    <a href=\"https://antsstyle.com/artretweeter/info\">Info & FAQ</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/artistsettings\">Artist Settings</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/artistqueuestatus\">Artist Queue Status</a>
+                    <a href=\"https://antsstyle.com/artretweeter/info\">Artists Info & FAQ</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/artistsettings\">Settings</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/artistqueuestatus\">Queue Status</a>
+                </div>
+                <br/>
+                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu2\"><b>ArtRetweeter (for non-artists)</b></button>
+                <div class=\"content\" style=\"max-height: 100%\">
+                    <a href=\"https://antsstyle.com/artretweeter/nonartistshome\">Home</a>
+                    <a href=\"https://antsstyle.com/artretweeter/nonartistsinfo\">Non-Artists Info & FAQ</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/nonartistsettings\">Settings</a> 
+                    <a href=\"https://antsstyle.com/artretweeter/nonartistqueuestatus\">Queue Status</a>
+                    <a href=\"https://antsstyle.com/artretweeter/addartists\">Add Artists</a>
+                    <a href=\"https://antsstyle.com/artretweeter/subscribe\">Subscribe</a>
                 </div>
                 <br/>
                 <button class=\"collapsiblemenuitem\" id=\"nftcryptoblockermenu\"><b>NFT Artist & Cryptobro Blocker</b></button>
@@ -76,7 +86,8 @@ class Core {
 
     public static function scheduleAllUserArtistRetweets() {
         $now = date("Y-m-d H:i:s");
-        $selectQuery = "SELECT * FROM userartistautomationsettings WHERE automationenabled=? "
+        $selectQuery = "SELECT * FROM users INNER JOIN userartistautomationsettings ON users.twitterid=userartistautomationsettings.usertwitterid "
+                . "WHERE automationenabled=? "
                 . "AND (nextserverscheduledate IS NULL OR nextserverscheduledate <= ?)";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute(["Y", $now]);
@@ -85,22 +96,26 @@ class Core {
             return;
         }
         $rows = $selectStmt->fetchAll();
-        error_log("Num users: " . count($rows));
-        $nonArtistRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_THRESHOLD);
+        $nonArtistRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_MIN_RT_THRESHOLD);
         if (is_null($nonArtistRTThreshold)) {
             Core::$logger->critical("Unable to get non-artist retweets threshold - cannot schedule non-artist retweets!");
             return;
         } else if ($nonArtistRTThreshold === false) {
             $nonArtistRTThreshold = 0.25;
-            CoreDB::updateCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_THRESHOLD, "0.25");
+            CoreDB::updateCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_MIN_RT_THRESHOLD, "0.25");
+        }
+        $freeUserMaxDailyLimit = CoreDB::getCachedVariable(CachedVariables::MAX_NON_ARTIST_RETWEETS_PER_DAY_FREE_USER);
+        $paidUserMaxDailyLimit = CoreDB::getCachedVariable(CachedVariables::MAX_NON_ARTIST_RETWEETS_PER_DAY_PAID_USER);
+        if (is_null($freeUserMaxDailyLimit) || $freeUserMaxDailyLimit === false || is_null($paidUserMaxDailyLimit) || $paidUserMaxDailyLimit === false) {
+            Core::$logger->critical("Unable to schedule non-artist retweets - could not find user limits in cached variables!");
+            return;
         }
         foreach ($rows as $row) {
-            Core::scheduleUserArtistRetweets($row, $nonArtistRTThreshold);
+            Core::scheduleUserArtistRetweets($row, $nonArtistRTThreshold, $freeUserMaxDailyLimit, $paidUserMaxDailyLimit);
         }
     }
 
-    public static function scheduleUserArtistRetweets($userRow, $nonArtistRTThreshold) {
-        $userMaxDailyLimit = 10;
+    public static function scheduleUserArtistRetweets($userRow, $nonArtistRTThreshold, $freeUserMaxDailyLimit, $paidUserMaxDailyLimit) {
         $dayFlags = $userRow['dayflags'];
         $hourFlags = $userRow['hourflags'];
         $dayCount = substr_count($dayFlags, 'Y');
@@ -109,7 +124,6 @@ class Core {
             Core::$logger->error("User has invalid artist automation settings, cannot continue.");
             return;
         }
-        error_log("User day flags: $dayFlags     User hour flags: $hourFlags");
         $today = date("N") - 1;
         $twoDaysFromNow = $today + 2;
         if ($twoDaysFromNow >= 7) {
@@ -120,11 +134,16 @@ class Core {
             Core::$logger->debug("Two days from now: $twoDaysFromNow. Today: $today. Dayflags: $dayFlags");
             return;
         }
-        $limitPerDay = min($hourCount, $userMaxDailyLimit);
+        if ($userRow['paiduser'] === "N") {
+            $limitPerDay = min($hourCount, $freeUserMaxDailyLimit);
+        } else {
+            $limitPerDay = min($hourCount, $paidUserMaxDailyLimit);
+        }
+
         $totalCountPerDay = $limitPerDay * ($dayCount / 7);
         $selectQuery = "SELECT * FROM userartistretweetsettings INNER JOIN artists "
                 . "ON userartistretweetsettings.artisttwitterid=artists.twitterid WHERE userartistretweetsettings.usertwitterid=? "
-                . "ORDER BY totalretweeted ASC, RAND()";
+                . "ORDER BY totalretweeted ASC, RAND() ";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$userRow['usertwitterid']]);
         if (!$success) {
@@ -225,7 +244,7 @@ class Core {
     }
 
     public static function deleteRetweet($userAuth, $tweetID) {
-        $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+        $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                 $userAuth['access_token'], $userAuth['access_token_secret']);
         $connection->setApiVersion('2');
         $connection->setRetries(1, 1);
@@ -235,17 +254,24 @@ class Core {
 
     public static function getUserTwitterObjectByHandle($userAuth, $twitterHandle) {
         $params['screen_name'] = $twitterHandle;
-        $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+        $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                 $userAuth['access_token'], $userAuth['access_token_secret']);
         $connection->setRetries(1, 1);
         $queryResult = Core::queryTwitterUserAuth($connection, "users/show", "GET", $params, $userAuth);
         return $queryResult;
     }
 
+    public static function postScheduledRetweetsForever() {
+        while (true) {
+            postScheduledRetweets();
+            sleep(15);
+        }
+    }
+
     public static function postScheduledRetweets() {
         $retweetEndpoint = "statuses/retweet";
-        $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-5 minutes', time()));
-        $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+5 minutes', time()));
+        $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-2 minutes', time()));
+        $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+2 minutes', time()));
         $selectQuery = "SELECT scheduledretweets.id,tweetid,retweettime,accesstoken,accesstokensecret,"
                 . "retweetingusertwitterid,tweetauthorid FROM scheduledretweets INNER JOIN users ON "
                 . "scheduledretweets.retweetingusertwitterid = users.twitterid WHERE retweettime >= ? "
@@ -284,7 +310,7 @@ class Core {
             Core::deleteRetweet($userAuth, $tweetID);
             $params['id'] = $tweetID;
             $params['trim_user'] = 1;
-            $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret, $accessToken, $accessTokenSecret);
+            $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret, $accessToken, $accessTokenSecret);
             $connection->setRetries(1, 1);
             $queryResult = Core::queryTwitterUserAuth($connection, $retweetEndpoint, "POST", $params, $userAuth);
             $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
@@ -897,7 +923,7 @@ class Core {
         $reachedEnd = false;
         $reachedEnd = false;
         while ($resultCount != 0 && !$reachedEnd) {
-            $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+            $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                     null, APIKeys::bearer_token);
             $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, APIKeys::bearer_token);
             $queryCount++;
@@ -973,7 +999,7 @@ class Core {
         }
         $reachedEnd = false;
         while ($resultCount != 0 && !$reachedEnd) {
-            $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+            $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                     $userAuth['access_token'], $userAuth['access_token_secret']);
             $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth);
             $queryCount++;
@@ -1332,7 +1358,6 @@ class Core {
         $oldTweetsCutoffDate = date("Y-m-d H:i:s", strtotime("-1 year"));
         $selectMeanStatsQuery .= " AND createdat >= ?";
         $selectMeanStatsParams[] = $oldTweetsCutoffDate;
-
         if ($artistRow['includetextenabled'] === 'Y' && !is_null($artistRow['includetext'])) {
             if ($artistRow['includetextcondition'] === "This exact phrase") {
                 $selectMeanStatsQuery .= " AND fulltweettext LIKE ?";

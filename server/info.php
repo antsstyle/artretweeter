@@ -23,7 +23,7 @@ use Antsstyle\ArtRetweeter\Core\Config;
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             <div class="subtitle">
-                <h2>Information & FAQs</h2>
+                <h2>Information & FAQs (artists)</h2>
             </div>
 
             <h3>How do I use this app?</h3>

@@ -10,5 +10,6 @@ class APIKeys {
     
     const patreon_client_id = "<your patreon client id>";
     const patreon_client_secret = "<your patreon client secret>";
+    const patreon_webhook_secret = "<your patreon webhook secret>";
 
 }

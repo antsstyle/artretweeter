@@ -14,7 +14,7 @@ class Users {
 
     public static function retrieveUserTwitterHandle($userAuth) {
         Core::validateUserAuth($userAuth);
-        $connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+        $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                 $userAuth['access_token'], $userAuth['access_token_secret']);
         $connection->setApiVersion('2');
         $connection->setRetries(1, 1);

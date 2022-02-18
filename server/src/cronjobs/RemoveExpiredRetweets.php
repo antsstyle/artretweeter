@@ -10,7 +10,6 @@ $dir = getcwd();
 
 require $dir . '/vendor/autoload.php';
 
-use Antsstyle\ArtRetweeter\Core\Analysis;
+use Antsstyle\ArtRetweeter\Core\Core;
 
-Analysis::computeAdaptiveAnalyticsForUsers();
-Analysis::computeAdaptiveAnalyticsForArtists();
+Core::removeExpiredRetweets();

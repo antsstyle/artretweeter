@@ -12,6 +12,14 @@ use Abraham\TwitterOAuth\TwitterOAuth;
 
 Session::checkSession();
 
+$artRetweeterPage = $_SESSION['artretweeterpage'];
+
+if (!$artRetweeterPage) {
+    $location = Config::HOMEPAGE_URL . "error";
+    header("Location: $location", true, 302);
+    exit();
+}
+
 if (!$_SESSION['oauth_token']) {
     $location = Config::HOMEPAGE_URL . "error";
     header("Location: $location", true, 302);
@@ -37,7 +45,7 @@ if ($request_token['oauth_token'] !== $requestOAuthToken) {
     exit();
 }
 
-$connection = new TwitterOAuth(APIKeys::consumer_key, APIKeys::consumer_secret,
+$connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
         $request_token['oauth_token'], $request_token['oauth_token_secret']);
 try {
     $access_token = $connection->oauth("oauth/access_token", ["oauth_verifier" => $requestOAuthVerifier]);
@@ -49,15 +57,17 @@ try {
     exit();
 }
 
-$artistSettingsPageURL = Config::ARTISTSETTINGSPAGE_URL;
-$nonArtistSettingsPageURL = Config::NONARTISTSETTINGSPAGE_URL;
-
 if (isset($access_token)) {
     $success = CoreDB::insertUserInformation($access_token);
     if ($success) {
         $_SESSION['usertwitterid'] = $access_token['user_id'];
-        $location = Config::HOMEPAGE_URL . "loginsuccess";
-        header("Location: $location", true, 302);
+        if ($_SESSION['artretweeterpage'] === "artists") {
+            $location = Config::HOMEPAGE_URL . "artistsettings";
+            header("Location: $location", true, 302);
+        } else {
+            $location = Config::HOMEPAGE_URL . "nonartistsettings";
+            header("Location: $location", true, 302);
+        }
     } else {
         $location = Config::HOMEPAGE_URL . "failure";
         header("Location: $location", true, 302);

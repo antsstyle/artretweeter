@@ -57,11 +57,13 @@ class SearchArtists {
         if ($rows !== false) {
             foreach ($rows as $resultRow) {
                 $screenName = $resultRow['screenname'];
+                $hrefScreenName = "<a href=\"https://twitter.com/" . $screenName . "\" target=_\"blank\">"
+                        . "@" . $screenName . "</a>";
                 $artistID = $resultRow['twitterid'];
                 $addButton = "<button id=\"followbutton$i\" type=\"button\" onclick=\"addArtistForUser('$userTwitterID', '$artistID'"
                         . ", 'followbutton$i', 'Enable', 'Update', '$i')\">Enable automated retweeting</button>";
                 $tableString .= "<tr>";
-                $tableString .= "<td>@" . $screenName . "</td>";
+                $tableString .= "<td>$hrefScreenName</td>";
                 $tableString .= "<td>" . $resultRow['followercount'] . "</td>";
                 $tableString .= "<td>" . $addButton . "</td>";
                 $tableString .= "</tr>";
