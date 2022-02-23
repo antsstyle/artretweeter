@@ -7,6 +7,8 @@ use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Credentials\DB;
+use Abraham\TwitterOAuth\TwitterOAuth;
+use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 
 class CoreDB {
 
@@ -106,12 +108,22 @@ class CoreDB {
             $dateSubmitted = $row['datesubmitted'];
             return "You have already submitted this artist for approval (date $dateSubmitted); it is still pending.";
         }
-        $artistTwitterObject = Core::getUserTwitterObjectByHandle($userAuth, $artistTwitterHandle);
-        if (isset($artistTwitterObject->errors)) {
-            $errorMessage = $artistTwitterObject->errors[0]->message;
+        $params['user.fields'] = "protected";
+        $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
+                $userAuth['access_token'], $userAuth['access_token_secret']);
+        $connection->setApiVersion('2');
+        $connection->setRetries(1, 1);
+        $endpoint = "users/by/username/" . $artistTwitterHandle;
+        $queryResult = Core::queryTwitterUserAuth($connection, $endpoint, "GET", $params, $userAuth);
+        if (isset($queryResult->errors)) {
+            $errorMessage = $queryResult->errors[0]->detail;
             return $errorMessage;
         }
-        $artistTwitterID = $artistTwitterObject->id;
+        $artistTwitterID = $queryResult->data->id;
+        $protected = $queryResult->data->protected;
+        if ($protected) {
+            return "This artist's profile is protected - their tweets cannot be retweeted.";
+        }
         $selectQuery = "SELECT * FROM artists WHERE twitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$artistTwitterID]);
@@ -209,7 +221,6 @@ class CoreDB {
         $artistRow = $artistStmt->fetch();
         $returnArray['screenname'] = $artistRow['screenname'];
         $returnArray['artisttwitterid'] = $artistRow['twitterid'];
-        $returnArray['followercount'] = $artistRow['followercount'];
         $returnArray['affectedrows'] = $affectedRows;
         return $returnArray;
     }
@@ -226,7 +237,7 @@ class CoreDB {
 
     public static function getUserArtistRetweetSettings($userTwitterID) {
         $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM userartistretweetsettings INNER JOIN artists ON "
-                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=?");
+                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? ORDER BY screenname ASC");
         $success = $stmt->execute([$userTwitterID]);
         if (!$success) {
             return null;

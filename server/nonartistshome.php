@@ -54,6 +54,10 @@ if (!$_SESSION['usertwitterid']) {
         <div class="main">
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
+            <div class="subtitle">
+                <h2>Non-Artists</h2>
+            </div>
+            <h3>This section of ArtRetweeter allows you to retweet other artists from your account, hence the "non-artists" tag.</h3>
             <p>
                 This app can automatically retweet artists for you. All you need to do is tell it which artists you'd like to retweet, save your settings 
                 for retweet times, and it will do the rest for you.
@@ -64,7 +68,7 @@ if (!$_SESSION['usertwitterid']) {
             </p>
             <p>
                 If you want more information about how the app works or want to see the FAQ, you can go to the 
-                <a href=<?php echo Config::HOMEPAGE_URL . "info" ?>>Info</a> page.
+                <a href=<?php echo Config::HOMEPAGE_URL . "nonartistsinfo" ?>>Info</a> page.
             </p>
 
             <br/>

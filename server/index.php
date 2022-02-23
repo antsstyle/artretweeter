@@ -54,6 +54,7 @@ if (!$_SESSION['usertwitterid']) {
         <div class="main">
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
+            
             <p>
                 This app can automatically retweet your art posts, based on specific criteria or filters. You don't have to schedule retweets manually - 
                 given some parameters to decide how it should retweet, it will do that for you.

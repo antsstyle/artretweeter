@@ -35,6 +35,10 @@ class SearchArtists {
         if (strpos($searchString, "@") === 0) {
             $searchString = substr($searchString, 1);
         }
+        if (strlen($searchString) < 3) {
+            echo "Your search string must be at least 3 characters long.";
+            return;
+        }
         $searchString = "%" . $searchString . "%";
         $artistResults = CoreDB::searchArtistsForUser($searchString, $userTwitterID);
         if (is_null($artistResults)) {
@@ -47,9 +51,7 @@ class SearchArtists {
     public static function echoTable($userTwitterID, $artistResults) {
         $tableString = "<table id=\"maintable\" class=\"dblisttable\"><tr>
                         <th onclick=\"sortTable(0, 'maintable')\">Twitter Handle</th>
-                        <th onclick=\"sortTable(1, 'maintable')\">Follower Count</th>
                         <th>Options</th>
-
             </tr>";
         $resultCount = $artistResults['resultcount'];
         $rows = $artistResults['rows'];
@@ -64,7 +66,7 @@ class SearchArtists {
                         . ", 'followbutton$i', 'Enable', 'Update', '$i')\">Enable automated retweeting</button>";
                 $tableString .= "<tr>";
                 $tableString .= "<td>$hrefScreenName</td>";
-                $tableString .= "<td>" . $resultRow['followercount'] . "</td>";
+                //$tableString .= "<td>" . $resultRow['followercount'] . "</td>";
                 $tableString .= "<td>" . $addButton . "</td>";
                 $tableString .= "</tr>";
                 $i++;

@@ -124,7 +124,7 @@ class Patreon {
             default:
                 break;
         }
-        error_log(print_r(json_decode($data), true));
+        error_log("Patreon webhook received: " . print_r(json_decode($data), true));
     }
 
 }

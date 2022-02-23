@@ -62,16 +62,19 @@ if ($userInfo === false) {
                 <br/>
                 <li>User must not sell or advocate for NFTs or cryptocurrency.</li>
                 <br/>
-                <li>User must either have at least 1,000 followers, or only tweet their art with specific text. <b>This requirement is not for restricting 
+                <li>User must either have at least 5,000 followers, or if they are below that, their art must be sufficiently easy to distinguish from other 
+                    image tweets (I will review it myself). <b>This requirement is not for restricting 
                         smaller artists from being retweeted by the app;</b> it is explained below.</li>
             </ol>
-            The reason for the third condition is because at low follower counts, 
-            it becomes nearly impossible for the app to determine which tweets are art and which are not. If however, an artist with 50 followers 
+            The third condition exists because at low follower counts, 
+            it becomes nearly impossible for the app to determine which tweets are art and which are not. If however, an artist with 200 followers 
             always tweets their art with a specific phrase or hashtag that is not used for non-art posts (e.g. "#Art" - but it can be any phrase), then 
-            this rule doesn't apply, as then the app will be able to retweet their art correctly.
+            this rule doesn't apply, as then the app will be able to retweet their art correctly. It also won't apply if e.g. said artist *only* tweets art 
+            with their account and not any other kind of images, as then there isn't going to be any confusion for the app as to which images are which.
             <br/><br/>
             To submit a user to be added to ArtRetweeter, use the simple form below. To avoid spam, you can make a maximum of 10 
-            unique submissions per week.
+            unique submissions per week. (This only counts successful submissions, i.e. if you try to submit an artist and they can't be submitted, it won't 
+            count towards that limit).
             </br><br/>
             <input type="text" style="width:250px" id="submitartistinput" placeholder="Enter artist's twitter handle here.">
             <button type="button" id="submitartistbutton" 
@@ -80,7 +83,7 @@ if ($userInfo === false) {
             <div id="submitartisttextdiv">
 
             </div>
-            
+
         </div>
     </body>
     <script src="src/ajax/Collapsibles.js"></script>

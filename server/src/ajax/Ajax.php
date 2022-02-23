@@ -10,9 +10,12 @@ require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
 
 class Ajax {
+    
+    public static $logger;
 
     public static function processAjax() {
         Session::checkSession();
@@ -49,13 +52,13 @@ class Ajax {
             case "reschedulequeueentry":
                 $idToReschedule = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
                 if ($idToReschedule === false || $idToReschedule === null) {
-                    error_log("Invalid request ID, cannot reschedule queue entry.");
+                    Ajax::$logger->error("Invalid request ID, cannot reschedule queue entry.");
                     echo "";
                     break;
                 }
                 $newTime = filter_input(INPUT_POST, 'newtime', FILTER_SANITIZE_STRING);
                 if ($newTime === false || $newTime === null) {
-                    error_log("Invalid schedule time, cannot reschedule queue entry.");
+                    Ajax::$logger->error("Invalid schedule time, cannot reschedule queue entry.");
                     echo "";
                     break;
                 }
@@ -73,7 +76,7 @@ class Ajax {
             case "deletequeueentry":
                 $idToDelete = filter_input(INPUT_POST, 'id', FILTER_SANITIZE_NUMBER_INT);
                 if ($idToDelete === false || $idToDelete === null) {
-                    error_log("Invalid request ID, cannot delete queue entry.");
+                    Ajax::$logger->error("Invalid request ID, cannot delete queue entry.");
                     echo "";
                 } else {
                     $result = CoreDB::deleteQueuedRetweet($idToDelete, $userTwitterID);
@@ -87,4 +90,5 @@ class Ajax {
 
 }
 
+Ajax::$logger = LogManager::getLogger("Ajax");
 Ajax::processAjax();

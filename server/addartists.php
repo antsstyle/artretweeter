@@ -57,8 +57,15 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
             <?php Core::echoSidebar(); ?>
             <h1>ArtRetweeter</h1>
             <p>
-                This page shows the artists you are automatically retweeting.
+                This page shows the artists you are automatically retweeting, in alphabetical order.
             </p>
+            <?php
+            if (is_null($userArtistRetweetSettings)) {
+                echo "An error occurred retrieving your artist records, check back later.";
+            } else if (count($userArtistRetweetSettings) === 0) {
+                echo "You are not retweeting any artists via this app yet.";
+            }
+            ?>
             <div id="userartistsresultsdiv">
 
             </div>
@@ -66,15 +73,10 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
                 <table id="userartiststable" class="dblisttable">
                     <tr>
                         <th onclick="sortTable(0, 'userartiststable')">Twitter Handle</th>
-                        <th onclick="sortTable(1, 'userartiststable')">Follower Count</th>
                         <th>Remove</th>
                     </tr>
                     <?php
-                    if (is_null($userArtistRetweetSettings)) {
-                        echo "An error occurred retrieving your artist records, check back later.";
-                    } else if (count($userArtistRetweetSettings) === 0) {
-                        echo "You are not retweeting any artists via this app yet.";
-                    } else {
+                    if (!is_null($userArtistRetweetSettings) && count($userArtistRetweetSettings) > 0) {
                         $i = 0;
                         foreach ($userArtistRetweetSettings as $userArtistRetweetSettings) {
                             $screenName = $userArtistRetweetSettings['screenname'];
@@ -83,7 +85,7 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
                                     . "@" . $screenName . "</a>";
                             echo "<tr>";
                             echo "<td>" . $twitterLink . "</td>";
-                            echo "<td>" . $userArtistRetweetSettings['followercount'] . "</td>";
+                            //echo "<td>" . $userArtistRetweetSettings['followercount'] . "</td>";
                             $removeButton = "<button id=\"removebutton$i\" type=\"button\" onclick=\"addArtistForUser('$userTwitterID', '$artistID'"
                                     . ", 'removebutton$i', 'Disable', 'Remove')\">Remove</button>";
                             echo "<td id=\"userartiststablerow$i\">$removeButton</td>";
@@ -114,7 +116,6 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
                 <table id="maintable" class="dblisttable">
                     <tr>
                         <th onclick="sortTable(0, 'maintable')">Twitter Handle</th>
-                        <th onclick="sortTable(1, 'maintable')">Follower Count</th>
                         <th>Options</th>
                     </tr>
                 </table>

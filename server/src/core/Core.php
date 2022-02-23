@@ -5,6 +5,7 @@ namespace Antsstyle\ArtRetweeter\Core;
 use Antsstyle\ArtRetweeter\Core\StatusCode;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Core\Users;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Abraham\TwitterOAuth\TwitterOAuth;
@@ -84,6 +85,46 @@ class Core {
             </div>";
     }
 
+    public static function updateArtistInfoForAllArtists() {
+        $now = date("Y-m-d H:i:s");
+        $selectQuery = "SELECT twitterid FROM artists WHERE (nextupdateinfodate IS NULL OR nextupdateinfodate < ?) LIMIT 50000";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$now]);
+        if (!$success) {
+            Core::$logger->critical("Failed to get all user artist automation settings!");
+            return;
+        }
+        $userLookupString = "";
+        $i = 0;
+        $consecutiveErrors = 0;
+        $updateQuery = "UPDATE artists SET followercount=?, nextupdateinfodate=? WHERE twitterid=?";
+        $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+        while ($row = $selectStmt->fetch()) {
+            if ($consecutiveErrors >= 2) {
+                Core::$logger->error("$consecutiveErrors consecutive errors finding artist follower counts - aborting.");
+                break;
+            }
+            $userLookupString .= $row['twitterid'] .= ",";
+            $i++;
+            if ($i === 100) {
+                $tomorrow = date("Y-m-d H:i:s", strtotime("+1 day"));
+                $i = 0;
+                $userLookupString = substr($userLookupString, 0, -1);
+                $data = Users::lookupUsersBearerToken($userLookupString);
+                if (is_null($data)) {
+                    $consecutiveErrors++;
+                    continue;
+                }
+                $consecutiveErrors = 0;
+                foreach ($data as $userEntry) {
+                    $userTwitterID = $userEntry->id;
+                    $followersCount = $userEntry->public_metrics->followers_count;
+                    $updateStmt->execute([$followersCount, $tomorrow, $userTwitterID]);
+                }
+            }
+        }
+    }
+
     public static function scheduleAllUserArtistRetweets() {
         $now = date("Y-m-d H:i:s");
         $selectQuery = "SELECT * FROM users INNER JOIN userartistautomationsettings ON users.twitterid=userartistautomationsettings.usertwitterid "
@@ -157,7 +198,7 @@ class Core {
         $totalArtistTweetCount = 0;
         foreach ($rows as $row) {
             $tweetRows = Core::getUserArtistEligibleTweets($userRow['usertwitterid'], $row, $nonArtistRTThreshold);
-            error_log("Eligible tweets for artist " . $row['twitterid'] . ": " . count($tweetRows));
+            Core::$logger->debug("Eligible tweets for artist " . $row['twitterid'] . ": " . count($tweetRows));
             $totalArtistTweetCount += count($tweetRows);
             if (count($tweetRows) > 0) {
                 $tweetRowsArray[] = $tweetRows;
@@ -172,8 +213,8 @@ class Core {
         $artistIndex = 0;
         $scheduledTweets = 0;
         $hourIndices = Core::getHourFlagIndices($hourFlags);
-        error_log("Limit per day: $limitPerDay");
-        error_log("Count of tweet rows array: " . count($tweetRowsArray));
+        Core::$logger->debug("Limit per day: $limitPerDay");
+        Core::$logger->debug("Count of tweet rows array: " . count($tweetRowsArray));
         $endReached = false;
         while ($scheduledTweets < $limitPerDay && ($artistIndex < count($tweetRowsArray)) && !$endReached) {
             $artistRows = $tweetRowsArray[$artistIndex];
@@ -190,6 +231,10 @@ class Core {
                 $retweetTimeStamp = $retweetTime->getTimestamp();
                 Core::queueRetweetInDB($userRow['usertwitterid'], $tweetAuthorID, $tweetIDToSchedule, $retweetTimeStamp);
                 $scheduledTweets++;
+                if ($scheduledTweets >= $limitPerDay) {
+                    $endReached = true;
+                    break;
+                }
                 if (count($hourIndices) === 0) {
                     $endReached = true;
                     break;
@@ -252,15 +297,6 @@ class Core {
         $connection->delete($query);
     }
 
-    public static function getUserTwitterObjectByHandle($userAuth, $twitterHandle) {
-        $params['screen_name'] = $twitterHandle;
-        $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
-                $userAuth['access_token'], $userAuth['access_token_secret']);
-        $connection->setRetries(1, 1);
-        $queryResult = Core::queryTwitterUserAuth($connection, "users/show", "GET", $params, $userAuth);
-        return $queryResult;
-    }
-
     public static function postScheduledRetweetsForever() {
         while (true) {
             postScheduledRetweets();
@@ -269,7 +305,6 @@ class Core {
     }
 
     public static function postScheduledRetweets() {
-        $retweetEndpoint = "statuses/retweet";
         $time5MinsAgo = date('Y-m-d H:i:s', strtotime('-2 minutes', time()));
         $time5MinsFromNow = date('Y-m-d H:i:s', strtotime('+2 minutes', time()));
         $selectQuery = "SELECT scheduledretweets.id,tweetid,retweettime,accesstoken,accesstokensecret,"
@@ -308,11 +343,12 @@ class Core {
                 continue;
             }
             Core::deleteRetweet($userAuth, $tweetID);
-            $params['id'] = $tweetID;
-            $params['trim_user'] = 1;
+            $params['tweet_id'] = $tweetID;
             $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret, $accessToken, $accessTokenSecret);
+            $connection->setApiVersion('2');
             $connection->setRetries(1, 1);
-            $queryResult = Core::queryTwitterUserAuth($connection, $retweetEndpoint, "POST", $params, $userAuth);
+            $retweetEndpoint = "users/" . $row['retweetingusertwitterid'] . "/retweets";
+            $queryResult = $connection->post($retweetEndpoint, $params, true);
             $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
                     . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
                     . "? FROM scheduledretweets WHERE id=?";
@@ -321,20 +357,18 @@ class Core {
                         ->execute([2, "Internal error whilst attempting to retweet", $databaseID]);
             } else {
                 if ($queryResult->errors) {
+                    error_log("Failed to retweet tweet: " . print_r($queryResult->errors, true));
                     if (is_array($queryResult->errors)) {
                         $errorCode = $queryResult->errors[0]->code;
-                        $errorMessage = $queryResult->errors[0]->message;
+                        $errorMessage = $queryResult->errors[0]->details;
                     } else {
                         $errorCode = $queryResult->errors->code;
-                        $errorMessage = $queryResult->errors->message;
+                        $errorMessage = $queryResult->errors->details;
                     }
                     CoreDB::$databaseConnection->prepare($insertFailedRetweetQuery)
                             ->execute([$errorCode, $errorMessage, $databaseID]);
                 } else {
-                    $originalStatus = $queryResult->retweeted_status;
-                    $retweetedStatusID = $queryResult->id;
-                    $originalTweetID = $originalStatus->id;
-                    Core::updateRetweetRecordsInDB($userAuth['twitter_id'], $originalTweetID, $retweetedStatusID, $retweetTime,
+                    Core::updateRetweetRecordsInDB($userAuth['twitter_id'], $tweetID, $retweetTime,
                             $tweetAuthorID, $selfRetweet);
                 }
             }
@@ -566,11 +600,11 @@ class Core {
         return true;
     }
 
-    public static function updateRetweetRecordsInDB($userTwitterID, $tweetID, $retweetID, $scheduledTime, $tweetAuthorID, $selfRetweet) {
-        $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweetid,retweettime,scheduledretweettime) 
-	VALUES (?,?,?,?,?)");
+    public static function updateRetweetRecordsInDB($userTwitterID, $tweetID, $scheduledTime, $tweetAuthorID, $selfRetweet) {
+        $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO retweetrecords (usertwitterid,tweetid,retweettime,scheduledretweettime) 
+	VALUES (?,?,?,?)");
         $currentTime = date("Y-m-d H:i:s", time());
-        $stmt->execute([$userTwitterID, $tweetID, $retweetID, $currentTime, $scheduledTime]);
+        $stmt->execute([$userTwitterID, $tweetID, $currentTime, $scheduledTime]);
         if (!$selfRetweet) {
             $stmt = CoreDB::$databaseConnection->prepare("UPDATE userartistretweetsettings SET totalretweeted=totalretweeted+1 WHERE usertwitterid=? "
                     . "AND artisttwitterid=?");
@@ -731,13 +765,19 @@ class Core {
             try {
                 $success = $updateStmt->execute([$fullText, "Y", $rowID]);
             } catch (\Exception $e) {
-                error_log("Tweet ID: " . $tweet->id);
-                error_log("Full tweet text too long: $fullText");
+                Core::$logger->error("Failed to fix tweet text! " . print_r($e, true));
+                Core::$logger->error("Tweet ID: " . $tweet->id);
+                Core::$logger->error("Full tweet text too long: $fullText");
             }
         }
     }
 
-    public static function insertTweetsAndMetrics($tweets, $userTwitterID, $imagesEnabled = "Y", $gifsEnabled = "N", $videosEnabled = "N") {
+    public static function insertTweetsAndMetrics($results, $userTwitterID, $imagesEnabled = "Y", $gifsEnabled = "N", $videosEnabled = "N") {
+        $tweets = $results->data;
+        $includes = $results->includes->media;
+        if (!$includes) {
+            return;
+        }
         $selectQuery = "SELECT id FROM retrievalmetrics WHERE description=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute(["Latest Metrics"]);
@@ -764,15 +804,21 @@ class Core {
         }
         CoreDB::$databaseConnection->beginTransaction();
         $timeNow = date("Y-m-d H:i:s");
+        $mediaMap = [];
+        foreach ($includes as $mediaEntry) {
+            $mediaMap[$mediaEntry->media_key] = $mediaEntry->type;
+        }
         foreach ($tweets as $tweet) {
             $created_at = date("Y-m-d H:i:s", strtotime($tweet->created_at));
-            if (!$tweet->extended_entities) {
+            if (!$tweet->attachments->media_keys) {
                 continue;
             }
-            if (!$tweet->extended_entities->media) {
+            $firstMediaKey = $tweet->attachments->media_keys[0];
+            if (!array_key_exists($firstMediaKey, $mediaMap)) {
+                Core::$logger->error("Media key $firstMediaKey doesn't exist in includes map! Tweet ID: " . $tweet->id);
                 continue;
             }
-            $mediaType = $tweet->extended_entities->media[0]->type;
+            $mediaType = $mediaMap[$firstMediaKey];
             if ($mediaType === "photo" && $imagesEnabled !== "Y") {
                 continue;
             }
@@ -782,33 +828,29 @@ class Core {
             if ($mediaType === "video" && $videosEnabled !== "Y") {
                 continue;
             }
-            if ($tweet->retweeted_status) {
-                continue;
-            }
             if ($tweet->in_reply_to_user_id && ($tweet->in_reply_to_user_id != $userTwitterID)) {
                 continue;
             }
             if (isset($deletedTweetsArray) && isset($deletedTweetsArray[$tweet->id])) {
                 continue;
             }
-            $fullText = $tweet->full_text;
-            $media = $tweet->entities->media;
-            for ($j = 0; $j < count($media); $j++) {
-                $url = $media[$j]->url;
-                $fullText = str_replace($url, "", $fullText);
+            $likeCount = $tweet->public_metrics->like_count;
+            $retweetCount = $tweet->public_metrics->retweet_count;
+            $fullText = $tweet->text;
+            $urlentities = $tweet->entities->urls;
+            for ($j = 0; $j < count($urlentities); $j++) {
+                $entityDisplayURL = $urlentities[$j]->display_url;
+                if (strpos($entityDisplayURL, "pic.twitter.com") !== false) {
+                    $fullText = str_replace($urlentities[$j]->url, "", $fullText);
+                } else {
+                    $fullText = str_replace($urlentities[$j]->url, $urlentities[$j]->expanded_url, $fullText);
+                }
             }
-            $urls = $tweet->entities->urls;
-            for ($j = 0; $j < count($urls); $j++) {
-                $url = $urls[$j]->url;
-                $extendedUrl = $urls[$j]->expanded_url;
-                $fullText = str_replace($url, $extendedUrl, $fullText);
-            }
-            $tweetJson = json_encode($tweet);
             try {
                 $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweets
-            (tweetid,usertwitterid,createdat,fulltweettext,tweetjson,mediatype) 
-	VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE fulltweettext=?");
-                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $fullText, $tweetJson, $mediaType, $fullText]);
+            (tweetid,usertwitterid,createdat,fulltweettext,mediatype) 
+	VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE fulltweettext=?");
+                $stmt->execute([$tweet->id, $userTwitterID, $created_at, $fullText, $mediaType, $fullText]);
             } catch (\PDOException $e) {
                 Core::$logger->error("Failed to insert tweet: " . print_r($e, true));
             }
@@ -817,8 +859,8 @@ class Core {
                     $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweetmetrics
                 (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (LAST_INSERT_ID(),?,?,?,?) 
                 ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
-                    $stmt->execute([$timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
-                        $tweet->retweet_count, $timeNow]);
+                    $stmt->execute([$timeNow, $metricID, $likeCount, $retweetCount, $likeCount,
+                        $retweetCount, $timeNow]);
                 } catch (\PDOException $e) {
                     Core::$logger->error("Failed to insert tweet metrics for new tweet: " . print_r($e, true));
                 }
@@ -830,35 +872,14 @@ class Core {
                     $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweetmetrics
                 (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (?,?,?,?,?) 
                 ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
-                    $stmt->execute([$tweetsTableID, $timeNow, $metricID, $tweet->favorite_count, $tweet->retweet_count, $tweet->favorite_count,
-                        $tweet->retweet_count, $timeNow]);
+                    $stmt->execute([$tweetsTableID, $timeNow, $metricID, $likeCount, $retweetCount, $likeCount,
+                        $retweetCount, $timeNow]);
                 } catch (\PDOException $e) {
                     Core::$logger->error("Failed to insert tweet metrics for existing tweet: " . print_r($e, true));
                 }
             }
-            if (!isset($highestID)) {
-                $highestID = $tweet->id;
-            } else if ($tweet->id > $highestID) {
-                $highestID = $tweet->id;
-            }
-            if (!isset($lowestID)) {
-                $lowestID = $tweet->id;
-            } else if ($tweet->id < $lowestID) {
-                $lowestID = $tweet->id;
-            }
         }
         CoreDB::$databaseConnection->commit();
-        $returnArray = [];
-        if (isset($highestID)) {
-            $returnArray['highestid'] = $highestID;
-        }
-        if (isset($lowestID)) {
-            $returnArray['lowestid'] = $lowestID;
-        }
-        if (count($returnArray) == 0) {
-            $returnArray['novalidresults'] = true;
-        }
-        return $returnArray;
     }
 
     public static function scheduleAutomatedRetweets() {
@@ -879,10 +900,11 @@ class Core {
     }
 
     public static function getAllNewTweetsForAllUsers() {
+        $now = date("Y-m-d H:i:s");
         $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
-                . "WHERE automationenabled=?";
+                . "WHERE automationenabled=? AND (nextusertimelinecheck IS NULL OR nextusertimelinecheck <= ?)";
         $stmt = CoreDB::$databaseConnection->prepare($query);
-        $success = $stmt->execute(["Y"]);
+        $success = $stmt->execute(["Y", $now]);
         if (!$success) {
             Core::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
             return;
@@ -907,13 +929,13 @@ class Core {
     }
 
     public static function getAllNewTweetsForArtist($artistRow) {
-        $params['count'] = 200;
-        $params['user_id'] = $artistRow['twitterid'];
-        $params['include_rts'] = "false";
-        $params['trim_user'] = "true";
-        $params['tweet_mode'] = "extended";
+        $params['max_results'] = 100;
+        $params['exclude'] = "retweets";
+        $params['expansions'] = "attachments.media_keys";
+        $params['media.fields'] = "type";
+        $params['tweet.fields'] = "public_metrics,author_id,in_reply_to_user_id,entities,created_at";
         if ($artistRow['oldtweetlimitretrieved'] === "N" && !is_null($artistRow['maxid'])) {
-            $params['max_id'] = $artistRow['maxid'];
+            $params['until_id'] = $artistRow['maxid'];
         }
         if (!is_null($artistRow['sinceid'])) {
             $params['since_id'] = $artistRow['sinceid'];
@@ -921,53 +943,62 @@ class Core {
         $resultCount = 1;
         $queryCount = 0;
         $reachedEnd = false;
-        $reachedEnd = false;
+        $oldestID = null;
+        $newestID = null;
+        $totalResultCount = 0;
         while ($resultCount != 0 && !$reachedEnd) {
             $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                     null, APIKeys::bearer_token);
-            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, APIKeys::bearer_token);
+            $connection->setApiVersion('2');
+            $endpoint = "users/" . $artistRow['twitterid'] . "/tweets";
+            $results = Core::queryTwitterUserAuth($connection, $endpoint, "GET", $params, APIKeys::bearer_token);
             $queryCount++;
             if ($connection->getLastHttpCode() == 200) {
-                $resultCount = count($results);
+                $meta = $results->meta;
+                $resultCount = $meta->result_count;
                 if ($resultCount == 0) {
                     $reachedEnd = true;
                 } else {
-                    $returnArray = Core::insertTweetsAndMetrics($results, $artistRow['twitterid'], $artistRow['imagesenabled'],
-                                    $artistRow['gifsenabled'], $artistRow['videosenabled']);
-                    if (!$returnArray) {
-                        Core::$logger->error("Empty or nonexistent return array - breaking loop.");
+                    $totalResultCount += $resultCount;
+                    Core::insertTweetsAndMetrics($results, $artistRow['twitterid'], $artistRow['imagesenabled'],
+                            $artistRow['gifsenabled'], $artistRow['videosenabled']);
+                    if (!isset($meta->oldest_id) && !isset($meta->newest_id)) {
                         break;
                     }
-                    if (isset($returnArray['novalidresults']) && $returnArray['novalidresults']) {
-                        break;
+                    if (isset($meta->oldest_id) && !is_null($meta->oldest_id)) {
+                        $oldestID = $meta->oldest_id;
+                    }
+                    if (isset($meta->newest_id) && !is_null($meta->newest_id)) {
+                        $newestID = $meta->newest_id;
                     }
                     if ($artistRow['oldtweetlimitretrieved'] == "N") {
-                        $params['max_id'] = $returnArray['lowestid'] - 1;
+                        $params['until_id'] = $meta->oldest_id - 1;
                     } else {
-                        $params['since_id'] = $returnArray['highestid'];
+                        $params['since_id'] = $meta->newest_id;
                     }
                 }
             } else {
                 break;
             }
             if ($queryCount > 35) {
-                Core::$logger->critical("35 user_timeline queries!");
+                Core::$logger->critical("35 users/:id/tweets queries!");
                 break;
             }
         }
-        $nextCheckDateRatio = ceil(24 / max($queryCount, 1));
-        $nextCheckDate = date("Y-m-d H:i:s", strtotime("+$nextCheckDateRatio hours"));
-        $query = "UPDATE artists SET ";
-        $updParams = [];
-        if ($reachedEnd) {
-            $query .= "oldtweetlimitretrieved=?, maxid=?, nextcheckdate=? ";
-            array_push($updParams, "Y", $params['max_id'], $nextCheckDate);
-        } else if (isset($params['max_id'])) {
-            $query .= "maxid=?, nextcheckdate=? ";
-            array_push($updParams, $params['max_id'], $nextCheckDate);
-        } else {
-            $query .= "sinceid=?, nextcheckdate=? ";
-            array_push($updParams, $params['since_id'], $nextCheckDate);
+        $resultCountModifier = max(ceil($totalResultCount / 100), 1);
+        $numHoursToNextCheck = ceil(24 / $resultCountModifier);
+        $nextCheck = date("Y-m-d H:i:s", strtotime("+$numHoursToNextCheck hours"));
+        $query = "UPDATE artists SET nextcheckdate=? ";
+        $updParams[] = $nextCheck;
+        if ($reachedEnd && !is_null($params['until_id'])) {
+            $query .= ",oldtweetlimitretrieved=?, maxid=? ";
+            array_push($updParams, "Y", $oldestID);
+        } else if (!is_null($oldestID) && !is_null($params['until_id'])) {
+            $query .= ",maxid=? ";
+            $updParams[] = $oldestID;
+        } else if (!is_null($newestID)) {
+            $query .= ",sinceid=? ";
+            $updParams[] = $newestID;
         }
         $query .= "WHERE twitterid=?";
         array_push($updParams, $artistRow['twitterid']);
@@ -977,11 +1008,11 @@ class Core {
     }
 
     public static function getAllNewTweetsForUser($userRow) {
-        $params['count'] = 200;
-        $params['user_id'] = $userRow['usertwitterid'];
-        $params['include_rts'] = "false";
-        $params['trim_user'] = "true";
-        $params['tweet_mode'] = "extended";
+        $params['max_results'] = 100;
+        $params['exclude'] = "retweets";
+        $params['expansions'] = "attachments.media_keys";
+        $params['media.fields'] = "type";
+        $params['tweet.fields'] = "public_metrics,author_id,in_reply_to_user_id,entities,created_at";
         $resultCount = 1;
         $queryCount = 0;
         $reachedEnd = false;
@@ -994,54 +1025,65 @@ class Core {
             }
         } else {
             if ($userRow['maxid'] != null) {
-                $params['max_id'] = $userRow['maxid'];
+                $params['until_id'] = $userRow['maxid'];
             }
         }
-        $reachedEnd = false;
+        $newestID = null;
+        $oldestID = null;
+        $totalResultCount = 0;
         while ($resultCount != 0 && !$reachedEnd) {
             $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
                     $userAuth['access_token'], $userAuth['access_token_secret']);
-            $results = Core::queryTwitterUserAuth($connection, "statuses/user_timeline", "GET", $params, $userAuth);
+            $connection->setApiVersion('2');
+            $endpoint = "users/" . $userRow['usertwitterid'] . "/tweets";
+            $results = Core::queryTwitterUserAuth($connection, $endpoint, "GET", $params, $userAuth);
             $queryCount++;
             if ($connection->getLastHttpCode() == 200) {
-                $resultCount = count($results);
+                $meta = $results->meta;
+                $resultCount = $meta->result_count;
                 if ($resultCount == 0) {
                     $reachedEnd = true;
                 } else {
-                    $returnArray = Core::insertTweetsAndMetrics($results, $userRow['usertwitterid'], $userRow['imagesenabled'],
-                                    $userRow['gifsenabled'], $userRow['videosenabled']);
-                    if (!$returnArray) {
-                        Core::$logger->error("Empty or nonexistent return array - breaking loop.");
+                    $totalResultCount += $resultCount;
+                    Core::insertTweetsAndMetrics($results, $userRow['usertwitterid'], $userRow['imagesenabled'],
+                            $userRow['gifsenabled'], $userRow['videosenabled']);
+                    if (!isset($meta->oldest_id) && !isset($meta->newest_id)) {
                         break;
                     }
-                    if (isset($returnArray['novalidresults']) && $returnArray['novalidresults']) {
-                        break;
+                    if (isset($meta->oldest_id) && !is_null($meta->oldest_id)) {
+                        $oldestID = $meta->oldest_id;
+                    }
+                    if (isset($meta->newest_id) && !is_null($meta->newest_id)) {
+                        $newestID = $meta->newest_id;
                     }
                     if ($userRow['oldtweetlimitretrieved'] == "N") {
-                        $params['max_id'] = $returnArray['lowestid'] - 1;
+                        $params['until_id'] = $meta->oldest_id - 1;
                     } else {
-                        $params['since_id'] = $returnArray['highestid'];
+                        $params['since_id'] = $meta->newest_id;
                     }
                 }
             } else {
                 break;
             }
             if ($queryCount > 35) {
-                Core::$logger->critical("35 user_timeline queries!");
+                Core::$logger->critical("35 users/:id/tweets queries!");
                 break;
             }
         }
-        $query = "UPDATE users SET ";
-        $updParams = [];
-        if ($reachedEnd) {
-            $query .= "oldtweetlimitretrieved=?, maxid=? ";
-            array_push($updParams, "Y", $params['max_id']);
-        } else if (isset($params['max_id'])) {
-            $query .= "maxid=? ";
-            $updParams[] = $params['max_id'];
-        } else {
-            $query .= "sinceid=? ";
-            $updParams[] = $params['since_id'];
+        $resultCountModifier = max(ceil($totalResultCount / 100), 1);
+        $numHoursToNextCheck = ceil(24 / $resultCountModifier);
+        $nextCheck = date("Y-m-d H:i:s", strtotime("+$numHoursToNextCheck hours"));
+        $query = "UPDATE users SET nextusertimelinecheck=? ";
+        $updParams[] = $nextCheck;
+        if ($reachedEnd && !is_null($params['until_id'])) {
+            $query .= ",oldtweetlimitretrieved=?, maxid=? ";
+            array_push($updParams, "Y", $oldestID);
+        } else if (!is_null($oldestID) && !is_null($params['until_id'])) {
+            $query .= ",maxid=? ";
+            $updParams[] = $oldestID;
+        } else if (!is_null($newestID)) {
+            $query .= ",sinceid=? ";
+            $updParams[] = $newestID;
         }
         $query .= "WHERE twitterid=? AND accesstoken=? AND accesstokensecret=?";
         array_push($updParams, $userAuth['twitter_id'],
@@ -1727,10 +1769,6 @@ class Core {
         } else {
             return $minuteValues[rand(0, count($minuteValues) - 1)];
         }
-    }
-
-    public static function beginInitialAutomationOnServer($userAuth) {
-        
     }
 
 }

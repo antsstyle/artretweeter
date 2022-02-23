@@ -49,15 +49,14 @@ function addArtistForUser(userid, artistid, buttonid, operation, type) {
     var actualRow = -1;
     var tablelength = userartiststable.rows.length;
     for (let i = 1; i < tablelength; i++) {
-        var tdhtml = userartiststable.rows[i].cells[2].innerHTML;
-        var string1 = "'";
-        var tablecellhtml = userartiststable.rows[i].cells[0].innerHTML;
-        var index1 = 0;
+        let string1 = "'";
+        let tablecellhtml = userartiststable.rows[i].cells[1].innerHTML;
+        let index1 = 0;
         for (let j = 0; j < 3; j++) {
             index1 = tablecellhtml.indexOf(string1, index1) + 1;
         }
-        var index2 = tablecellhtml.indexOf(string1, index1);
-        var artistIDInTable = tablecellhtml.substring(index1, index2).trim();
+        let index2 = tablecellhtml.indexOf(string1, index1);
+        let artistIDInTable = tablecellhtml.substring(index1, index2).trim();
         if (artistIDInTable.includes(artistid)) {
             actualRow = i;
             break;
@@ -82,7 +81,6 @@ function addArtistForUser(userid, artistid, buttonid, operation, type) {
                 }
                 var artisttwitterid = json.artisttwitterid;
                 var screenname = json.screenname;
-                var followercount = json.followercount;
                 var affectedrows = json.affectedrows;
                 var resulttext;
                 if (parseInt(affectedrows) === 0) {
@@ -97,25 +95,34 @@ function addArtistForUser(userid, artistid, buttonid, operation, type) {
                     if (type === "Update") {
                         document.getElementById("searchresultstextdiv").innerHTML = resulttext;
                         document.getElementById(buttonid).innerHTML = "Disable automated retweeting";
-                        var table = document.getElementById("userartiststable");
-                        var newRow = table.insertRow(-1);
+                        var lowerCaseScreenName = "@" + screenname.toLowerCase();
+                        var lastIndex = -1;
+                        for (let i = 1; i < tablelength; i++) {
+                            let tablecellhtml = userartiststable.rows[i].cells[0].innerHTML;
+                            let index1 = tablecellhtml.indexOf(">") + 1;
+                            let index2 = tablecellhtml.indexOf("<", index1);
+                            let artistHandle = tablecellhtml.substring(index1, index2).trim().toLowerCase();
+                            if (artistHandle > lowerCaseScreenName) {
+                                lastIndex = i;
+                                break;
+                            }
+                        }
+                        var newRow = userartiststable.insertRow(lastIndex);
                         var cell1 = newRow.insertCell(0);
                         var cell2 = newRow.insertCell(1);
-                        var cell3 = newRow.insertCell(2);
-                        var tableCount = table.rows.length;
+                        var tableCount = userartiststable.rows.length;
                         var buttonidcount = buttonid.substring(12);
                         var newOnclick = "addArtistForUser('" + userid + "','" + artistid + "','" + buttonid + "','" + "Disable"
                                 + "','Update','" + buttonidcount + "')";
                         document.getElementById(buttonid).setAttribute('onclick', newOnclick);
                         cell1.innerHTML = "<a href=\"https://twitter.com/" + screenname + "\" target=\"_blank\"> "
                                 + "@" + screenname + "</a>";
-                        cell2.innerHTML = followercount;
-                        cell3.innerHTML = "<button id=\"followbutton" + tableCount + "\" type=\"button\" "
+                        cell2.innerHTML = "<button id=\"followbutton" + tableCount + "\" type=\"button\" "
                                 + "onclick=\"addArtistForUser('" + userid + "', '" + artisttwitterid + "'"
                                 + ", 'removebutton" + tableCount + "', 'Disable', 'Remove', '" + tableCount + "')\">Remove</button>";
                     } else if (type === "Remove") {
                         document.getElementById("userartistsresultsdiv").innerHTML = resulttext;
-                        document.getElementById("userartiststable").deleteRow(actualRow);
+                        userartiststable.deleteRow(actualRow);
                     }
                 } else {
                     resulttext = "Retweets disabled for artist @" + screenname + " successfully.<br/><br/>";
@@ -126,10 +133,10 @@ function addArtistForUser(userid, artistid, buttonid, operation, type) {
                         var newOnclick = "addArtistForUser('" + userid + "','" + artistid + "','" + buttonid + "','" + "Enable"
                                 + "','Update','" + buttonidcount + "')";
                         document.getElementById(buttonid).setAttribute('onclick', newOnclick);
-                        document.getElementById("userartiststable").deleteRow(actualRow);
+                        userartiststable.deleteRow(actualRow);
                     } else if (type === "Remove") {
                         document.getElementById("userartistsresultsdiv").innerHTML = resulttext;
-                        document.getElementById("userartiststable").deleteRow(actualRow);
+                        userartiststable.deleteRow(actualRow);
                         changeButtonInSecondTable(artistid);
                     }
                 }
