@@ -1,5 +1,9 @@
 # ArtRetweeter
-A tool for artists to use, focused on enabling automatically scheduled retweets of your art (or manually scheduled if you prefer).
+This app serves two purposes:
+ - Allowing artists to retweet their own work automatically
+ - Allowing non-artists to retweet their favourite artists automatically
+
+In both cases, scheduling and retweeting is done by the app itself; users don't have to manually schedule anything.
 
 More information can be found on the app's homepage.
 
