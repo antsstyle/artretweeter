@@ -1644,7 +1644,6 @@ class Core {
             $nextHour = $start;
             $latestUsed = null;
             $interval = $maxDist / $totalCountPerDay;
-            //error_log("Time interval: $interval");
             while ($numScheduled < $tweetsPerDay && $numScheduled < $tweetCount && $numScheduled < 10) {
                 $minuteValue = Core::getNextMinute($minuteValues);
                 $retweetTime = new \DateTime();
