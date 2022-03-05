@@ -5,12 +5,13 @@ use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\Config;
 
 $defaultMessage = "You are not logged in. Go back to the homepage to sign in.";
-$errorMessage = filter_input(INPUT_POST, "errormsg", FILTER_SANITIZE_STRING);
+$errorMessage = htmlspecialchars($_POST['errormsg']);
 ?>
 
 <html>
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <title>
@@ -18,11 +19,11 @@ $errorMessage = filter_input(INPUT_POST, "errormsg", FILTER_SANITIZE_STRING);
     </title>
     <body>
         <div class="main">
-            <?php Core::echoSidebar(); ?>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <?php
             $hp = Config::HOMEPAGE_URL;
-            if ($errorMessage !== false && !is_null($errorMessage)) {
+            if ($errorMessage !== "") {
                 echo $errorMessage;
             } else {
                 echo $defaultMessage;

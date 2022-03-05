@@ -4,6 +4,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\CoreDB;
 
 Session::checkSession();
 
@@ -29,12 +30,18 @@ if ($userInfo === false) {
     header("Location: $errorURL", true, 302);
     exit();
 }
+
+$userTwitterID = $_SESSION['usertwitterid'];
+
+$pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwitterID);
 ?>
 
 <html>
     <script src="src/ajax/SubmitArtist.js"></script>
+    <script src="src/ajax/Tables.js"></script>
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -47,7 +54,7 @@ if ($userInfo === false) {
     </title>
     <body>
         <div class="main">
-            <?php Core::echoSidebar(); ?>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <p>
                 You can submit a user to be added to ArtRetweeter here; this will allow you, or other app users, to retweet that user automatically.
@@ -62,12 +69,12 @@ if ($userInfo === false) {
                 <br/>
                 <li>User must not sell or advocate for NFTs or cryptocurrency.</li>
                 <br/>
-                <li>User must either have at least 5,000 followers, or if they are below that, their art must be sufficiently easy to distinguish from other 
-                    image tweets (I will review it myself). <b>This requirement is not for restricting 
+                <li>User must have a certain level of engagement on their art posts (typically if they have >5,000 followers this will work), 
+                    in order that their art tweets are sufficiently easy to distinguish from their non-art tweets. <b>This requirement is not for restricting 
                         smaller artists from being retweeted by the app;</b> it is explained below.</li>
             </ol>
-            The third condition exists because at low follower counts, 
-            it becomes nearly impossible for the app to determine which tweets are art and which are not. If however, an artist with 200 followers 
+            The third condition exists because if an artist's art tweets and non-art tweets have similar retweet counts, 
+            it becomes nearly impossible for the app to determine which tweets are art and which are not. If however, an artist 
             always tweets their art with a specific phrase or hashtag that is not used for non-art posts (e.g. "#Art" - but it can be any phrase), then 
             this rule doesn't apply, as then the app will be able to retweet their art correctly. It also won't apply if e.g. said artist *only* tweets art 
             with their account and not any other kind of images, as then there isn't going to be any confusion for the app as to which images are which.
@@ -78,12 +85,73 @@ if ($userInfo === false) {
             </br><br/>
             <input type="text" style="width:250px" id="submitartistinput" placeholder="Enter artist's twitter handle here.">
             <button type="button" id="submitartistbutton" 
-                    onclick="submitArtist('<?php echo $_SESSION['usertwitterid']; ?>')">Submit</button>
+                    onclick="submitArtist('<?php echo $userTwitterID; ?>')">Submit</button>
             <br/><br/>
             <div id="submitartisttextdiv">
 
             </div>
+            <p>
+                Below is a list of your artist submissions from the last 30 days.
+            </p>
+            <div id="usersubmissionsresultsdiv">
 
+            </div>
+            <div id="usersubmissionsdiv">
+                <table id="usersubmissionstable" class="dblisttable">
+                    <tr>
+                        <th>Twitter Handle</th>
+                        <th>Date Submitted</th>
+                        <th>Status</th>
+                        <th>Date Approved/Rejected</th>
+                        <th>Rejection Reason</th>
+                        <th>Cancel Submission</th>
+                    </tr>
+                    <?php
+                    if (!is_null($pendingArtistSubmissions) && count($pendingArtistSubmissions) > 0) {
+                        $i = 0;
+                        foreach ($pendingArtistSubmissions as $pendingSubmission) {
+                            $dateSubmitted = substr($pendingSubmission['datesubmitted'], 0, 10);
+                            $screenName = $pendingSubmission['screenname'];
+                            $status = $pendingSubmission['status'];
+                            if ($status === "N") {
+                                $status = "Rejected";
+                            } else if ($status === "Y") {
+                                $status = "Approved";
+                            } else {
+                                $status = "Pending";
+                            }
+                            $dateDecided = $pendingSubmission['datedecided'];
+                            if (is_null($dateDecided)) {
+                                $dateDecided = "N/A";
+                            } else {
+                                $dateDecided = substr($dateDecided, 0, 10);
+                            }
+                            $rejectionReason = $pendingSubmission['rejectionreason'];
+                            if (is_null($rejectionReason)) {
+                                $rejectionReason = "N/A";
+                            }
+                            $twitterLink = "<a href=\"https://twitter.com/" . $screenName . "\" target=\"_blank\"> "
+                                    . "@" . $screenName . "</a>";
+                            echo "<tr>";
+                            echo "<td>" . $twitterLink . "</td>";
+                            echo "<td>" . $dateSubmitted . "</td>";
+                            echo "<td>" . $status . "</td>";
+                            echo "<td>" . $dateDecided . "</td>";
+                            echo "<td>" . $rejectionReason . "</td>";
+                            if ($dateDecided === "N/A") {
+                                $cancelButton = "<button type=\"button\" "
+                                        . "onclick=\"cancelArtistSubmissionForUser('$userTwitterID', '$screenName')\">Cancel</button>";
+                            } else {
+                                $cancelButton = "";
+                            }
+                            echo "<td id=\"usersubmissionstablerow$i\">$cancelButton</td>";
+                            echo "</tr>";
+                            $i++;
+                        }
+                    }
+                    ?>
+                </table>
+            </div>
         </div>
     </body>
     <script src="src/ajax/Collapsibles.js"></script>

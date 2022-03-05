@@ -33,7 +33,7 @@ class SubmitArtist {
         $userAuth['access_token'] = $userInfo['accesstoken'];
         $userAuth['access_token_secret'] = $userInfo['accesstokensecret'];
 
-        $artistTwitterHandle = filter_input(INPUT_POST, 'artisttwitterhandle', FILTER_SANITIZE_STRING);
+        $artistTwitterHandle = htmlspecialchars($_POST['artisttwitterhandle']);
         if ($artistTwitterHandle === false) {
             echo "Invalid username";
             return;
@@ -45,43 +45,18 @@ class SubmitArtist {
             return;
         }
 
-        if (strpos($artistTwitterHandle, "@") === 0) {
-            $searchString = substr($searchString, 1);
+        $operation = htmlspecialchars($_POST['operation']);
+        if ($operation === "cancel") {
+            $result = CoreDB::cancelArtistSubmission($userAuth, $artistTwitterHandle);
+        } else if ($operation === "submit") {
+            $result = json_encode(CoreDB::submitArtistForApproval($userAuth, $artistTwitterHandle));
+        } else {
+            echo "Invalid operation";
+            return;
         }
-        $result = CoreDB::submitArtistForApproval($userAuth, $artistTwitterHandle);
+
         echo $result;
     }
-
-    public static function echoTable($userTwitterID, $artistResults) {
-        $tableString = "<table id=\"maintable\" class=\"dblisttable\"><tr>
-                        <th onclick=\"sortTable(0, 'maintable')\">Twitter Handle</th>
-                        <th onclick=\"sortTable(1, 'maintable')\">Follower Count</th>
-                        <th>Options</th>
-
-            </tr>";
-        $resultCount = $artistResults['resultcount'];
-        $rows = $artistResults['rows'];
-        $i = 0;
-        if ($rows !== false) {
-            foreach ($rows as $resultRow) {
-                $screenName = $resultRow['screenname'];
-                $artistID = $resultRow['twitterid'];
-                $addButton = "<button id=\"followbutton$i\" type=\"button\" onclick=\"addArtistForUser('$userTwitterID', '$artistID'"
-                        . ", 'followbutton$i', 'Enable', 'Update', '$i')\">Enable automated retweeting</button>";
-                $tableString .= "<tr>";
-                $tableString .= "<td>@" . $screenName . "</td>";
-                $tableString .= "<td>" . $resultRow['followercount'] . "</td>";
-                $tableString .= "<td>" . $addButton . "</td>";
-                $tableString .= "</tr>";
-                $i++;
-            }
-        }
-        $tableString .= "</table>";
-        $returnArray['resultcount'] = $resultCount;
-        $returnArray['tablestring'] = $tableString;
-        echo json_encode($returnArray);
-    }
-
 }
 
 SubmitArtist::processAjax();

@@ -4,6 +4,7 @@ namespace Antsstyle\ArtRetweeter\Core;
 
 class CachedVariables {
 
+    const MAX_PENDING_SUBMISSIONS_FREE_USER = "artretweeter.maxpendingsubmissionsfreeuser";
     const MAX_ARTISTS_FREE_USER = "artretweeter.maxartistsfreeuser";
     const MAX_ARTIST_RETWEETS_PER_DAY = "artretweeter.maxartistretweetsperday";
     const MAX_NON_ARTIST_RETWEETS_PER_DAY_FREE_USER = "artretweeter.maxnonartistretweetsperdayfreeuser";

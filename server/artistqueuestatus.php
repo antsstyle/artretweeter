@@ -32,6 +32,7 @@ if ($userInfo !== false && $userInfo !== null) {
     <script src="src/ajax/Queue.js"></script>
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <title>
@@ -39,7 +40,7 @@ if ($userInfo !== false && $userInfo !== null) {
     </title>
     <body onload="initialiseQueueStatus()">
         <div class="main">
-            <?php Core::echoSidebar(); ?>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <h2>Artist Retweet Queue</h2>
             <b>This page shows your queued retweets for your own account. If you want to see your queued retweets for other accounts, 

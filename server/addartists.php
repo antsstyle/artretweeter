@@ -33,7 +33,27 @@ if ($userInfo === false) {
     exit();
 }
 
-$userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID);
+$pageNum = filter_input(INPUT_GET, "page", FILTER_VALIDATE_INT);
+if (is_null($pageNum) || $pageNum === false) {
+    $pageNum = 1;
+} else if (!is_numeric($pageNum)) {
+    $pageNum = 1;
+}
+
+$pageCount = CoreDB::getUserArtistRetweetSettingsCount($userTwitterID);
+
+$pageCount = ceil($pageCount / 15);
+if ($pageNum > $pageCount) {
+    $pageNum = $pageCount;
+}
+if ($pageNum < 1) {
+    $pageNum = 1;
+}
+
+$userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID, $pageNum);
+
+$nextPage = $pageNum + 1;
+$prevPage = $pageNum - 1;
 ?>
 
 
@@ -42,6 +62,7 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
     <script src="src/ajax/SearchArtists.js"></script>
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -54,16 +75,36 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
     </title>
     <body onload="storeSearchResults()">
         <div class="main">
-            <?php Core::echoSidebar(); ?>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
-            <p>
-                This page shows the artists you are automatically retweeting, in alphabetical order.
-            </p>
             <?php
             if (is_null($userArtistRetweetSettings)) {
                 echo "An error occurred retrieving your artist records, check back later.";
             } else if (count($userArtistRetweetSettings) === 0) {
                 echo "You are not retweeting any artists via this app yet.";
+            } else {
+                echo "This page shows the artists you are automatically retweeting, in alphabetical order. "
+                . "<br/><br/>This is page $pageNum of $pageCount.<br/><br/>";
+            }
+
+            if ($prevPage >= 1) {
+                echo "<button onclick=\"window.location.href = '" . Config::HOMEPAGE_URL . "addartists?page=" . $prevPage . "';\">"
+                . "Previous page"
+                . "</button>";
+            } else {
+                echo "<button onclick=\"window.location.href = '" . Config::HOMEPAGE_URL . "addartists?page=" . $prevPage . "';\" disabled>"
+                . "Previous page"
+                . "</button>";
+            }
+            echo "&nbsp;";
+            if ($nextPage <= $pageCount) {
+                echo "<button onclick=\"window.location.href = '" . Config::HOMEPAGE_URL . "addartists?page=" . $nextPage . "';\">"
+                . "Next page"
+                . "</button>";
+            } else {
+                echo "<button onclick=\"window.location.href = '" . Config::HOMEPAGE_URL . "addartists?page=" . $nextPage . "';\" disabled>"
+                . "Next page"
+                . "</button>";
             }
             ?>
             <div id="userartistsresultsdiv">
@@ -85,7 +126,6 @@ $userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID
                                     . "@" . $screenName . "</a>";
                             echo "<tr>";
                             echo "<td>" . $twitterLink . "</td>";
-                            //echo "<td>" . $userArtistRetweetSettings['followercount'] . "</td>";
                             $removeButton = "<button id=\"removebutton$i\" type=\"button\" onclick=\"addArtistForUser('$userTwitterID', '$artistID'"
                                     . ", 'removebutton$i', 'Disable', 'Remove')\">Remove</button>";
                             echo "<td id=\"userartiststablerow$i\">$removeButton</td>";

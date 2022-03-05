@@ -51,40 +51,6 @@ class Core {
         return new StatusCode(200, 0);
     }
 
-    public static function echoSidebar() {
-        echo "<div class=\"sidenav\">
-                <button class=\"collapsiblemenuitem\" id=\"mainmenu\"><b>Home</b></button>
-                <div class=\"content\">
-                    <a href=\"https://antsstyle.com/\">About</a>
-                    <a href=\"https://antsstyle.com/apps\">Apps</a>
-                </div>
-                <br/>
-                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu\"><b>ArtRetweeter (for artists)</b></button>
-                <div class=\"content\" style=\"max-height: 100%\">
-                    <a href=\"https://antsstyle.com/artretweeter\">Home</a>
-                    <a href=\"https://antsstyle.com/artretweeter/info\">Artists Info & FAQ</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/artistsettings\">Settings</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/artistqueuestatus\">Queue Status</a>
-                </div>
-                <br/>
-                <button class=\"collapsiblemenuitem activemenuitem\" id=\"artretweetermenu2\"><b>ArtRetweeter (for non-artists)</b></button>
-                <div class=\"content\" style=\"max-height: 100%\">
-                    <a href=\"https://antsstyle.com/artretweeter/nonartistshome\">Home</a>
-                    <a href=\"https://antsstyle.com/artretweeter/nonartistsinfo\">Non-Artists Info & FAQ</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/nonartistsettings\">Settings</a> 
-                    <a href=\"https://antsstyle.com/artretweeter/nonartistqueuestatus\">Queue Status</a>
-                    <a href=\"https://antsstyle.com/artretweeter/addartists\">Add Artists</a>
-                    <a href=\"https://antsstyle.com/artretweeter/subscribe\">Subscribe</a>
-                </div>
-                <br/>
-                <button class=\"collapsiblemenuitem\" id=\"nftcryptoblockermenu\"><b>NFT Artist & Cryptobro Blocker</b></button>
-                <div class=\"content\">
-                    <a href=\"https://antsstyle.com/nftcryptoblocker/\">Home</a>
-                    <a href=\"https://antsstyle.com/nftcryptoblocker/settings\">Settings</a>
-                </div>
-            </div>";
-    }
-
     public static function updateArtistInfoForAllArtists() {
         $now = date("Y-m-d H:i:s");
         $selectQuery = "SELECT twitterid FROM artists WHERE (nextupdateinfodate IS NULL OR nextupdateinfodate < ?) LIMIT 50000";
@@ -280,11 +246,11 @@ class Core {
 
     public static function removeExpiredRetweets() {
         $time1HourAgo = date('Y-m-d H:i:s', strtotime('-1 hour', time()));
-        $insertQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
-                . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
+        $insertQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,failreason) "
+                . "SELECT retweetingusertwitterid, tweetid, retweettime, "
                 . "? FROM scheduledretweets WHERE retweettime <= ?";
         CoreDB::$databaseConnection->prepare($insertQuery)
-                ->execute([-1, "Missed schedule", $time1HourAgo]);
+                ->execute(["Missed schedule", $time1HourAgo]);
         CoreDB::$databaseConnection->prepare("DELETE FROM scheduledretweets WHERE retweettime <= ?")->execute([$time1HourAgo]);
     }
 
@@ -349,24 +315,21 @@ class Core {
             $connection->setRetries(1, 1);
             $retweetEndpoint = "users/" . $row['retweetingusertwitterid'] . "/retweets";
             $queryResult = $connection->post($retweetEndpoint, $params, true);
-            $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,errorcode,failreason) "
-                    . "SELECT retweetingusertwitterid, tweetid, retweettime, ?, "
+            $insertFailedRetweetQuery = "INSERT INTO failedretweets (retweetingusertwitterid,tweetid,retweettime,failreason) "
+                    . "SELECT retweetingusertwitterid, tweetid, retweettime, "
                     . "? FROM scheduledretweets WHERE id=?";
             if (!$queryResult) {
                 CoreDB::$databaseConnection->prepare($insertFailedRetweetQuery)
                         ->execute([2, "Internal error whilst attempting to retweet", $databaseID]);
             } else {
                 if ($queryResult->errors) {
-                    error_log("Failed to retweet tweet: " . print_r($queryResult->errors, true));
                     if (is_array($queryResult->errors)) {
-                        $errorCode = $queryResult->errors[0]->code;
-                        $errorMessage = $queryResult->errors[0]->details;
+                        $errorMessage = $queryResult->errors[0]->message;
                     } else {
-                        $errorCode = $queryResult->errors->code;
-                        $errorMessage = $queryResult->errors->details;
+                        $errorMessage = $queryResult->errors->message;
                     }
                     CoreDB::$databaseConnection->prepare($insertFailedRetweetQuery)
-                            ->execute([$errorCode, $errorMessage, $databaseID]);
+                            ->execute([$errorMessage, $databaseID]);
                 } else {
                     Core::updateRetweetRecordsInDB($userAuth['twitter_id'], $tweetID, $retweetTime,
                             $tweetAuthorID, $selfRetweet);
@@ -854,29 +817,21 @@ class Core {
             } catch (\PDOException $e) {
                 Core::$logger->error("Failed to insert tweet: " . print_r($e, true));
             }
-            if ($stmt->rowCount()) {
-                try {
+
+            try {
+                $selectStmt = CoreDB::$databaseConnection->prepare("SELECT id FROM tweetmetrics WHERE tweetid=? AND retrievalmetric=?");
+                $selectStmt->execute([$tweet->id, $metricID]);
+                if ($selectStmt->fetchColumn() === false) {
                     $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweetmetrics
-                (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (LAST_INSERT_ID(),?,?,?,?) 
-                ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
-                    $stmt->execute([$timeNow, $metricID, $likeCount, $retweetCount, $likeCount,
-                        $retweetCount, $timeNow]);
-                } catch (\PDOException $e) {
-                    Core::$logger->error("Failed to insert tweet metrics for new tweet: " . print_r($e, true));
+                (tweetid,retrievedtime,retrievalmetric,likes,retweets) VALUES (?,?,?,?,?)");
+                    $stmt->execute([$tweet->id, $timeNow, $metricID, $likeCount, $retweetCount]);
+                } else {
+                    $stmt = CoreDB::$databaseConnection->prepare("UPDATE tweetmetrics SET likes=?,retweets=?,retrievedtime=? 
+                            WHERE tweetid=? AND retrievalmetric=?");
+                    $stmt->execute([$likeCount, $retweetCount, $timeNow, $tweet->id, $metricID]);
                 }
-            } else {
-                $stmt = CoreDB::$databaseConnection->prepare("SELECT id FROM tweets WHERE tweetid=?");
-                $stmt->execute([$tweet->id]);
-                $tweetsTableID = $stmt->fetchColumn();
-                try {
-                    $stmt = CoreDB::$databaseConnection->prepare("INSERT INTO tweetmetrics
-                (tweetstableid,retrievedtime,retrievalmetric,likes,retweets) VALUES (?,?,?,?,?) 
-                ON DUPLICATE KEY UPDATE likes=?,retweets=?,retrievedtime=?");
-                    $stmt->execute([$tweetsTableID, $timeNow, $metricID, $likeCount, $retweetCount, $likeCount,
-                        $retweetCount, $timeNow]);
-                } catch (\PDOException $e) {
-                    Core::$logger->error("Failed to insert tweet metrics for existing tweet: " . print_r($e, true));
-                }
+            } catch (\PDOException $e) {
+                Core::$logger->error("Failed to insert tweet metrics for new tweet: " . print_r($e, true));
             }
         }
         CoreDB::$databaseConnection->commit();
@@ -936,8 +891,7 @@ class Core {
         $params['tweet.fields'] = "public_metrics,author_id,in_reply_to_user_id,entities,created_at";
         if ($artistRow['oldtweetlimitretrieved'] === "N" && !is_null($artistRow['maxid'])) {
             $params['until_id'] = $artistRow['maxid'];
-        }
-        if (!is_null($artistRow['sinceid'])) {
+        } else if (!is_null($artistRow['sinceid'])) {
             $params['since_id'] = $artistRow['sinceid'];
         }
         $resultCount = 1;
@@ -1394,7 +1348,7 @@ class Core {
 
     public static function getUserArtistEligibleTweets($userTwitterID, $artistRow, $nonArtistRTThreshold) {
         $selectMeanStatsQuery = "SELECT AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr "
-                . "FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=?";
+                . "FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?";
         $selectMeanStatsParams[] = $artistRow['twitterid'];
 
         $oldTweetsCutoffDate = date("Y-m-d H:i:s", strtotime("-1 year"));
@@ -1467,10 +1421,10 @@ class Core {
         $oneMonthAgo = date("Y-m-d H:i:s", strtotime("-1 month"));
         $selectTweetsQuery = str_replace("AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr",
                 "*", $selectMeanStatsQuery);
-        $selectTweetsQuery .= " AND retweets >=? AND tweetid NOT IN (SELECT tweetid FROM scheduledretweets WHERE retweetingusertwitterid=?) "
-                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ?) "
-                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
-                . "GROUP BY tweetid HAVING COUNT(tweetid) > ?) "
+        $selectTweetsQuery .= " AND retweets >=? AND tweets.tweetid NOT IN (SELECT scheduledretweets.tweetid FROM scheduledretweets WHERE retweetingusertwitterid=?) "
+                . "AND tweets.tweetid NOT IN (SELECT retweetrecords.tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ?) "
+                . "AND tweets.tweetid NOT IN (SELECT retweetrecords.tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
+                . "GROUP BY retweetrecords.tweetid HAVING COUNT(retweetrecords.tweetid) > ?) "
                 . "ORDER BY RAND()";
         $selectMeanStatsParams[] = $retweetThreshold;
         $selectMeanStatsParams[] = $userTwitterID;
@@ -1522,7 +1476,7 @@ class Core {
         }
         $today = date("N") - 1;
         $twoDaysFromNow = $today + 2;
-        if ($twoDaysFromNow > 7) {
+        if ($twoDaysFromNow >= 7) {
             $twoDaysFromNow -= 7;
         }
         $dayFlag = substr($dayFlags, $twoDaysFromNow, 1);
@@ -1534,7 +1488,7 @@ class Core {
         $totalCountPerDay = $limitPerDay * ($dayCount / 7);
 
         $selectMeanStatsQuery = "SELECT AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr "
-                . "FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=?";
+                . "FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?";
         $selectMeanStatsParams[] = $settingsRow['usertwitterid'];
         if ($settingsRow['oldtweetscutoffdateenabled'] == 'Y') {
             $selectMeanStatsQuery .= " AND createdat >= ?";
@@ -1640,10 +1594,10 @@ class Core {
         $oneMonthAgo = date("Y-m-d H:i:s", strtotime("-1 month"));
         $selectTweetsQuery = str_replace("AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr",
                 "*", $selectMeanStatsQuery);
-        $selectTweetsQuery .= " AND retweets >=? AND tweetid NOT IN (SELECT tweetid FROM scheduledretweets WHERE retweetingusertwitterid=?) "
-                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ?) "
-                . "AND tweetid NOT IN (SELECT tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
-                . "GROUP BY tweetid HAVING COUNT(tweetid) > ?) "
+        $selectTweetsQuery .= " AND retweets >=? AND tweets.tweetid NOT IN (SELECT scheduledretweets.tweetid FROM scheduledretweets WHERE retweetingusertwitterid=?) "
+                . "AND tweets.tweetid NOT IN (SELECT retweetrecords.tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ?) "
+                . "AND tweets.tweetid NOT IN (SELECT retweetrecords.tweetid FROM retweetrecords WHERE usertwitterid=? AND scheduledretweettime >= ? "
+                . "GROUP BY retweetrecords.tweetid HAVING COUNT(retweetrecords.tweetid) > ?) "
                 . "ORDER BY RAND()";
         $selectMeanStatsParams[] = $retweetThreshold;
         $selectMeanStatsParams[] = $userAuth['twitter_id'];
@@ -1653,7 +1607,6 @@ class Core {
         $selectMeanStatsParams[] = $oneYearAgo;
         $selectMeanStatsParams[] = 2;
         $selectTweetsStmt = CoreDB::$databaseConnection->prepare($selectTweetsQuery);
-        //error_log("Select tweets query: $selectTweetsQuery");
         $success = $selectTweetsStmt->execute($selectMeanStatsParams);
         if (!$success) {
             Core::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
@@ -1672,17 +1625,13 @@ class Core {
         if ($scheduleType == "Random") {
             // Schedule randomly, once per hour
             $hourIndices = Core::getHourFlagIndices($hourFlags);
-            //error_log("Count of hour indices: $countOfHours");
             while ($numScheduled < 10 && $numScheduled < $tweetCount && $numScheduled < $tweetsPerDay && count($hourIndices) > 0) {
                 $nextHour = Core::getRandomHourToAutomate($hourIndices);
-                //error_log("Next hour: $nextHour");
                 unset($hourIndices[array_search($nextHour, $hourIndices)]);
                 $hourIndices = array_values($hourIndices);
-                //error_log(print_r($hourIndices, true));
                 $minuteValue = Core::getNextMinute($minuteValues);
                 $retweetTime = new \DateTime();
                 $retweetTime->add(new \DateInterval('P2D'));
-                //error_log("Next hour: $nextHour    Next minute: $minuteValue");
                 $retweetTime->setTime($nextHour, $minuteValue);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
                 Core::queueRetweetInDB($userAuth['twitter_id'], $userAuth['twitter_id'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);

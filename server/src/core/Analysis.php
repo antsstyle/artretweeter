@@ -50,12 +50,12 @@ class Analysis {
         $currentTime = date("Y-m-d H:i:s");
         $selectUsersQuery = "SELECT usertwitterid FROM `users` INNER JOIN userautomationsettings "
                 . "ON users.twitterid=userautomationsettings.usertwitterid WHERE automationenabled=? AND (nextanalysis IS NULL OR nextanalysis <= ?) "
-                . "AND usertwitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid "
+                . "AND usertwitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid "
                 . "GROUP BY usertwitterid HAVING (COUNT(*) > ?)) ";
         $selectUsersStmt = CoreDB::$databaseConnection->prepare($selectUsersQuery);
         $success = $selectUsersStmt->execute(["Y", $currentTime, $minimumTweetMetricsLimit]);
         if (!$success) {
-            error_log("Failed to get tweets from DB, cannot update metrics.");
+            Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
             return;
         }
         $userTwitterIDs = [];
@@ -66,12 +66,12 @@ class Analysis {
         $updateParams = [];
         $nextAnalysis = date("Y-m-d H:i:s", strtotime("+7 days"));
         foreach ($userTwitterIDs as $userTwitterID) {
-            $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=?"
+            $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
             $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
             $success = $selectStmt->execute([$userTwitterID, $metricID]);
             if (!$success) {
-                error_log("Failed to get tweets from DB, cannot update metrics.");
+                Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
                 return;
             }
             $retweetValues = [];
@@ -181,12 +181,12 @@ class Analysis {
         $minimumTweetMetricsLimit = 10;
         $currentTime = date("Y-m-d H:i:s");
         $selectUsersQuery = "SELECT twitterid FROM `artists` WHERE (nextanalysis IS NULL OR nextanalysis <= ?) "
-                . "AND twitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid "
+                . "AND twitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid "
                 . "GROUP BY usertwitterid HAVING (COUNT(*) > ?)) ";
         $selectUsersStmt = CoreDB::$databaseConnection->prepare($selectUsersQuery);
         $success = $selectUsersStmt->execute([$currentTime, $minimumTweetMetricsLimit]);
         if (!$success) {
-            error_log("Failed to get tweets from DB, cannot update metrics.");
+            Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
             return;
         }
         $updateQuery = "UPDATE artists SET adaptivertthreshold=?, meanrtthreshold=?, nextanalysis=? WHERE twitterid=?";
@@ -195,12 +195,12 @@ class Analysis {
         $nextAnalysis = date("Y-m-d H:i:s", strtotime("+7 days"));
 
         while ($userRow = $selectUsersStmt->fetch()) {
-            $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.id=tweetmetrics.tweetstableid WHERE usertwitterid=?"
+            $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
             $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
             $success = $selectStmt->execute([$userRow['twitterid'], $metricID]);
             if (!$success) {
-                error_log("Failed to get tweets from DB, cannot update metrics.");
+                Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
                 return;
             }
             $retweetValues = [];

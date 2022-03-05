@@ -22,7 +22,7 @@ class AddArtistForUser {
         }
 
         $artistTwitterID = filter_input(INPUT_POST, 'artistid', FILTER_SANITIZE_NUMBER_INT);
-        $operation = filter_input(INPUT_POST, 'operation', FILTER_SANITIZE_STRING);
+        $operation = htmlspecialchars($_POST['operation']);
         if ($operation !== "Disable" && $operation !== "Enable") {
             echo "Invalid input";
             return;

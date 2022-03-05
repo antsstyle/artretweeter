@@ -32,14 +32,20 @@ if ($userInfo !== false && $userInfo !== null) {
     <script src="src/ajax/Queue.js"></script>
     <head>
         <link rel="stylesheet" href="main.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:site" content="@antsstyle" />
+        <meta name="twitter:title" content="ArtRetweeter, an auto-retweeting app for artists and users" />
+        <meta name="twitter:description" content="ArtRetweeter can automatically retweet your art for you, without the need to schedule retweets manually." />
+        <meta name="twitter:image" content="<?php echo Config::CARD_IMAGE_URL; ?>" />
     </head>
     <title>
         ArtRetweeter
     </title>
     <body onload="initialiseQueueStatus()">
         <div class="main">
-            <?php Core::echoSidebar(); ?>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <h2>Non-Artist Retweet Queue</h2>
             <b>This page shows your queued retweets for other accounts. If you want to see your queued retweets for your own account, 

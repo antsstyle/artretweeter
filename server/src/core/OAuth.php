@@ -12,8 +12,7 @@ class OAuth {
     }
 
     public static function generatePKCEVerifierAndChallenge() {
-        // try 32 maybe
-        $random = bin2hex(openssl_random_pseudo_bytes(32));
+        $random = bin2hex(openssl_random_pseudo_bytes(128));
         $verifier = OAuth::base64url_encode(pack('H*', $random));
         $challenge = OAuth::base64url_encode(pack('H*', hash('sha256', $verifier)));
         return [$verifier, $challenge];

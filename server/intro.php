@@ -24,11 +24,18 @@ use Antsstyle\ArtRetweeter\Core\Config;
             <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <div class="subtitle">
-                <h2>Terms of Service</h2>
+                <h2>Intro</h2>
             </div>
-            You can use ArtRetweeter in any manner you like - providing that you are not using it to retweet NFTs, cryptocurrency, or any other form of scam.
+            <h3>What is ArtRetweeter?</h3>
 
-
+            ArtRetweeter is an automated app that you can connect to your Twitter account. It has two main uses:
+            <ul>
+                <li>If you're an artist, ArtRetweeter allows you to retweet your own art automatically.</li>
+                <li>If you're not an artist, ArtRetweeter allows you to retweet the art of your favourite artists automatically.</li>
+            </ul>
+            You can, of course, use both options if you want to both retweet your work and other artists' work.
+            
+            To find out more, go to the ArtRetweeter section you want in the menu, and read the Info & FAQs page. 
         </div>
     </body>
     <script src="src/ajax/Collapsibles.js"></script>

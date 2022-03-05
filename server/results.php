@@ -36,8 +36,8 @@ $request_token = [];
 $request_token['oauth_token'] = $_SESSION['oauth_token'];
 $request_token['oauth_token_secret'] = $_SESSION['oauth_token_secret'];
 
-$requestOAuthToken = filter_input(INPUT_GET, 'oauth_token', FILTER_SANITIZE_STRING);
-$requestOAuthVerifier = filter_input(INPUT_GET, 'oauth_verifier', FILTER_SANITIZE_STRING);
+$requestOAuthToken = htmlspecialchars($_GET['oauth_token']);
+$requestOAuthVerifier = htmlspecialchars($_GET['oauth_verifier']);
 
 if ($request_token['oauth_token'] !== $requestOAuthToken) {
     // Show error, redirect user back to homepage
@@ -58,6 +58,24 @@ try {
 }
 
 if (isset($access_token)) {
+
+    $userTwitterID = $access_token['user_id'];
+    $userBanned = CoreDB::checkIfUserIsBanned($userTwitterID);
+    if (is_null($userBanned)) {
+        $location = Config::HOMEPAGE_URL . "failure";
+        header("Location: $location", true, 302);
+        exit();
+    } else if ($userBanned !== false) {
+        if (isset($userBanned['reason'])) {
+            $reasonString = htmlspecialchars($userBanned['reason']);
+        } else {
+            $reasonString = htmlspecialchars($userBanned['matchedfiltertype'] . " : " . $userBanned['matchedfiltercontent']);
+        }
+        $location = Config::HOMEPAGE_URL . "banned?reason=$reasonString";
+        header("Location: $location", true, 302);
+        exit();
+    }
+
     $success = CoreDB::insertUserInformation($access_token);
     if ($success) {
         $_SESSION['usertwitterid'] = $access_token['user_id'];

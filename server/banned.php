@@ -1,8 +1,9 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
 
-use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\Config;
+
+$reasonString = htmlspecialchars($_GET['reason']);
 ?>
 
 <html>
@@ -23,12 +24,13 @@ use Antsstyle\ArtRetweeter\Core\Config;
         <div class="main">
             <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
             <h1>ArtRetweeter</h1>
-            <div class="subtitle">
-                <h2>Terms of Service</h2>
-            </div>
-            You can use ArtRetweeter in any manner you like - providing that you are not using it to retweet NFTs, cryptocurrency, or any other form of scam.
-
-
+            Your account is not allowed to use ArtRetweeter.
+            <br/><br/>
+            <?php
+            echo "Reason: $reasonString";
+            ?>
+            <br/><br/>
+            If you think this is an error, email <?php echo Config::ADMIN_EMAIL_TEXT; ?>
         </div>
     </body>
     <script src="src/ajax/Collapsibles.js"></script>

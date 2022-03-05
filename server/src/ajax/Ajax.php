@@ -24,10 +24,8 @@ class Ajax {
             exit();
         }
 
-        $request = filter_input(INPUT_POST, 'request', FILTER_SANITIZE_STRING);
-        if ($request === false) {
-            exit();
-        } else if (is_null($request)) {
+        $request = htmlspecialchars($_POST['request']);
+        if ($request === "") {
             exit();
         }
 
@@ -56,8 +54,8 @@ class Ajax {
                     echo "";
                     break;
                 }
-                $newTime = filter_input(INPUT_POST, 'newtime', FILTER_SANITIZE_STRING);
-                if ($newTime === false || $newTime === null) {
+                $newTime = htmlspecialchars($_POST['newtime']);
+                if ($newTime === "") {
                     Ajax::$logger->error("Invalid schedule time, cannot reschedule queue entry.");
                     echo "";
                     break;

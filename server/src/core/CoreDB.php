@@ -25,10 +25,55 @@ class CoreDB {
             CoreDB::$databaseConnection = new \PDO($params, DB::username, DB::password, CoreDB::options);
         } catch (\Exception $e) {
             CoreDB::$logger->error("Failed to create database connection: " . print_r($e, true));
-            echo "Failed to create database connection.";
             exit();
         }
         CoreDB::$databaseConnection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+    }
+
+    public static function checkNFTCryptoBlockerCentralDB() {
+        $nftCryptoBlockerDBConn = null;
+        try {
+            $params = "mysql:host=" . DB::server_name . ";dbname=" . DB::nftcryptoblocker_database . ";port=" . DB::port . ";charset=UTF8MB4";
+            $nftCryptoBlockerDBConn = new \PDO($params, DB::username, DB::password, CoreDB::options);
+        } catch (\Exception $e) {
+            CoreDB::$logger->error("Failed to create database connection: " . print_r($e, true));
+            return null;
+        }
+        $nftCryptoBlockerDBConn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+
+        $selectQuery = "SELECT dateadded FROM nftcryptoblockercentralisedblocklist ORDER BY dateadded DESC LIMIT 5";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $selectStmt->execute();
+        $latestDates = [];
+        while ($row = $selectStmt->fetch()) {
+            $latestDates[] = $row['dateadded'];
+        }
+
+        $insertQuery = "INSERT INTO nftcryptoblockercentralisedblocklist (blockableusertwitterid,matchedfiltertype,matchedfiltercontent,"
+                . "dateadded,addedfrom,markedfordeletion,markedfordeletiondate,markedfordeletionreason,followercount,twitterhandle,matchcount,"
+                . "lastcheckeddate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+        $insertStmt = CoreDB::$databaseConnection->prepare($insertQuery);
+        $offset = 0;
+        $rowCount = 1;
+        CoreDB::$databaseConnection->beginTransaction();
+        while ($rowCount > 0) {
+            $stmt = $nftCryptoBlockerDBConn->prepare("SELECT * FROM centralisedblocklist ORDER BY dateadded DESC LIMIT 1000 OFFSET $offset");
+            $stmt->execute();
+            $rowCount = $stmt->rowCount();
+            while ($row = $stmt->fetch()) {
+                $dateAdded = $row['dateadded'];
+                foreach ($latestDates as $latestDate) {
+                    if ($latestDate >= $dateAdded) {
+                        CoreDB::$databaseConnection->commit();
+                        return;
+                    }
+                }
+                $insertStmt->execute([$row['blockableusertwitterid'], $row['matchedfiltertype'], $row['matchedfiltercontent'], $row['dateadded'],
+                    $row['addedfrom'], $row['markedfordeletion'], $row['markedfordeletiondate'], $row['markedfordeletionreason'],
+                    $row['followercount'], $row['twitterhandle'], $row['matchcount'], $row['lastcheckeddate']]);
+            }
+        }
+        CoreDB::$databaseConnection->commit();
     }
 
     public static function getCachedVariable($name) {
@@ -75,6 +120,129 @@ class CoreDB {
         return $success;
     }
 
+    public static function removeOldArtistSubmissions() {
+        $now = date("Y-m-d H:i:s");
+        $deleteQuery = "DELETE FROM artistsubmissions WHERE status != ? AND datesubmitted < ?";
+        $deleteStmt = CoreDB::$databaseConnection->prepare($deleteQuery);
+        $deleteStmt->execute(["U", $now]);
+    }
+
+    public static function checkIfUserIsBanned($userTwitterID) {
+        $selectQuery = "SELECT * FROM bannedusers WHERE twitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userTwitterID]);
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get user ban info.");
+            return null;
+        }
+        $row = $selectStmt->fetch();
+        if ($row !== false) {
+            return $row;
+        }
+        $selectQuery = "SELECT * FROM nftcryptoblockercentralisedblocklist WHERE blockableusertwitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userTwitterID]);
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get user ban info.");
+            return null;
+        }
+        $row = $selectStmt->fetch();
+        if ($row !== false) {
+            return $row;
+        }
+        return false;
+    }
+
+    public static function processArtistSubmission($artistScreenName, $type, $reason) {
+        if ($type !== "rejection" && $type !== "approval") {
+            return "Unknown approval type.";
+        }
+
+        if ($type === "approval") {
+            $params['user.fields'] = "protected";
+            $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
+                    null, APIKeys::bearer_token);
+            $connection->setApiVersion('2');
+            $connection->setRetries(1, 1);
+            $endpoint = "users/by/username/" . $artistScreenName;
+            $queryResult = Core::queryTwitterUserAuth($connection, $endpoint, "GET", $params, APIKeys::bearer_token);
+            if (isset($queryResult->errors)) {
+                $errorMessage = $queryResult->errors[0]->detail;
+                return $errorMessage;
+            }
+            $artistTwitterID = $queryResult->data->id;
+            $protected = $queryResult->data->protected;
+            if ($protected) {
+                return "This artist's profile is protected - their tweets cannot be retweeted.";
+            }
+            $insertQuery = "INSERT INTO artists (twitterid,screenname) VALUES (?,?)";
+            $insertStmt = CoreDB::$databaseConnection->prepare($insertQuery);
+            $success = $insertStmt->execute([$artistTwitterID, $artistScreenName]);
+            if (!$success) {
+                return "Failed to add artist to DB - check error log.";
+            }
+            $now = date("Y-m-d H:i:s");
+            $updateQuery = "UPDATE artistsubmissions SET status=?, datedecided=? WHERE screenname=?";
+            $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+            $updateStmt->execute(["Y", $now, $artistScreenName]);
+            return "Submission approved successfully.";
+        } else {
+            $now = date("Y-m-d H:i:s");
+            $updateQuery = "UPDATE artistsubmissions SET status=?, datedecided=?, rejectionreason=? WHERE screenname=?";
+            $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+            $updateStmt->execute(["N", $now, $reason, $artistScreenName]);
+            return "Submission rejected successfully.";
+        }
+    }
+
+    public static function resetAdminUserLoginAttempts($username) {
+        $updateQuery = "UPDATE adminaccounts SET failedloginattempts=0 WHERE username=?";
+        $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+        $updateStmt->execute([$username]);
+    }
+
+    public static function incrementAdminUserLoginAttempts($username) {
+        $updateQuery = "UPDATE adminaccounts SET failedloginattempts=failedloginattempts+1 WHERE username=?";
+        $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+        $updateStmt->execute([$username]);
+    }
+
+    public static function getAdminInfo($username) {
+        $selectQuery = "SELECT * FROM adminaccounts WHERE username=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$username]);
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get admin info.");
+            return null;
+        }
+        return $selectStmt->fetch();
+    }
+
+    public static function getAllPendingArtistSubmissions() {
+        $selectQuery = "SELECT screenname,COUNT(screenname) FROM artistsubmissions WHERE status=? GROUP BY screenname";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute(["U"]);
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get user artist submissions.");
+            return null;
+        }
+        $rows = $selectStmt->fetchAll();
+        return $rows;
+    }
+
+    public static function getPendingArtistSubmissionsForUser($userTwitterID) {
+        $selectQuery = "SELECT * FROM artistsubmissions WHERE artisttwitterid NOT IN (SELECT twitterid FROM artists) "
+                . "AND artisttwitterid NOT IN (SELECT artisttwitterid FROM rejectedartistsubmissions) AND submittedbyusertwitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userTwitterID]);
+        if (!$success) {
+            CoreDB::$logger->critical("Failed to get artist submissions for user ID $userTwitterID - cannot display on webpage.");
+            return null;
+        }
+        $rows = $selectStmt->fetchAll();
+        return $rows;
+    }
+
     public static function getLatestMetricsTypeID() {
         $metricTypesSelectQuery = "SELECT * FROM retrievalmetrics";
         $metricTypesSelectStmt = CoreDB::$databaseConnection->prepare($metricTypesSelectQuery);
@@ -95,18 +263,60 @@ class CoreDB {
         return $metricID;
     }
 
+    public static function cancelArtistSubmission($userAuth, $artistTwitterHandle) {
+        $deleteQuery = "DELETE FROM artistsubmissions WHERE screenname=? AND submittedbyusertwitterid=?";
+        $deleteStmt = CoreDB::$databaseConnection->prepare($deleteQuery);
+        $success = $deleteStmt->execute([$artistTwitterHandle, $userAuth['twitter_id']]);
+        if ($success) {
+            return "Submission cancelled successfully.";
+        } else {
+            return "A database error occurred. Try again later or contact "
+                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+        }
+    }
+
     public static function submitArtistForApproval($userAuth, $artistTwitterHandle) {
+        $userInfo = Core::getUserInfo($userAuth['twitter_id']);
+        if (is_null($userInfo)) {
+            return ["Your user information could not be found. Try logging in again or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
+        }
+        if ($userInfo === false) {
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
+        }
+        $paidUser = $userInfo['paiduser'];
+        $maxPendingSubmissions = CoreDB::getCachedVariable(CachedVariables::MAX_PENDING_SUBMISSIONS_FREE_USER);
+        if (is_null($maxPendingSubmissions)) {
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
+        } else if ($maxPendingSubmissions === false) {
+            CoreDB::$logger->error("Error: could not find max pending submissions cached variable, defaulting to 5.");
+            $maxPendingSubmissions = 5;
+        }
+        $selectQuery = "SELECT COUNT(*) FROM artistsubmissions WHERE submittedbyusertwitterid=? AND status=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $success = $selectStmt->execute([$userAuth['twitter_id'], "U"]);
+        if (!$success) {
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
+        }
+        $count = $selectStmt->fetchColumn();
+        if ($count >= $maxPendingSubmissions && $paidUser !== "Y") {
+            return ["You already have $maxPendingSubmissions submissions pending. You cannot submit any "
+                . "more until some of them are approved or rejected.", null];
+        }
         $selectQuery = "SELECT * FROM artistsubmissions WHERE screenname=? AND submittedbyusertwitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$artistTwitterHandle, $userAuth['twitter_id']]);
         if (!$success) {
-            return "A database error occurred. Try again later or contact "
-                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
         }
         $row = $selectStmt->fetch();
         if ($row !== false) {
             $dateSubmitted = $row['datesubmitted'];
-            return "You have already submitted this artist for approval (date $dateSubmitted); it is still pending.";
+            return ["You have already submitted this artist for approval (date $dateSubmitted); it is still pending.", null];
         }
         $params['user.fields'] = "protected";
         $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret,
@@ -117,57 +327,72 @@ class CoreDB {
         $queryResult = Core::queryTwitterUserAuth($connection, $endpoint, "GET", $params, $userAuth);
         if (isset($queryResult->errors)) {
             $errorMessage = $queryResult->errors[0]->detail;
-            return $errorMessage;
+            return [$errorMessage, null];
         }
         $artistTwitterID = $queryResult->data->id;
         $protected = $queryResult->data->protected;
         if ($protected) {
-            return "This artist's profile is protected - their tweets cannot be retweeted.";
+            return ["This artist's profile is protected - their tweets cannot be retweeted.", null];
         }
         $selectQuery = "SELECT * FROM artists WHERE twitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$artistTwitterID]);
         if (!$success) {
-            return "A database error occurred. Try again later or contact "
-                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
         }
         $row = $selectStmt->fetch();
         if ($row !== false) {
-            return "Artist is already approved for retweeting.";
+            return ["Artist is already approved for retweeting.", null];
         }
         $selectQuery = "SELECT * FROM bannedusers WHERE twitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$artistTwitterID]);
         if (!$success) {
-            return "A database error occurred. Try again later or contact "
-                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
         }
         $row = $selectStmt->fetch();
         if ($row !== false) {
             $reason = $row['reason'];
-            return "Artist is banned. Reason: $reason.";
+            return ["Artist is banned. Reason: $reason.", null];
         }
-        $selectQuery = "SELECT * FROM rejectedartists WHERE twitterid=?";
+        $selectQuery = "SELECT * FROM nftcryptoblockercentralisedblocklist WHERE blockableusertwitterid=?";
         $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
         $success = $selectStmt->execute([$artistTwitterID]);
         if (!$success) {
-            return "A database error occurred. Try again later or contact "
-                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
         }
         $row = $selectStmt->fetch();
         if ($row !== false) {
-            $reason = $row['reason'];
-            $date = $row['rejectiondate'];
-            return "Artist was previously submitted, but has been rejected. Reason: $reason. Date of rejection: $date.";
+            $type = $row['matchedfiltertype'];
+            $content = $row['matchedfiltercontent'];
+            return ["Artist was detected as using NFTs or crypto, they cannot be submitted. "
+                . "<br/>Match type: $type Match content: $content", null];
         }
-        $insertQuery = "INSERT INTO artistsubmissions (screenname,submittedbyusertwitterid) VALUES (?,?)";
+        /*
+          $selectQuery = "SELECT * FROM rejectedartists WHERE twitterid=?";
+          $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+          $success = $selectStmt->execute([$artistTwitterID]);
+          if (!$success) {
+          return "A database error occurred. Try again later or contact "
+          . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+          }
+          $row = $selectStmt->fetch();
+          if ($row !== false) {
+          $reason = $row['reason'];
+          $date = $row['rejectiondate'];
+          return "Artist was previously submitted, but has been rejected. Reason: $reason. Date of rejection: $date.";
+          } */
+        $insertQuery = "INSERT INTO artistsubmissions (screenname,submittedbyusertwitterid,artisttwitterid) VALUES (?,?,?)";
         $insertStmt = CoreDB::$databaseConnection->prepare($insertQuery);
-        $success = $insertStmt->execute([$artistTwitterHandle, $userAuth['twitter_id']]);
+        $success = $insertStmt->execute([$artistTwitterHandle, $userAuth['twitter_id'], $artistTwitterID]);
         if ($success) {
-            return "Artist submitted for approval successfully.";
+            return ["Artist submitted for approval successfully.", $artistTwitterID];
         } else {
-            return "A database error occurred. Try again later or contact "
-                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+            return ["A database error occurred. Try again later or contact "
+                . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
         }
     }
 
@@ -235,9 +460,22 @@ class CoreDB {
         return $rows;
     }
 
-    public static function getUserArtistRetweetSettings($userTwitterID) {
+    public static function getUserArtistRetweetSettingsCount($userTwitterID) {
+        $stmt = CoreDB::$databaseConnection->prepare("SELECT COUNT(*) FROM userartistretweetsettings WHERE usertwitterid=?");
+        $success = $stmt->execute([$userTwitterID]);
+        if (!$success) {
+            return null;
+        }
+        return $stmt->fetchColumn();
+    }
+
+    public static function getUserArtistRetweetSettings($userTwitterID, $pageNum = 1) {
+        if (!is_numeric($pageNum)) {
+            $pageNum = 1;
+        }
+        $offSet = ($pageNum - 1) * 15;
         $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM userartistretweetsettings INNER JOIN artists ON "
-                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? ORDER BY screenname ASC");
+                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? ORDER BY screenname ASC LIMIT 15 OFFSET $offSet");
         $success = $stmt->execute([$userTwitterID]);
         if (!$success) {
             return null;
@@ -294,10 +532,18 @@ class CoreDB {
         $accessToken = $access_token['oauth_token'];
         $accessTokenSecret = $access_token['oauth_token_secret'];
         $userTwitterID = $access_token['user_id'];
-        $insertQuery = "INSERT INTO users (twitterid,accesstoken,accesstokensecret) VALUES (?,?,?) ON DUPLICATE KEY UPDATE "
-                . "accesstoken=?, accesstokensecret=? ";
-        $success = CoreDB::$databaseConnection->prepare($insertQuery)
-                ->execute([$userTwitterID, $accessToken, $accessTokenSecret, $accessToken, $accessTokenSecret]);
+        $selectQuery = "SELECT twitterid FROM users WHERE twitterid=?";
+        $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+        $selectStmt->execute([$userTwitterID]);
+        if ($selectStmt->fetchColumn() !== false) {
+            $insertQuery = "UPDATE users SET accesstoken=?, accesstokensecret=? WHERE twitterid=?";
+            $success = CoreDB::$databaseConnection->prepare($insertQuery)
+                    ->execute([$accessToken, $accessTokenSecret, $userTwitterID]);
+        } else {
+            $insertQuery = "INSERT INTO users (twitterid,accesstoken,accesstokensecret) VALUES (?,?,?)";
+            $success = CoreDB::$databaseConnection->prepare($insertQuery)
+                    ->execute([$userTwitterID, $accessToken, $accessTokenSecret]);
+        }
         return $success;
     }
 

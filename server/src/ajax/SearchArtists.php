@@ -20,11 +20,8 @@ class SearchArtists {
             return;
         }
 
-        $searchString = filter_input(INPUT_POST, 'searchstring', FILTER_SANITIZE_STRING);
-        if ($searchString === false) {
-            echo "Invalid username";
-            return;
-        } else if (is_null($searchString)) {
+        $searchString = htmlspecialchars($_POST['searchstring']);
+        if ($searchString === "") {
             echo "Invalid username";
             return;
         } else if (!preg_match("/^@?[A-Za-z0-9_]{1,15}$/", $searchString)) {

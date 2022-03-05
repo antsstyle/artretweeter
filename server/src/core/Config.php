@@ -13,5 +13,7 @@ class Config {
     const ADMIN_NAME = "@antsstyle";
     const CARD_IMAGE_URL = "https://antsstyle.com/artretweeter/twittercard.jpg";
     const OAUTH_CALLBACK = "https://antsstyle.com/artretweeter/results";
-
+    const WEBSITE_STYLE_DIRECTORY = "/website/sidebar/";
+    const ADMIN_EMAIL_TEXT = "ant[at]antsstyle[dot]com";
+    
 }

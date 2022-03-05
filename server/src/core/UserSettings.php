@@ -10,9 +10,9 @@ class UserSettings {
     public static $logger;
 
     public static function saveAutomationSettings($userTwitterID) {
-        $enableAutomation = filter_input(INPUT_POST, "enableautomatedretweeting", FILTER_SANITIZE_STRING);
+        $enableAutomation = htmlspecialchars($_POST['enableautomatedretweeting']);
 
-        if (is_null($enableAutomation)) {
+        if ($enableAutomation === "") {
             $enableAutomation = "N";
         } else if ($enableAutomation === "enable_automated_retweeting") {
             $enableAutomation = "Y";
@@ -21,9 +21,9 @@ class UserSettings {
             return "Invalid automation enabled setting.";
         }
 
-        $ignoreOldTweets = filter_input(INPUT_POST, "ignoreoldtweets", FILTER_SANITIZE_STRING);
+        $ignoreOldTweets = htmlspecialchars($_POST["ignoreoldtweets"]);
 
-        if (is_null($ignoreOldTweets)) {
+        if ($ignoreOldTweets === "") {
             $ignoreOldTweets = "N";
         } else if ($ignoreOldTweets === "ignore_old_tweets") {
             $ignoreOldTweets = "Y";
@@ -32,20 +32,17 @@ class UserSettings {
             return "Invalid ignore old tweets setting.";
         }
 
-        $ignoreOldTweetsDate = filter_input(INPUT_POST, "ignoreoldtweetsdate", FILTER_SANITIZE_STRING);
-        if ((is_null($ignoreOldTweetsDate) || $ignoreOldTweetsDate == "") && $ignoreOldTweets == "Y") {
+        $ignoreOldTweetsDate = htmlspecialchars($_POST["ignoreoldtweetsdate"]);
+        if ($ignoreOldTweetsDate === "" && $ignoreOldTweets == "Y") {
             UserSettings::$logger->error("Invalid ignore old tweets date setting.");
             return "Invalid ignore old tweets date setting.";
-        } else if ($ignoreOldTweetsDate === false) {
-            UserSettings::$logger->error("Invalid ignore old tweets date setting.");
-            return "Invalid ignore old tweets date setting.";
-        } else if ($ignoreOldTweetsDate == "") {
+        } else if ($ignoreOldTweetsDate === "") {
             $ignoreOldTweetsDate = null;
         }
 
-        $includeTextEnabled = filter_input(INPUT_POST, "includetextenabled", FILTER_SANITIZE_STRING);
+        $includeTextEnabled = htmlspecialchars($_POST["includetextenabled"]);
 
-        if (is_null($includeTextEnabled)) {
+        if ($includeTextEnabled === "") {
             $includeTextEnabled = "N";
         } else if ($includeTextEnabled === "include_text_enabled") {
             $includeTextEnabled = "Y";
@@ -54,11 +51,9 @@ class UserSettings {
             return "Invalid include text enabled setting.";
         }
 
-        $includeTextOperation = filter_input(INPUT_POST, "includetextoperation", FILTER_SANITIZE_STRING);
+        $includeTextOperation = htmlspecialchars($_POST["includetextoperation"]);
 
-        if (is_null($includeTextOperation)) {
-            $includeTextOperation = "N";
-        } else if ($includeTextOperation === "all") {
+        if ($includeTextOperation === "all") {
             $includeTextOperation = "All of these words";
         } else if ($includeTextOperation === "any") {
             $includeTextOperation = "Any of these words";
@@ -69,7 +64,7 @@ class UserSettings {
             return "Invalid include text operation setting.";
         }
 
-        $includeText = filter_input(INPUT_POST, "includetext", FILTER_SANITIZE_STRING);
+        $includeText = htmlspecialchars($_POST["includetext"]);
 
         if ($includeText === "") {
             $includeText = null;
@@ -78,22 +73,20 @@ class UserSettings {
             return "Invalid include text setting.";
         }
 
-        $excludeTextEnabled = filter_input(INPUT_POST, "excludetextenabled", FILTER_SANITIZE_STRING);
+        $excludeTextEnabled = htmlspecialchars($_POST["excludetextenabled"]);
 
-        if (is_null($excludeTextEnabled)) {
+        if ($excludeTextEnabled === "") {
             $excludeTextEnabled = "N";
         } else if ($excludeTextEnabled === "exclude_text_enabled") {
             $excludeTextEnabled = "Y";
         } else {
-            error_log("Invalid exclude text enabled setting.");
+            UserSettings::$logger->error("Invalid exclude text enabled setting.");
             return "Invalid exclude text enabled setting";
         }
 
-        $excludeTextOperation = filter_input(INPUT_POST, "excludetextoperation", FILTER_SANITIZE_STRING);
+        $excludeTextOperation = htmlspecialchars($_POST["excludetextoperation"]);
 
-        if (is_null($excludeTextOperation)) {
-            UserSettings::$logger->error("Invalid exclude text operation setting.");
-        } else if ($excludeTextOperation === "all") {
+        if ($excludeTextOperation === "all") {
             $excludeTextOperation = "All of these words";
         } else if ($excludeTextOperation === "any") {
             $excludeTextOperation = "Any of these words";
@@ -104,7 +97,7 @@ class UserSettings {
             return "Invalid exclude text operation setting";
         }
 
-        $excludeText = filter_input(INPUT_POST, "excludetext", FILTER_SANITIZE_STRING);
+        $excludeText = htmlspecialchars($_POST["excludetext"]);
 
         if ($excludeText === "") {
             $excludeText = null;
@@ -122,12 +115,9 @@ class UserSettings {
             return "Invalid metrics percent setting.";
         }
 
-        $metricsMethod = filter_input(INPUT_POST, "metricsmethod", FILTER_SANITIZE_STRING);
+        $metricsMethod = htmlspecialchars($_POST["metricsmethod"]);
 
-        if (is_null($metricsMethod)) {
-            UserSettings::$logger->error("Invalid metrics method setting.");
-            return "Invalid metrics method setting.";
-        } else if ($metricsMethod === "mean_average") {
+        if ($metricsMethod === "mean_average") {
             $metricsMethod = "Mean Average";
         } else if ($metricsMethod === "adaptive") {
             $metricsMethod = "Adaptive";
@@ -136,8 +126,8 @@ class UserSettings {
             return "Invalid metrics method setting.";
         }
 
-        $imagesEnabled = filter_input(INPUT_POST, "imagesenabled", FILTER_SANITIZE_STRING);
-        if (is_null($imagesEnabled)) {
+        $imagesEnabled = htmlspecialchars($_POST["imagesenabled"]);
+        if ($imagesEnabled === "") {
             $imagesEnabled = "N";
         } else if ($imagesEnabled === "images_enabled") {
             $imagesEnabled = "Y";
@@ -146,8 +136,8 @@ class UserSettings {
             return "Invalid images enabled setting.";
         }
 
-        $gifsEnabled = filter_input(INPUT_POST, "gifsenabled", FILTER_SANITIZE_STRING);
-        if (is_null($gifsEnabled)) {
+        $gifsEnabled = htmlspecialchars($_POST["gifsenabled"]);
+        if ($gifsEnabled === "") {
             $gifsEnabled = "N";
         } else if ($gifsEnabled === "gifs_enabled") {
             $gifsEnabled = "Y";
@@ -156,8 +146,8 @@ class UserSettings {
             return "Invalid gifs enabled setting.";
         }
 
-        $videosEnabled = filter_input(INPUT_POST, "videosenabled", FILTER_SANITIZE_STRING);
-        if (is_null($videosEnabled)) {
+        $videosEnabled = htmlspecialchars($_POST["videosenabled"]);
+        if ($videosEnabled === "") {
             $videosEnabled = "N";
         } else if ($videosEnabled === "videos_enabled") {
             $videosEnabled = "Y";
@@ -169,8 +159,8 @@ class UserSettings {
 
         $dayFlags = "";
 
-        $mondayEnabled = filter_input(INPUT_POST, "mondayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($mondayEnabled)) {
+        $mondayEnabled = htmlspecialchars($_POST["mondayenabled"]);
+        if ($mondayEnabled === "") {
             $dayFlags .= "N";
         } else if ($mondayEnabled === "monday_enabled") {
             $dayFlags .= "Y";
@@ -179,8 +169,8 @@ class UserSettings {
             return "Invalid monday enabled setting.";
         }
 
-        $tuesdayEnabled = filter_input(INPUT_POST, "tuesdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($tuesdayEnabled)) {
+        $tuesdayEnabled = htmlspecialchars($_POST["tuesdayenabled"]);
+        if ($tuesdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($tuesdayEnabled === "tuesday_enabled") {
             $dayFlags .= "Y";
@@ -189,8 +179,8 @@ class UserSettings {
             return "Invalid tuesday enabled setting.";
         }
 
-        $wednesdayEnabled = filter_input(INPUT_POST, "wednesdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($wednesdayEnabled)) {
+        $wednesdayEnabled = htmlspecialchars($_POST["wednesdayenabled"]);
+        if ($wednesdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($wednesdayEnabled === "wednesday_enabled") {
             $dayFlags .= "Y";
@@ -199,8 +189,8 @@ class UserSettings {
             return "Invalid wednesday enabled setting.";
         }
 
-        $thursdayEnabled = filter_input(INPUT_POST, "thursdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($thursdayEnabled)) {
+        $thursdayEnabled = htmlspecialchars($_POST["thursdayenabled"]);
+        if ($thursdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($thursdayEnabled === "thursday_enabled") {
             $dayFlags .= "Y";
@@ -209,8 +199,8 @@ class UserSettings {
             return "Invalid thursday enabled setting.";
         }
 
-        $fridayEnabled = filter_input(INPUT_POST, "fridayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($fridayEnabled)) {
+        $fridayEnabled = htmlspecialchars($_POST["fridayenabled"]);
+        if ($fridayEnabled === "") {
             $dayFlags .= "N";
         } else if ($fridayEnabled === "friday_enabled") {
             $dayFlags .= "Y";
@@ -219,8 +209,8 @@ class UserSettings {
             return "Invalid friday enabled setting.";
         }
 
-        $saturdayEnabled = filter_input(INPUT_POST, "saturdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($saturdayEnabled)) {
+        $saturdayEnabled = htmlspecialchars($_POST["saturdayenabled"]);
+        if ($saturdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($saturdayEnabled === "saturday_enabled") {
             $dayFlags .= "Y";
@@ -229,8 +219,8 @@ class UserSettings {
             return "Invalid saturday enabled setting.";
         }
 
-        $sundayEnabled = filter_input(INPUT_POST, "sundayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($sundayEnabled)) {
+        $sundayEnabled = htmlspecialchars($_POST["sundayenabled"]);
+        if ($sundayEnabled === "") {
             $dayFlags .= "N";
         } else if ($sundayEnabled === "sunday_enabled") {
             $dayFlags .= "Y";
@@ -262,8 +252,9 @@ class UserSettings {
                 $jString = strval($j);
             }
             $concatString = "h" . $iString . $jString;
-            $timePeriod = filter_input(INPUT_POST, $concatString, FILTER_SANITIZE_STRING);
-            if (is_null($timePeriod)) {
+            
+            $timePeriod = htmlspecialchars($_POST[$concatString]);
+            if ($timePeriod === "") {
                 $hourFlags .= "N";
             } else if ($timePeriod === $concatString) {
                 $hourFlags .= "Y";
@@ -280,8 +271,8 @@ class UserSettings {
             return "No hours selected.";
         }
 
-        $minute0 = filter_input(INPUT_POST, "minute0", FILTER_SANITIZE_STRING);
-        if (is_null($minute0)) {
+        $minute0 = htmlspecialchars($_POST["minute0"]);
+        if ($minute0 === "") {
             $minuteFlags .= "N";
         } else if ($minute0 === "minute_0") {
             $minuteFlags .= "Y";
@@ -290,8 +281,8 @@ class UserSettings {
             return "Invalid minutes setting.";
         }
 
-        $minute15 = filter_input(INPUT_POST, "minute15", FILTER_SANITIZE_STRING);
-        if (is_null($minute15)) {
+        $minute15 = htmlspecialchars($_POST["minute15"]);
+        if ($minute15 === "") {
             $minuteFlags .= "N";
         } else if ($minute15 === "minute_15") {
             $minuteFlags .= "Y";
@@ -300,8 +291,8 @@ class UserSettings {
             return "Invalid minutes setting.";
         }
 
-        $minute30 = filter_input(INPUT_POST, "minute30", FILTER_SANITIZE_STRING);
-        if (is_null($minute30)) {
+        $minute30 = htmlspecialchars($_POST["minute30"]);
+        if ($minute30 === "") {
             $minuteFlags .= "N";
         } else if ($minute30 === "minute_30") {
             $minuteFlags .= "Y";
@@ -310,8 +301,8 @@ class UserSettings {
             return "Invalid minutes setting.";
         }
 
-        $minute45 = filter_input(INPUT_POST, "minute45", FILTER_SANITIZE_STRING);
-        if (is_null($minute45)) {
+        $minute45 = htmlspecialchars($_POST["minute45"]);
+        if ($minute45 === "") {
             $minuteFlags .= "N";
         } else if ($minute45 === "minute_45") {
             $minuteFlags .= "Y";
@@ -325,8 +316,8 @@ class UserSettings {
             return "No minutes selected.";
         }
 
-        $timezone = filter_input(INPUT_POST, "timezone", FILTER_SANITIZE_STRING);
-        if (is_null($timezone)) {
+        $timezone = htmlspecialchars($_POST["timezone"]);
+        if ($timezone === "") {
             UserSettings::$logger->error("No timezone detected.");
             return "No timezone selected.";
         }
@@ -375,9 +366,9 @@ class UserSettings {
     }
 
     public static function saveNonArtistAutomationSettings($userTwitterID) {
-        $enableAutomation = filter_input(INPUT_POST, "enableautomatedretweeting", FILTER_SANITIZE_STRING);
+        $enableAutomation = htmlspecialchars($_POST["enableautomatedretweeting"]);
 
-        if (is_null($enableAutomation)) {
+        if ($enableAutomation === "") {
             $enableAutomation = "N";
         } else if ($enableAutomation === "enable_automated_retweeting") {
             $enableAutomation = "Y";
@@ -386,9 +377,9 @@ class UserSettings {
             return "Invalid automation enabled setting.";
         }
 
-        $ignoreOldTweets = filter_input(INPUT_POST, "ignoreoldtweets", FILTER_SANITIZE_STRING);
+        $ignoreOldTweets = htmlspecialchars($_POST["ignoreoldtweets"]);
 
-        if (is_null($ignoreOldTweets)) {
+        if ($ignoreOldTweets === "") {
             $ignoreOldTweets = "N";
         } else if ($ignoreOldTweets === "ignore_old_tweets") {
             $ignoreOldTweets = "Y";
@@ -397,20 +388,17 @@ class UserSettings {
             return "Invalid ignore old tweets setting.";
         }
 
-        $ignoreOldTweetsDate = filter_input(INPUT_POST, "ignoreoldtweetsdate", FILTER_SANITIZE_STRING);
-        if ((is_null($ignoreOldTweetsDate) || $ignoreOldTweetsDate == "") && $ignoreOldTweets == "Y") {
+        $ignoreOldTweetsDate = htmlspecialchars($_POST["ignoreoldtweetsdate"]);
+        if ($ignoreOldTweetsDate === "" && $ignoreOldTweets == "Y") {
             UserSettings::$logger->error("Invalid ignore old tweets date setting.");
             return "Invalid ignore old tweets date setting.";
-        } else if ($ignoreOldTweetsDate === false) {
-            UserSettings::$logger->error("Invalid ignore old tweets date setting.");
-            return "Invalid ignore old tweets date setting.";
-        } else if ($ignoreOldTweetsDate == "") {
+        } else if ($ignoreOldTweetsDate === "") {
             $ignoreOldTweetsDate = null;
         }
 
-        $includeTextEnabled = filter_input(INPUT_POST, "includetextenabled", FILTER_SANITIZE_STRING);
+        $includeTextEnabled = htmlspecialchars($_POST["includetextenabled"]);
 
-        if (is_null($includeTextEnabled)) {
+        if ($includeTextEnabled === "") {
             $includeTextEnabled = "N";
         } else if ($includeTextEnabled === "include_text_enabled") {
             $includeTextEnabled = "Y";
@@ -419,11 +407,9 @@ class UserSettings {
             return "Invalid include text enabled setting.";
         }
 
-        $includeTextOperation = filter_input(INPUT_POST, "includetextoperation", FILTER_SANITIZE_STRING);
+        $includeTextOperation = htmlspecialchars($_POST["includetextoperation"]);
 
-        if (is_null($includeTextOperation)) {
-            $includeTextOperation = "N";
-        } else if ($includeTextOperation === "all") {
+        if ($includeTextOperation === "all") {
             $includeTextOperation = "All of these words";
         } else if ($includeTextOperation === "any") {
             $includeTextOperation = "Any of these words";
@@ -434,7 +420,7 @@ class UserSettings {
             return "Invalid include text operation setting.";
         }
 
-        $includeText = filter_input(INPUT_POST, "includetext", FILTER_SANITIZE_STRING);
+        $includeText = htmlspecialchars($_POST["includetext"]);
 
         if ($includeText === "") {
             $includeText = null;
@@ -443,9 +429,9 @@ class UserSettings {
             return "Invalid include text setting.";
         }
 
-        $excludeTextEnabled = filter_input(INPUT_POST, "excludetextenabled", FILTER_SANITIZE_STRING);
+        $excludeTextEnabled = htmlspecialchars($_POST["excludetextenabled"]);
 
-        if (is_null($excludeTextEnabled)) {
+        if ($excludeTextEnabled === "") {
             $excludeTextEnabled = "N";
         } else if ($excludeTextEnabled === "exclude_text_enabled") {
             $excludeTextEnabled = "Y";
@@ -454,11 +440,9 @@ class UserSettings {
             return "Invalid exclude text enabled setting";
         }
 
-        $excludeTextOperation = filter_input(INPUT_POST, "excludetextoperation", FILTER_SANITIZE_STRING);
+        $excludeTextOperation = htmlspecialchars($_POST["excludetextoperation"]);
 
-        if (is_null($excludeTextOperation)) {
-            UserSettings::$logger->error("Invalid exclude text operation setting.");
-        } else if ($excludeTextOperation === "all") {
+        if ($excludeTextOperation === "all") {
             $excludeTextOperation = "All of these words";
         } else if ($excludeTextOperation === "any") {
             $excludeTextOperation = "Any of these words";
@@ -469,7 +453,7 @@ class UserSettings {
             return "Invalid exclude text operation setting";
         }
 
-        $excludeText = filter_input(INPUT_POST, "excludetext", FILTER_SANITIZE_STRING);
+        $excludeText = htmlspecialchars($_POST["excludetext"]);
 
         if ($excludeText === "") {
             $excludeText = null;
@@ -478,8 +462,8 @@ class UserSettings {
             return "Invalid exclude text setting";
         }
 
-        $imagesEnabled = filter_input(INPUT_POST, "imagesenabled", FILTER_SANITIZE_STRING);
-        if (is_null($imagesEnabled)) {
+        $imagesEnabled = htmlspecialchars($_POST["imagesenabled"]);
+        if ($imagesEnabled === "") {
             $imagesEnabled = "N";
         } else if ($imagesEnabled === "images_enabled") {
             $imagesEnabled = "Y";
@@ -488,8 +472,8 @@ class UserSettings {
             return "Invalid images enabled setting.";
         }
 
-        $gifsEnabled = filter_input(INPUT_POST, "gifsenabled", FILTER_SANITIZE_STRING);
-        if (is_null($gifsEnabled)) {
+        $gifsEnabled = htmlspecialchars($_POST["gifsenabled"]);
+        if ($gifsEnabled === "") {
             $gifsEnabled = "N";
         } else if ($gifsEnabled === "gifs_enabled") {
             $gifsEnabled = "Y";
@@ -498,8 +482,8 @@ class UserSettings {
             return "Invalid gifs enabled setting.";
         }
 
-        $videosEnabled = filter_input(INPUT_POST, "videosenabled", FILTER_SANITIZE_STRING);
-        if (is_null($videosEnabled)) {
+        $videosEnabled = htmlspecialchars($_POST["videosenabled"]);
+        if ($videosEnabled === "") {
             $videosEnabled = "N";
         } else if ($videosEnabled === "videos_enabled") {
             $videosEnabled = "Y";
@@ -511,8 +495,8 @@ class UserSettings {
 
         $dayFlags = "";
 
-        $mondayEnabled = filter_input(INPUT_POST, "mondayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($mondayEnabled)) {
+        $mondayEnabled = htmlspecialchars($_POST["mondayenabled"]);
+        if ($mondayEnabled === "") {
             $dayFlags .= "N";
         } else if ($mondayEnabled === "monday_enabled") {
             $dayFlags .= "Y";
@@ -521,8 +505,8 @@ class UserSettings {
             return "Invalid monday enabled setting.";
         }
 
-        $tuesdayEnabled = filter_input(INPUT_POST, "tuesdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($tuesdayEnabled)) {
+        $tuesdayEnabled = htmlspecialchars($_POST["tuesdayenabled"]);
+        if ($tuesdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($tuesdayEnabled === "tuesday_enabled") {
             $dayFlags .= "Y";
@@ -531,8 +515,8 @@ class UserSettings {
             return "Invalid tuesday enabled setting.";
         }
 
-        $wednesdayEnabled = filter_input(INPUT_POST, "wednesdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($wednesdayEnabled)) {
+        $wednesdayEnabled = htmlspecialchars($_POST["wednesdayenabled"]);
+        if ($wednesdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($wednesdayEnabled === "wednesday_enabled") {
             $dayFlags .= "Y";
@@ -541,8 +525,8 @@ class UserSettings {
             return "Invalid wednesday enabled setting.";
         }
 
-        $thursdayEnabled = filter_input(INPUT_POST, "thursdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($thursdayEnabled)) {
+        $thursdayEnabled = htmlspecialchars($_POST["thursdayenabled"]);
+        if ($thursdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($thursdayEnabled === "thursday_enabled") {
             $dayFlags .= "Y";
@@ -551,8 +535,8 @@ class UserSettings {
             return "Invalid thursday enabled setting.";
         }
 
-        $fridayEnabled = filter_input(INPUT_POST, "fridayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($fridayEnabled)) {
+        $fridayEnabled = htmlspecialchars($_POST["fridayenabled"]);
+        if ($fridayEnabled === "") {
             $dayFlags .= "N";
         } else if ($fridayEnabled === "friday_enabled") {
             $dayFlags .= "Y";
@@ -561,8 +545,8 @@ class UserSettings {
             return "Invalid friday enabled setting.";
         }
 
-        $saturdayEnabled = filter_input(INPUT_POST, "saturdayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($saturdayEnabled)) {
+        $saturdayEnabled = htmlspecialchars($_POST["saturdayenabled"]);
+        if ($saturdayEnabled === "") {
             $dayFlags .= "N";
         } else if ($saturdayEnabled === "saturday_enabled") {
             $dayFlags .= "Y";
@@ -571,8 +555,8 @@ class UserSettings {
             return "Invalid saturday enabled setting.";
         }
 
-        $sundayEnabled = filter_input(INPUT_POST, "sundayenabled", FILTER_SANITIZE_STRING);
-        if (is_null($sundayEnabled)) {
+        $sundayEnabled = htmlspecialchars($_POST["sundayenabled"]);
+        if ($sundayEnabled === "") {
             $dayFlags .= "N";
         } else if ($sundayEnabled === "sunday_enabled") {
             $dayFlags .= "Y";
@@ -603,8 +587,8 @@ class UserSettings {
                 $jString = strval($j);
             }
             $concatString = "h" . $iString . $jString;
-            $timePeriod = filter_input(INPUT_POST, $concatString, FILTER_SANITIZE_STRING);
-            if (is_null($timePeriod)) {
+            $timePeriod = htmlspecialchars($_POST[$concatString]);
+            if ($timePeriod === "") {
                 $hourFlags .= "N";
             } else if ($timePeriod === $concatString) {
                 $hourFlags .= "Y";
@@ -621,8 +605,8 @@ class UserSettings {
             return "No hours selected.";
         }
 
-        $timezone = filter_input(INPUT_POST, "timezone", FILTER_SANITIZE_STRING);
-        if (is_null($timezone)) {
+        $timezone = htmlspecialchars($_POST["timezone"]);
+        if ($timezone === "") {
             UserSettings::$logger->error("No timezone detected.");
             return "No timezone selected.";
         }
