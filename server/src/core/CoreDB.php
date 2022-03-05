@@ -276,7 +276,7 @@ class CoreDB {
     }
 
     public static function submitArtistForApproval($userAuth, $artistTwitterHandle) {
-        $userInfo = Core::getUserInfo($userAuth['twitter_id']);
+        $userInfo = CoreDB::getUserInfo($userAuth['twitter_id']);
         if (is_null($userInfo)) {
             return ["Your user information could not be found. Try logging in again or contact "
                 . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.", null];
@@ -597,6 +597,20 @@ class CoreDB {
         }
         $rowCount = $statement->rowCount();
         return $rowCount;
+    }
+
+    public static function getUserInfo($userTwitterID) {
+        $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users LEFT JOIN "
+                . "userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid WHERE twitterid=?");
+        $success = $stmt->execute([$userTwitterID]);
+        if (!$success) {
+            return false;
+        }
+        $row = $stmt->fetch();
+        if ($row) {
+            return $row;
+        }
+        return null;
     }
 
 }

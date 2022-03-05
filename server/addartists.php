@@ -4,7 +4,6 @@ require __DIR__ . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
-use Antsstyle\ArtRetweeter\Core\Core;
 
 Session::checkSession();
 
@@ -22,7 +21,7 @@ if (!$_SESSION['usertwitterid']) {
 
 $userTwitterID = $_SESSION['usertwitterid'];
 
-$userInfo = Core::getUserInfo($userTwitterID);
+$userInfo = CoreDB::getUserInfo($userTwitterID);
 if ($userInfo === false) {
     $errorURL = Config::HOMEPAGE_URL . "error";
     header("Location: $errorURL", true, 302);

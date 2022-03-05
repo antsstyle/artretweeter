@@ -22,7 +22,7 @@ class SubmitArtist {
             return;
         }
 
-        $userInfo = Core::getUserInfo($userTwitterID);
+        $userInfo = CoreDB::getUserInfo($userTwitterID);
         if (is_null($userInfo) || $userInfo === false) {
             echo "A database error occurred. Try again later or contact "
             . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";

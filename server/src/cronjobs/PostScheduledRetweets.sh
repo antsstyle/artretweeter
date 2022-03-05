@@ -10,4 +10,4 @@ tmpDir="$(dirname "$PWD")/tmp/"
 mkdir -p ${tmpDir}
 
 lockFile="${tmpDir}${fileName}"
-nohup flock -en ${lockFile} php cronjobs/ScheduleUserArtistRetweets.php &
+nohup flock -en ${lockFile} php cronjobs/PostScheduledRetweets.php &

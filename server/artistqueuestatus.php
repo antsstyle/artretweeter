@@ -18,7 +18,7 @@ if (!$_SESSION['usertwitterid']) {
 }
 
 $queuedRetweets = CoreDB::getUserRetweetQueue($userTwitterID);
-$userInfo = Core::getUserInfo($userTwitterID);
+$userInfo = CoreDB::getUserInfo($userTwitterID);
 if ($userInfo !== false && $userInfo !== null) {
     $userAuth['twitter_id'] = $_SESSION['usertwitterid'];
     $userAuth['access_token'] = $userInfo['accesstoken'];

@@ -355,20 +355,6 @@ class Core {
         return $success;
     }
 
-    public static function getUserInfo($userTwitterID) {
-        $stmt = CoreDB::$databaseConnection->prepare("SELECT * FROM users LEFT JOIN "
-                . "userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid WHERE twitterid=?");
-        $success = $stmt->execute([$userTwitterID]);
-        if (!$success) {
-            return false;
-        }
-        $row = $stmt->fetch();
-        if ($row) {
-            return $row;
-        }
-        return null;
-    }
-
     public static function validateUserAuth($userAuth) {
         if ($userAuth === APIKeys::bearer_token) {
             return true;

@@ -22,7 +22,7 @@ if (!$_SESSION['usertwitterid']) {
     exit();
 }
 
-$userInfo = Core::getUserInfo($_SESSION['usertwitterid']);
+$userInfo = CoreDB::getUserInfo($_SESSION['usertwitterid']);
 if ($userInfo === false) {
     $errorURL = Config::HOMEPAGE_URL . "error";
     header("Location: $errorURL", true, 302);
