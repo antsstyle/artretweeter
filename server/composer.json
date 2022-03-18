@@ -3,7 +3,8 @@
         "abraham/twitteroauth": "^3.3.0",
         "monolog/monolog": "^2.3",
         "patreon/patreon": "^1.0",
-        "paypal/rest-api-sdk-php": "*"
+        "paypal/rest-api-sdk-php": "*",
+        "phpmailer/phpmailer": "^6.6"
     },
     "autoload": {
         "psr-4": {

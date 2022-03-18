@@ -4,6 +4,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\Session;
+use Antsstyle\ArtRetweeter\Core\OAuth;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Abraham\TwitterOAuth\TwitterOAuth;
 
@@ -11,36 +12,25 @@ Session::checkSession();
 
 $_SESSION['artretweeterpage'] = "nonartists";
 
-if (!$_SESSION['usertwitterid']) {
+if (!$_SESSION['artretweeterlogin']) {
     $connection = new TwitterOAuth(APIKeys::twitter_consumer_key, APIKeys::twitter_consumer_secret);
-    try {
-        $response = $connection->oauth("oauth/request_token", ["oauth_callback" => Config::OAUTH_CALLBACK]);
-        $httpcode = $connection->getLastHttpCode();
-        if ($httpcode != 200) {
-            error_log("Failed to get request token!");
-            // Show error page
-        }
-    } catch (\Exception $e) {
-        error_log("Failed to get request token: " . print_r($e, true));
-    }
-    $oauth_token = $response['oauth_token'];
-    $oauth_token_secret = $response['oauth_token_secret'];
-    $oauth_callback_confirmed = $response['oauth_callback_confirmed'];
-    $_SESSION['oauth_token'] = $oauth_token;
-    $_SESSION['oauth_token_secret'] = $oauth_token_secret;
-    $oauth_token_array['oauth_token'] = $oauth_token;
-    try {
-        $url = $connection->url('oauth/authenticate', array('oauth_token' => $oauth_token));
-    } catch (\Exception $e) {
-        error_log("Failed to authenticate request token: " . print_r($e, true));
-    }
+    $array = OAuth::generatePKCEVerifierAndChallenge();
+    $code_verifier = $array[0];
+    $code_challenge = $array[1];
+    $_SESSION['code_verifier'] = $code_verifier;
+    $url = "https://twitter.com/i/oauth2/authorize?";
+    $paramString = "response_type=code&client_id=" . APIKeys::twitter_oauth2_client_id . "&redirect_uri=" . Config::OAUTH_CALLBACK
+            . "&scope=" . "tweet.read%20tweet.write%20offline.access%20users.read"
+            . "&state=state&code_challenge=$code_challenge&code_challenge_method=s256";
+    $url .= $paramString;
 }
 ?>
 
 <html>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -53,7 +43,7 @@ if (!$_SESSION['usertwitterid']) {
     </title>
     <body>
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <div class="subtitle">
                 <h2>Non-Artists</h2>
@@ -74,7 +64,7 @@ if (!$_SESSION['usertwitterid']) {
 
             <br/>
             <?php
-            if ($_SESSION['usertwitterid']) {
+            if ($_SESSION['usertwitterid'] && $_SESSION['artretweeterlogin']) {
                 echo "<hr><p>You are already logged in. You can change your settings or manage your queued retweets using the menu options on the left.</p><hr>";
             } else {
                 echo "<hr><p>To use this app or change your settings, you must first sign in with Twitter. Use the button below to proceed.</p>";
@@ -96,5 +86,5 @@ if (!$_SESSION['usertwitterid']) {
             </p>
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

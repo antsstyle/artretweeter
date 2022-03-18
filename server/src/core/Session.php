@@ -2,7 +2,17 @@
 
 namespace Antsstyle\ArtRetweeter\Core;
 
+use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Core\Config;
+use Antsstyle\ArtRetweeter\Core\LogManager;
+
 class Session {
+
+    private static $logger;
+
+    public static function initialiseLogger() {
+        self::$logger = LogManager::getLogger(self::class);
+    }
 
     public static function regenerateSession($reload = false) {
         // This token is used by forms to prevent cross site forgery attempts
@@ -30,7 +40,7 @@ class Session {
         // Set session ID to the new one, and start it back up again
         session_id($newSession);
         session_start([
-            'cookie_lifetime' => 86400,
+            'cookie_lifetime' => 0,
             'gc_maxlifetime' => 86400,
             'use_strict_mode' => 1,
             'cookie_secure' => "On",
@@ -43,7 +53,7 @@ class Session {
 
     public static function checkSession() {
         session_start([
-            'cookie_lifetime' => 86400,
+            'cookie_lifetime' => 0,
             'gc_maxlifetime' => 86400,
             'use_strict_mode' => 1,
             'cookie_secure' => "On",
@@ -51,9 +61,6 @@ class Session {
         try {
             if ($_SESSION['OBSOLETE'] && ($_SESSION['EXPIRES'] < time())) {
                 throw new \Exception('Attempt to use expired session.');
-            }
-            if (!is_numeric($_SESSION['user_id'])) {
-                throw new \Exception('No session started.');
             }
             if ($_SESSION['IPaddress'] != filter_input(INPUT_SERVER, 'REMOTE_ADDR')) {
                 throw new \Exception('IP Address mixmatch (possible session hijacking attempt).');
@@ -64,11 +71,31 @@ class Session {
             if (!$_SESSION['OBSOLETE'] && mt_rand(1, 100) == 1) {
                 self::regenerateSession();
             }
-            return true;
         } catch (\Exception $e) {
-            return false;
+            self::$logger->error("Session error! " . print_r($e, true));
+        }
+    }
+
+    public static function validateUserLoggedIn() {
+        if (!$_SESSION['usertwitterid'] || !$_SESSION['artretweeterlogin']) {
+            $errorURL = Config::HOMEPAGE_URL . "error";
+            header("Location: $errorURL", true, 302);
+            exit();
+        }
+        $userTwitterID = $_SESSION['usertwitterid'];
+
+        $userInfo = CoreDB::getUserInfo($userTwitterID);
+        if ($userInfo === false) {
+            $errorURL = Config::HOMEPAGE_URL . "error";
+            header("Location: $errorURL", true, 302);
+            exit();
+        } else if ($userInfo === null) {
+            $errorURL = Config::HOMEPAGE_URL . "error";
+            header("Location: $errorURL", true, 302);
+            exit();
         }
     }
 
 }
 
+Session::initialiseLogger();

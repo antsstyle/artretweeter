@@ -9,7 +9,11 @@ use Patreon\API;
 
 class Patreon {
 
-    public static $logger;
+    private static $logger;
+
+    public static function initialiseLogger() {
+        self::$logger = LogManager::getLogger(self::class);
+    }
 
     public static function getCampaignTiers() {
         $api_client = new API(AdminUserAuth::patreon_creator_access_token);
@@ -37,21 +41,25 @@ class Patreon {
                 $tierDetails['attributes']['description'], $tierDetails['attributes']['amount_cents'], $tierDetails['attributes']['published']];
             $insertQuery = "INSERT INTO patreontiers (patreon_id,title,description,amount_cents,published) VALUES (?,?,?,?,?) ON DUPLICATE KEY "
                     . "UPDATE title=?,description=?,amount_cents=?,published=?";
-            $insertStmt = CoreDB::$databaseConnection->prepare($insertQuery);
+            $insertStmt = CoreDB::getConnection()->prepare($insertQuery);
             $insertStmt->execute($params);
         }
     }
 
     public static function getPatrons() {
+        $adminUserIDs = CoreDB::getAllAdminTwitterIDs();
+        if (is_null($adminUserIDs)) {
+            self::$logger->emergency("Unable to get admin user IDs, cannot update patron statuses!");
+            return false;
+        }
         $paidTierID = CoreDB::getCachedVariable(CachedVariables::PATREON_PAID_TIER_ID);
         if (is_null($paidTierID) || $paidTierID === false) {
-            Patreon::$logger->emergency("Unable to get patron information, no paid tier ID is known!");
+            self::$logger->emergency("Unable to get patron information, no paid tier ID is known!");
             return false;
         }
         $api_client = new API(AdminUserAuth::patreon_creator_access_token);
         $campaigns = $api_client->fetch_campaigns();
         $firstCampaign = $campaigns['data'][0]['id'];
-
         $error = 1;
         $i = 0;
         $maxIterations = 30;
@@ -64,7 +72,7 @@ class Patreon {
             if (!is_array($response)) {
                 $error = json_decode($response);
                 if (!is_null($error)) {
-                    Patreon::$logger->error("Error received from Patreon API, not registering new patron information.");
+                    self::$logger->error("Error received from Patreon API, not registering new patron information.");
                     break;
                 }
             }
@@ -94,9 +102,9 @@ class Patreon {
             foreach ($included as $includedEntry) {
                 $userPatreonID = $includedEntry['id'];
                 $twitterUserID = $includedEntry['attributes']['social_connections']['twitter']['user_id'];
-                if (!is_null($twitterUserID) && array_key_exists($userPatreonID, $updateParams) && $twitterUserID !== AdminUserAuth::user_id) {
+                if (!is_null($twitterUserID) && array_key_exists($userPatreonID, $updateParams) && !in_array($twitterUserID, $adminUserIDs)) {
                     $updateQuery = "UPDATE users SET patreonid=?, paiduser=? WHERE twitterid=?";
-                    $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+                    $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
                     $updateStmt->execute([$userPatreonID, $updateParams[$userPatreonID], $twitterUserID]);
                 }
             }
@@ -129,4 +137,4 @@ class Patreon {
 
 }
 
-Patreon::$logger = LogManager::getLogger("Patreon");
+Patreon::initialiseLogger();

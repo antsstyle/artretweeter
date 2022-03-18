@@ -3,38 +3,20 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
 use Antsstyle\ArtRetweeter\Core\UserSettings;
-use Antsstyle\ArtRetweeter\Core\StatusCode;
+use Antsstyle\ArtRetweeter\Core\TwitterResponseStatus;
 
 Session::checkSession();
+Session::validateUserLoggedIn();
 
-$userTwitterID = $_SESSION['usertwitterid'];
-
-if (!$_SESSION['usertwitterid']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
-$userInfo = CoreDB::getUserInfo($_SESSION['usertwitterid']);
-if ($userInfo === false) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-} else if ($userInfo === null) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
-$result = UserSettings::saveAutomationSettings($userTwitterID);
+$result = UserSettings::saveAutomationSettings($_SESSION['usertwitterid']);
 ?>
 
 <html>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+        
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -47,14 +29,15 @@ $result = UserSettings::saveAutomationSettings($userTwitterID);
     </title>
     <body>
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <?php
             $adminURL = Config::ADMIN_URL;
             $adminName = Config::ADMIN_NAME;
-            if ($result === StatusCode::ARTRETWEETER_QUERY_OK) {
+            if ($result === TwitterResponseStatus::ARTRETWEETER_QUERY_OK) {
                 echo "ArtRetweeter settings saved successfully. If you want to change your settings, you can go back to the settings page.";
             } else if (is_string($result)) {
+                error_log("Failed to save settings correctly. User twitter ID: " . $_SESSION['usertwitterid'] . " Error string was: $result");
                 echo "ArtRetweeter settings were not saved successfully ($result).<br/><br/>"
                 . "Go back to the homepage to try"
                 . " again, or contact <a href=$adminURL>$adminName</a> on Twitter if the problem persists.";
@@ -62,5 +45,5 @@ $result = UserSettings::saveAutomationSettings($userTwitterID);
             ?>
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

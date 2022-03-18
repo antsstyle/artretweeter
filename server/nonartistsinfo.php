@@ -7,8 +7,9 @@ use Antsstyle\ArtRetweeter\Core\Config;
 
 <html>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+        
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -21,7 +22,7 @@ use Antsstyle\ArtRetweeter\Core\Config;
     </title>
     <body>
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <div class="subtitle">
                 <h2>Information & FAQs (non-artists)</h2>
@@ -43,16 +44,6 @@ use Antsstyle\ArtRetweeter\Core\Config;
                     to consider limiting the artists you add for retweeting to those who only tweet one or the other.
                 </p>
             </div>
-            <button class="collapsible">Why does the app need so many permissions?</button>
-            <div class="content">
-                <p>
-                    Twitter's API doesn't allow developers to request only the permissions we need; we have to either ask for ALL permissions or none, effectively. 
-                    To be more specific, it only allows us to request "read" or "write" permissions; if an app wants to post tweets for a user, it also has to request 
-                    every other write permission, like updating a user's profile or blocking users for them, even if the app doesn't want or need that permission.
-                    <br/><br/>
-                    In future Twitter is planning to change this, but for now there's no way around it.
-                </p>
-            </div>
             <button class="collapsible">Why is there an artist whitelist instead of just being able to retweet anyone I want?</button>
             <div class="content">
                 <p>
@@ -71,5 +62,5 @@ use Antsstyle\ArtRetweeter\Core\Config;
             </div>
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

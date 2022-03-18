@@ -1,0 +1,123 @@
+button.settingsswitchbutton {
+    display:inline-block;
+}
+
+div.center {
+    text-align: center;
+}
+
+div.errormsg {
+    padding-top: 3px;
+    padding-bottom: 3px;
+    color: #ff4d4d;
+}
+
+div.queuedtweet {
+    border-style: solid;
+    border-color: blue;
+}
+
+div.reschedulequeuedentrydiv {
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.reschedulequeuedentrydiv.transition {
+    padding: 0;
+    height: 60px;
+    transition: all 0.3s linear;
+}
+
+div.deletequeueentrydiv {
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.deletequeueentrydiv.transition {
+    height: 60px;
+    transition: all 0.3s linear;
+}
+
+button.reschedulebutton {
+    margin-left: 5px;
+}
+
+input[type=date].rescheduledate {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-right: 5px;
+}
+
+div.rescheduleresultdiv {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.rescheduleresultdiv.transition {
+    padding: 0;
+    height: 16px;
+    transition: all 0.3s linear;
+}
+
+div.retweettime {
+    padding: 0;
+    margin: 0;
+    display: inline;
+}
+
+div.deleteresultdiv {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.deleteresultdiv.transition {
+    padding: 0;
+    height: 16px;
+    transition: all 0.3s linear;
+}
+
+div.disableautomationwarningdiv {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s linear;
+}
+
+div.disableautomationwarningdiv.transition {
+    padding: 0;
+    height: 16px;
+    transition: all 0.3s linear;
+    color: orangered;
+}
+
+.dblisttable {
+    padding: 5px;
+    font-size: 12px;
+}
+
+tr {
+    border: 1px solid blue;
+}
+
+td {
+    border: 1px solid blue;
+    padding: 5px;
+}
+
+th {
+    border: 1px solid blue;
+}
+
+div.formsection {
+    border-style: solid;
+    border-color: #0000cc;
+    margin-left: 50px;
+    max-width: 250px;
+}

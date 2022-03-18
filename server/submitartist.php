@@ -3,36 +3,18 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\CachedVariables;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
 
 Session::checkSession();
-
-if (!$_SESSION['oauth_token']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
-if (!$_SESSION['usertwitterid']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
-$userInfo = CoreDB::getUserInfo($_SESSION['usertwitterid']);
-if ($userInfo === false) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-} else if ($userInfo === null) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
+Session::validateUserLoggedIn();
 
 $userTwitterID = $_SESSION['usertwitterid'];
 
+$maxPendingSubmissions = CoreDB::getCachedVariable(CachedVariables::MAX_PENDING_SUBMISSIONS_FREE_USER);
+if ($userInfo['paiduser'] === "Y") {
+    $maxPendingSubmissions = CoreDB::getCachedVariable(CachedVariables::MAX_PENDING_SUBMISSIONS_PAID_USER);
+}
 $pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwitterID);
 ?>
 
@@ -40,8 +22,9 @@ $pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwit
     <script src="src/ajax/SubmitArtist.js"></script>
     <script src="src/ajax/Tables.js"></script>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+        
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -54,7 +37,7 @@ $pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwit
     </title>
     <body>
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <p>
                 You can submit a user to be added to ArtRetweeter here; this will allow you, or other app users, to retweet that user automatically.
@@ -79,9 +62,8 @@ $pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwit
             this rule doesn't apply, as then the app will be able to retweet their art correctly. It also won't apply if e.g. said artist *only* tweets art 
             with their account and not any other kind of images, as then there isn't going to be any confusion for the app as to which images are which.
             <br/><br/>
-            To submit a user to be added to ArtRetweeter, use the simple form below. To avoid spam, you can make a maximum of 10 
-            unique submissions per week. (This only counts successful submissions, i.e. if you try to submit an artist and they can't be submitted, it won't 
-            count towards that limit).
+            To submit a user to be added to ArtRetweeter, use the simple form below. You can have up to <?php echo $maxPendingSubmissions;?> 
+            pending submissions at any one time.
             </br><br/>
             <input type="text" style="width:250px" id="submitartistinput" placeholder="Enter artist's twitter handle here.">
             <button type="button" id="submitartistbutton" 
@@ -154,5 +136,5 @@ $pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwit
             </div>
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

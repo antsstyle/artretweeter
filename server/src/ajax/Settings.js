@@ -143,6 +143,38 @@ function checkValidRetweetPercent(elementID, errorElementID) {
     document.getElementById(errorElementID).innerHTML = "&nbsp;";
 }
 
+function getUserNonArtistSimpleAutomationSettings(id) {
+    if (id === null) {
+        return;
+    } else {
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                var offset = new Date().getTimezoneOffset();
+                document.getElementById("simplesettingsform_timezone").value = offset;
+                if (this.responseText === "") {
+
+                } else {
+                    var json = JSON.parse(this.responseText);
+                    let enableautomatedretweeting = json.automationenabled;
+                    if (enableautomatedretweeting === "Y") {
+                        document.getElementById("enableautomatedretweeting_simplesettings").checked = true;
+                    } else {
+                        document.getElementById("enableautomatedretweeting_simplesettings").checked = false;
+                    }
+                    offset = new Date().getTimezoneOffset();
+                }
+
+            }
+        };
+        var params = 'request=usernonartistautomationsettings&userid='.concat(id);
+        //Send the proper header information along with the request
+        xmlhttp.open("POST", "src/ajax/Ajax.php", true);
+        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xmlhttp.send(params);
+    }
+}
+
 function getUserNonArtistAutomationSettings(id) {
     if (id === null) {
         return;
@@ -287,6 +319,38 @@ function getUserNonArtistAutomationSettings(id) {
             }
         };
         var params = 'request=usernonartistautomationsettings&userid='.concat(id);
+        //Send the proper header information along with the request
+        xmlhttp.open("POST", "src/ajax/Ajax.php", true);
+        xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xmlhttp.send(params);
+    }
+}
+
+function getUserSimpleAutomationSettings(id) {
+    if (id === null) {
+        return;
+    } else {
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (this.readyState === 4 && this.status === 200) {
+                var offset = new Date().getTimezoneOffset();
+                document.getElementById("simplesettingsform_timezone").value = offset;
+                if (this.responseText === "") {
+
+                } else {
+                    var json = JSON.parse(this.responseText);
+                    let enableautomatedretweeting = json.automationenabled;
+                    if (enableautomatedretweeting === "Y") {
+                        document.getElementById("enableautomatedretweeting_simplesettings").checked = true;
+                    } else {
+                        document.getElementById("enableautomatedretweeting_simplesettings").checked = false;
+                    }
+                    offset = new Date().getTimezoneOffset();
+                }
+
+            }
+        };
+        var params = 'request=userautomationsettings&userid='.concat(id);
         //Send the proper header information along with the request
         xmlhttp.open("POST", "src/ajax/Ajax.php", true);
         xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');

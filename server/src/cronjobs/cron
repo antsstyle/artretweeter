@@ -1,0 +1,63 @@
+# Example cron configuration.
+
+MAILTO="<your email here>"
+SHELL="/usr/local/cpanel/bin/jailshell"
+* * * * * ~/public_html/artretweeter/src/cronjobs/PostScheduledRetweets.sh >/dev/null 
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+7,22,37,52 * * * * ~/public_html/artretweeter/src/cronjobs/ScheduleUserRetweets.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+5,20,35,50 * * * * ~/public_html/artretweeter/src/cronjobs/GetUserTweets.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+1,16,31,51 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CheckFollowers.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+3,18,33,48 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CheckHomeTimelines.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+10 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CheckBlocklistUpdates.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+6,21,36,51 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CalculateCachedVariables.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/ProcessEntries.sh -t 13 -w 300  >>~/public_html/nftcryptoblocker/logs/cronjobs/ProcessEntries.txt
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/5 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/AssignEntryPNums.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/UpdateObjectUserInfo.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CheckMentionTimelines.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/CheckCentralisedBlocklist.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/nftcryptoblocker/src/cronjobs/UpdateCentralisedBlocklistUserInfo.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/artretweeter/src/cronjobs/GetArtistTweets.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/artretweeter/src/cronjobs/ScheduleArtistRetweets.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/artretweeter/src/cronjobs/Analysis.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+0 * * * * ~/public_html/artretweeter/src/cronjobs/RemoveExpiredRetweets.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+*/15 * * * * ~/public_html/artretweeter/src/cronjobs/UpdatePatronStatus.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+0 * * * * ~/public_html/artretweeter/src/cronjobs/SyncNFTBlockerDB.sh >/dev/null
+
+SHELL="/usr/local/cpanel/bin/jailshell"
+0 0 * * * ~/public_html/artretweeter/src/cronjobs/RemoveOldArtistSubmissions.sh >/dev/null
+

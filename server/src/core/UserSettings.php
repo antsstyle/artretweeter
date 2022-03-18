@@ -3,13 +3,73 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\LogManager;
-use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\CoreDB;
 
 class UserSettings {
 
-    public static $logger;
+    private static $logger;
+
+    public static function initialiseLogger() {
+        self::$logger = LogManager::getLogger(self::class);
+    }
+
+    public static function saveSimpleAutomationSettings($userTwitterID) {
+        $enableAutomation = htmlspecialchars($_POST['enableautomatedretweeting_simplesettings']);
+        if ($enableAutomation === "") {
+            $enableAutomation = "N";
+        } else if ($enableAutomation === "enable_automated_retweeting_simplesettings") {
+            $enableAutomation = "Y";
+        } else {
+            self::$logger->error("Invalid automation enabled setting.");
+            return "Invalid automation enabled setting.";
+        }
+
+        $offset = filter_input(INPUT_POST, "simplesettingsform_timezone", FILTER_SANITIZE_NUMBER_INT);
+        if (is_null($offset) || $offset === false) {
+            self::$logger->error("Invalid timezone offset.");
+            return "Invalid timezone offset.";
+        }
+        if ($offset == 0) {
+            $hourOffset = 0;
+            $minuteOffset = 0;
+        } else {
+            $hourOffset = floor($offset / 60);
+            $minuteOffset = abs($offset % 60);
+        }
+
+        $aS['hourflags'] = "YYYYYYYYYYYYYYYYYYYYYYYY";
+        $aS['dayflags'] = "YYYYYYY";
+        $aS['minuteflags'] = "YYYY";
+        $aS['automationenabled'] = $enableAutomation;
+        $aS['usertwitterid'] = $userTwitterID;
+        $aS['includetextenabled'] = "N";
+        $aS['excludetextenabled'] = "N";
+        $aS['includetextcondition'] = "Any of these words";
+        $aS['excludetextcondition'] = "Any of these words";
+        $aS['includetext'] = null;
+        $aS['excludetext'] = null;
+        $aS['oldtweetcutoffdateenabled'] = "N";
+        $aS['oldtweetcutoffdate'] = null;
+        $aS['timezonehouroffset'] = $hourOffset;
+        $aS['timezoneminuteoffset'] = $minuteOffset;
+        $aS['metricsmeasurementtype'] = "Adaptive";
+        $aS['retweetpercent'] = 20;
+        $aS['imagesenabled'] = "Y";
+        $aS['gifsenabled'] = "N";
+        $aS['videosenabled'] = "N";
+        $aS['settingstype'] = "Simple";
+
+        $automationSavedSuccess = CoreDB::commitAutomationSettingsInDB($aS);
+        return $automationSavedSuccess;
+    }
 
     public static function saveAutomationSettings($userTwitterID) {
+        $simpleSettingsForm = htmlspecialchars($_POST['simplesettingsform']);
+        if ($simpleSettingsForm !== "") {
+            return UserSettings::saveSimpleAutomationSettings($userTwitterID);
+        }
+
+
         $enableAutomation = htmlspecialchars($_POST['enableautomatedretweeting']);
 
         if ($enableAutomation === "") {
@@ -17,7 +77,7 @@ class UserSettings {
         } else if ($enableAutomation === "enable_automated_retweeting") {
             $enableAutomation = "Y";
         } else {
-            UserSettings::$logger->error("Invalid automation enabled setting.");
+            self::$logger->error("Invalid automation enabled setting.");
             return "Invalid automation enabled setting.";
         }
 
@@ -28,13 +88,13 @@ class UserSettings {
         } else if ($ignoreOldTweets === "ignore_old_tweets") {
             $ignoreOldTweets = "Y";
         } else {
-            UserSettings::$logger->error("Invalid ignore old tweets setting.");
+            self::$logger->error("Invalid ignore old tweets setting.");
             return "Invalid ignore old tweets setting.";
         }
 
         $ignoreOldTweetsDate = htmlspecialchars($_POST["ignoreoldtweetsdate"]);
         if ($ignoreOldTweetsDate === "" && $ignoreOldTweets == "Y") {
-            UserSettings::$logger->error("Invalid ignore old tweets date setting.");
+            self::$logger->error("Invalid ignore old tweets date setting.");
             return "Invalid ignore old tweets date setting.";
         } else if ($ignoreOldTweetsDate === "") {
             $ignoreOldTweetsDate = null;
@@ -47,7 +107,7 @@ class UserSettings {
         } else if ($includeTextEnabled === "include_text_enabled") {
             $includeTextEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid include text enabled setting.");
+            self::$logger->error("Invalid include text enabled setting.");
             return "Invalid include text enabled setting.";
         }
 
@@ -60,7 +120,7 @@ class UserSettings {
         } else if ($includeTextOperation === "exact") {
             $includeTextOperation = "This exact phrase";
         } else {
-            UserSettings::$logger->error("Invalid include text operation setting.");
+            self::$logger->error("Invalid include text operation setting.");
             return "Invalid include text operation setting.";
         }
 
@@ -69,7 +129,7 @@ class UserSettings {
         if ($includeText === "") {
             $includeText = null;
         } else if (strlen($includeText) > 50) {
-            UserSettings::$logger->error("Invalid include text setting.");
+            self::$logger->error("Invalid include text setting.");
             return "Invalid include text setting.";
         }
 
@@ -80,7 +140,7 @@ class UserSettings {
         } else if ($excludeTextEnabled === "exclude_text_enabled") {
             $excludeTextEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid exclude text enabled setting.");
+            self::$logger->error("Invalid exclude text enabled setting.");
             return "Invalid exclude text enabled setting";
         }
 
@@ -93,7 +153,7 @@ class UserSettings {
         } else if ($excludeTextOperation === "exact") {
             $excludeTextOperation = "This exact phrase";
         } else {
-            UserSettings::$logger->error("Invalid exclude text operation setting.");
+            self::$logger->error("Invalid exclude text operation setting.");
             return "Invalid exclude text operation setting";
         }
 
@@ -102,16 +162,16 @@ class UserSettings {
         if ($excludeText === "") {
             $excludeText = null;
         } else if (strlen($excludeText) > 50) {
-            UserSettings::$logger->error("Invalid exclude text setting.");
+            self::$logger->error("Invalid exclude text setting.");
             return "Invalid exclude text setting";
         }
 
         $metricsPercent = filter_input(INPUT_POST, "metricspercent", FILTER_SANITIZE_NUMBER_INT);
         if (is_null($metricsPercent)) {
-            UserSettings::$logger->error("Invalid metrics percent setting.");
+            self::$logger->error("Invalid metrics percent setting.");
             return "Invalid metrics percent setting.";
         } else if ($metricsPercent < 20 || $metricsPercent > 75) {
-            UserSettings::$logger->error("Invalid metrics percent setting.");
+            self::$logger->error("Invalid metrics percent setting.");
             return "Invalid metrics percent setting.";
         }
 
@@ -122,7 +182,7 @@ class UserSettings {
         } else if ($metricsMethod === "adaptive") {
             $metricsMethod = "Adaptive";
         } else {
-            UserSettings::$logger->error("Invalid metrics method setting.");
+            self::$logger->error("Invalid metrics method setting.");
             return "Invalid metrics method setting.";
         }
 
@@ -132,7 +192,7 @@ class UserSettings {
         } else if ($imagesEnabled === "images_enabled") {
             $imagesEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid images enabled setting.");
+            self::$logger->error("Invalid images enabled setting.");
             return "Invalid images enabled setting.";
         }
 
@@ -142,7 +202,7 @@ class UserSettings {
         } else if ($gifsEnabled === "gifs_enabled") {
             $gifsEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid gifs enabled setting.");
+            self::$logger->error("Invalid gifs enabled setting.");
             return "Invalid gifs enabled setting.";
         }
 
@@ -152,7 +212,7 @@ class UserSettings {
         } else if ($videosEnabled === "videos_enabled") {
             $videosEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid videos enabled setting.");
+            self::$logger->error("Invalid videos enabled setting.");
             return "Invalid videos enabled setting.";
         }
 
@@ -165,7 +225,7 @@ class UserSettings {
         } else if ($mondayEnabled === "monday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid monday enabled setting.");
+            self::$logger->error("Invalid monday enabled setting.");
             return "Invalid monday enabled setting.";
         }
 
@@ -175,7 +235,7 @@ class UserSettings {
         } else if ($tuesdayEnabled === "tuesday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid tuesday enabled setting.");
+            self::$logger->error("Invalid tuesday enabled setting.");
             return "Invalid tuesday enabled setting.";
         }
 
@@ -185,7 +245,7 @@ class UserSettings {
         } else if ($wednesdayEnabled === "wednesday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid wednesday enabled setting.");
+            self::$logger->error("Invalid wednesday enabled setting.");
             return "Invalid wednesday enabled setting.";
         }
 
@@ -195,7 +255,7 @@ class UserSettings {
         } else if ($thursdayEnabled === "thursday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid thursday enabled setting.");
+            self::$logger->error("Invalid thursday enabled setting.");
             return "Invalid thursday enabled setting.";
         }
 
@@ -205,7 +265,7 @@ class UserSettings {
         } else if ($fridayEnabled === "friday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid friday enabled setting.");
+            self::$logger->error("Invalid friday enabled setting.");
             return "Invalid friday enabled setting.";
         }
 
@@ -215,7 +275,7 @@ class UserSettings {
         } else if ($saturdayEnabled === "saturday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid saturday enabled setting.");
+            self::$logger->error("Invalid saturday enabled setting.");
             return "Invalid saturday enabled setting.";
         }
 
@@ -225,12 +285,12 @@ class UserSettings {
         } else if ($sundayEnabled === "sunday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid sunday enabled setting.");
+            self::$logger->error("Invalid sunday enabled setting.");
             return "Invalid sunday enabled setting.";
         }
 
         if (strpos($dayFlags, "Y") === false) {
-            UserSettings::$logger->error("No days selected.");
+            self::$logger->error("No days selected.");
             return "No days selected.";
         }
 
@@ -252,22 +312,22 @@ class UserSettings {
                 $jString = strval($j);
             }
             $concatString = "h" . $iString . $jString;
-            
+
             $timePeriod = htmlspecialchars($_POST[$concatString]);
             if ($timePeriod === "") {
                 $hourFlags .= "N";
             } else if ($timePeriod === $concatString) {
                 $hourFlags .= "Y";
             } else {
-                UserSettings::$logger->error("Invalid hour flag setting: $timePeriod");
+                self::$logger->error("Invalid hour flag setting: $timePeriod");
                 return "Invalid hour flag setting: $timePeriod";
             }
         }
 
-        UserSettings::$logger->debug("Hour flags: $hourFlags");
+        self::$logger->debug("Hour flags: $hourFlags");
 
         if (strpos($hourFlags, "Y") === false) {
-            UserSettings::$logger->error("No hours selected.");
+            self::$logger->error("No hours selected. User twitter ID: $userTwitterID");
             return "No hours selected.";
         }
 
@@ -277,7 +337,7 @@ class UserSettings {
         } else if ($minute0 === "minute_0") {
             $minuteFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid minutes setting.");
+            self::$logger->error("Invalid minutes setting.");
             return "Invalid minutes setting.";
         }
 
@@ -287,7 +347,7 @@ class UserSettings {
         } else if ($minute15 === "minute_15") {
             $minuteFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid minutes setting.");
+            self::$logger->error("Invalid minutes setting.");
             return "Invalid minutes setting.";
         }
 
@@ -297,7 +357,7 @@ class UserSettings {
         } else if ($minute30 === "minute_30") {
             $minuteFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid minutes setting.");
+            self::$logger->error("Invalid minutes setting.");
             return "Invalid minutes setting.";
         }
 
@@ -307,18 +367,18 @@ class UserSettings {
         } else if ($minute45 === "minute_45") {
             $minuteFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid minutes setting.");
+            self::$logger->error("Invalid minutes setting.");
             return "Invalid minutes setting.";
         }
 
         if (strpos($minuteFlags, "Y") === false) {
-            UserSettings::$logger->error("No minutes selected.");
+            self::$logger->error("No minutes selected.");
             return "No minutes selected.";
         }
 
         $timezone = htmlspecialchars($_POST["timezone"]);
         if ($timezone === "") {
-            UserSettings::$logger->error("No timezone detected.");
+            self::$logger->error("No timezone detected.");
             return "No timezone selected.";
         }
 
@@ -327,7 +387,7 @@ class UserSettings {
             "t0545", "t0600", "t0630", "t0700", "t0800", "t0900", "t0930", "t1000", "t1100", "t1200", "t1300"];
 
         if (!in_array($timezone, $timezoneStrings)) {
-            UserSettings::$logger->error("Timezone string is invalid or not supported: $timezone");
+            self::$logger->error("Timezone string is invalid or not supported: $timezone");
             return "Timezone string is invalid or not supported: $timezone";
         } else {
             if (strpos($timezone, "-") !== false) {
@@ -360,12 +420,66 @@ class UserSettings {
         $aS['imagesenabled'] = $imagesEnabled;
         $aS['gifsenabled'] = $gifsEnabled;
         $aS['videosenabled'] = $videosEnabled;
+        $aS['settingstype'] = "Advanced";
 
-        $automationSavedSuccess = Core::commitAutomationSettingsInDB($aS);
+        $automationSavedSuccess = CoreDB::commitAutomationSettingsInDB($aS);
+        return $automationSavedSuccess;
+    }
+
+    public static function saveSimpleNonArtistAutomationSettings($userTwitterID) {
+        $enableAutomation = htmlspecialchars($_POST['enableautomatedretweeting_simplesettings']);
+        if ($enableAutomation === "") {
+            $enableAutomation = "N";
+        } else if ($enableAutomation === "enable_automated_retweeting_simplesettings") {
+            $enableAutomation = "Y";
+        } else {
+            self::$logger->error("Invalid automation enabled setting.");
+            return "Invalid automation enabled setting.";
+        }
+
+        $offset = filter_input(INPUT_POST, "simplesettingsform_timezone", FILTER_SANITIZE_NUMBER_INT);
+        if (is_null($offset) || $offset === false) {
+            self::$logger->error("Invalid timezone offset.");
+            return "Invalid timezone offset.";
+        }
+        if ($offset == 0) {
+            $hourOffset = 0;
+            $minuteOffset = 0;
+        } else {
+            $hourOffset = floor($offset / 60);
+            $minuteOffset = abs($offset % 60);
+        }
+
+        $aS['hourflags'] = "YYYYYYYYYYYYYYYYYYYYYYYY";
+        $aS['dayflags'] = "YYYYYYY";
+        $aS['automationenabled'] = $enableAutomation;
+        $aS['usertwitterid'] = $userTwitterID;
+        $aS['includetextenabled'] = "N";
+        $aS['excludetextenabled'] = "N";
+        $aS['includetextcondition'] = "Any of these words";
+        $aS['excludetextcondition'] = "Any of these words";
+        $aS['includetext'] = null;
+        $aS['excludetext'] = null;
+        $aS['oldtweetcutoffdateenabled'] = "N";
+        $aS['oldtweetcutoffdate'] = null;
+        $aS['timezonehouroffset'] = $hourOffset;
+        $aS['timezoneminuteoffset'] = $minuteOffset;
+        $aS['imagesenabled'] = "Y";
+        $aS['gifsenabled'] = "N";
+        $aS['videosenabled'] = "N";
+        $aS['settingstype'] = "Simple";
+
+        $automationSavedSuccess = CoreDB::commitNonArtistAutomationSettingsInDB($aS);
         return $automationSavedSuccess;
     }
 
     public static function saveNonArtistAutomationSettings($userTwitterID) {
+        $simpleSettingsForm = htmlspecialchars($_POST['simplesettingsform']);
+        if ($simpleSettingsForm !== "") {
+            return UserSettings::saveSimpleNonArtistAutomationSettings($userTwitterID);
+        }
+
+
         $enableAutomation = htmlspecialchars($_POST["enableautomatedretweeting"]);
 
         if ($enableAutomation === "") {
@@ -373,7 +487,7 @@ class UserSettings {
         } else if ($enableAutomation === "enable_automated_retweeting") {
             $enableAutomation = "Y";
         } else {
-            UserSettings::$logger->error("Invalid automation enabled setting.");
+            self::$logger->error("Invalid automation enabled setting.");
             return "Invalid automation enabled setting.";
         }
 
@@ -384,13 +498,13 @@ class UserSettings {
         } else if ($ignoreOldTweets === "ignore_old_tweets") {
             $ignoreOldTweets = "Y";
         } else {
-            UserSettings::$logger->error("Invalid ignore old tweets setting.");
+            self::$logger->error("Invalid ignore old tweets setting.");
             return "Invalid ignore old tweets setting.";
         }
 
         $ignoreOldTweetsDate = htmlspecialchars($_POST["ignoreoldtweetsdate"]);
         if ($ignoreOldTweetsDate === "" && $ignoreOldTweets == "Y") {
-            UserSettings::$logger->error("Invalid ignore old tweets date setting.");
+            self::$logger->error("Invalid ignore old tweets date setting.");
             return "Invalid ignore old tweets date setting.";
         } else if ($ignoreOldTweetsDate === "") {
             $ignoreOldTweetsDate = null;
@@ -403,7 +517,7 @@ class UserSettings {
         } else if ($includeTextEnabled === "include_text_enabled") {
             $includeTextEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid include text enabled setting.");
+            self::$logger->error("Invalid include text enabled setting.");
             return "Invalid include text enabled setting.";
         }
 
@@ -416,7 +530,7 @@ class UserSettings {
         } else if ($includeTextOperation === "exact") {
             $includeTextOperation = "This exact phrase";
         } else {
-            UserSettings::$logger->error("Invalid include text operation setting.");
+            self::$logger->error("Invalid include text operation setting.");
             return "Invalid include text operation setting.";
         }
 
@@ -425,7 +539,7 @@ class UserSettings {
         if ($includeText === "") {
             $includeText = null;
         } else if (strlen($includeText) > 50) {
-            UserSettings::$logger->error("Invalid include text setting.");
+            self::$logger->error("Invalid include text setting.");
             return "Invalid include text setting.";
         }
 
@@ -436,7 +550,7 @@ class UserSettings {
         } else if ($excludeTextEnabled === "exclude_text_enabled") {
             $excludeTextEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid exclude text enabled setting.");
+            self::$logger->error("Invalid exclude text enabled setting.");
             return "Invalid exclude text enabled setting";
         }
 
@@ -449,7 +563,7 @@ class UserSettings {
         } else if ($excludeTextOperation === "exact") {
             $excludeTextOperation = "This exact phrase";
         } else {
-            UserSettings::$logger->error("Invalid exclude text operation setting.");
+            self::$logger->error("Invalid exclude text operation setting.");
             return "Invalid exclude text operation setting";
         }
 
@@ -458,7 +572,7 @@ class UserSettings {
         if ($excludeText === "") {
             $excludeText = null;
         } else if (strlen($excludeText) > 50) {
-            UserSettings::$logger->error("Invalid exclude text setting.");
+            self::$logger->error("Invalid exclude text setting.");
             return "Invalid exclude text setting";
         }
 
@@ -468,7 +582,7 @@ class UserSettings {
         } else if ($imagesEnabled === "images_enabled") {
             $imagesEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid images enabled setting.");
+            self::$logger->error("Invalid images enabled setting.");
             return "Invalid images enabled setting.";
         }
 
@@ -478,7 +592,7 @@ class UserSettings {
         } else if ($gifsEnabled === "gifs_enabled") {
             $gifsEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid gifs enabled setting.");
+            self::$logger->error("Invalid gifs enabled setting.");
             return "Invalid gifs enabled setting.";
         }
 
@@ -488,7 +602,7 @@ class UserSettings {
         } else if ($videosEnabled === "videos_enabled") {
             $videosEnabled = "Y";
         } else {
-            UserSettings::$logger->error("Invalid videos enabled setting.");
+            self::$logger->error("Invalid videos enabled setting.");
             return "Invalid videos enabled setting.";
         }
 
@@ -501,7 +615,7 @@ class UserSettings {
         } else if ($mondayEnabled === "monday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid monday enabled setting.");
+            self::$logger->error("Invalid monday enabled setting.");
             return "Invalid monday enabled setting.";
         }
 
@@ -511,7 +625,7 @@ class UserSettings {
         } else if ($tuesdayEnabled === "tuesday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid tuesday enabled setting.");
+            self::$logger->error("Invalid tuesday enabled setting.");
             return "Invalid tuesday enabled setting.";
         }
 
@@ -521,7 +635,7 @@ class UserSettings {
         } else if ($wednesdayEnabled === "wednesday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid wednesday enabled setting.");
+            self::$logger->error("Invalid wednesday enabled setting.");
             return "Invalid wednesday enabled setting.";
         }
 
@@ -531,7 +645,7 @@ class UserSettings {
         } else if ($thursdayEnabled === "thursday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid thursday enabled setting.");
+            self::$logger->error("Invalid thursday enabled setting.");
             return "Invalid thursday enabled setting.";
         }
 
@@ -541,7 +655,7 @@ class UserSettings {
         } else if ($fridayEnabled === "friday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid friday enabled setting.");
+            self::$logger->error("Invalid friday enabled setting.");
             return "Invalid friday enabled setting.";
         }
 
@@ -551,7 +665,7 @@ class UserSettings {
         } else if ($saturdayEnabled === "saturday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid saturday enabled setting.");
+            self::$logger->error("Invalid saturday enabled setting.");
             return "Invalid saturday enabled setting.";
         }
 
@@ -561,12 +675,12 @@ class UserSettings {
         } else if ($sundayEnabled === "sunday_enabled") {
             $dayFlags .= "Y";
         } else {
-            UserSettings::$logger->error("Invalid sunday enabled setting.");
+            self::$logger->error("Invalid sunday enabled setting.");
             return "Invalid sunday enabled setting.";
         }
 
         if (strpos($dayFlags, "Y") === false) {
-            UserSettings::$logger->error("No days selected.");
+            self::$logger->error("No days selected.");
             return "No days selected.";
         }
 
@@ -593,21 +707,21 @@ class UserSettings {
             } else if ($timePeriod === $concatString) {
                 $hourFlags .= "Y";
             } else {
-                UserSettings::$logger->error("Invalid hour flag setting: $timePeriod");
+                self::$logger->error("Invalid hour flag setting: $timePeriod");
                 return "Invalid hour flag setting: $timePeriod";
             }
         }
 
-        UserSettings::$logger->debug("Hour flags: $hourFlags");
+        self::$logger->debug("Hour flags: $hourFlags");
 
         if (strpos($hourFlags, "Y") === false) {
-            UserSettings::$logger->error("No hours selected.");
+            self::$logger->error("No hours selected.");
             return "No hours selected.";
         }
 
         $timezone = htmlspecialchars($_POST["timezone"]);
         if ($timezone === "") {
-            UserSettings::$logger->error("No timezone detected.");
+            self::$logger->error("No timezone detected.");
             return "No timezone selected.";
         }
 
@@ -616,7 +730,7 @@ class UserSettings {
             "t0545", "t0600", "t0630", "t0700", "t0800", "t0900", "t0930", "t1000", "t1100", "t1200", "t1300"];
 
         if (!in_array($timezone, $timezoneStrings)) {
-            UserSettings::$logger->error("Timezone string is invalid or not supported: $timezone");
+            self::$logger->error("Timezone string is invalid or not supported: $timezone");
             return "Timezone string is invalid or not supported: $timezone";
         } else {
             if (strpos($timezone, "-") !== false) {
@@ -646,11 +760,12 @@ class UserSettings {
         $aS['imagesenabled'] = $imagesEnabled;
         $aS['gifsenabled'] = $gifsEnabled;
         $aS['videosenabled'] = $videosEnabled;
+        $aS['settingstype'] = "Advanced";
 
-        $automationSavedSuccess = Core::commitNonArtistAutomationSettingsInDB($aS);
+        $automationSavedSuccess = CoreDB::commitNonArtistAutomationSettingsInDB($aS);
         return $automationSavedSuccess;
     }
 
 }
 
-UserSettings::$logger = LogManager::getLogger("Settings");
+UserSettings::initialiseLogger();

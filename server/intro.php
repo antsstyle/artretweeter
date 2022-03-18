@@ -7,8 +7,9 @@ use Antsstyle\ArtRetweeter\Core\Config;
 
 <html>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+        
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -21,7 +22,7 @@ use Antsstyle\ArtRetweeter\Core\Config;
     </title>
     <body>
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <div class="subtitle">
                 <h2>Intro</h2>
@@ -34,9 +35,9 @@ use Antsstyle\ArtRetweeter\Core\Config;
                 <li>If you're not an artist, ArtRetweeter allows you to retweet the art of your favourite artists automatically.</li>
             </ul>
             You can, of course, use both options if you want to both retweet your work and other artists' work.
-            
+
             To find out more, go to the ArtRetweeter section you want in the menu, and read the Info & FAQs page. 
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

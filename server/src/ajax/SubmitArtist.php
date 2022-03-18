@@ -29,10 +29,6 @@ class SubmitArtist {
             return;
         }
 
-        $userAuth['twitter_id'] = $userInfo['twitterid'];
-        $userAuth['access_token'] = $userInfo['accesstoken'];
-        $userAuth['access_token_secret'] = $userInfo['accesstokensecret'];
-
         $artistTwitterHandle = htmlspecialchars($_POST['artisttwitterhandle']);
         if ($artistTwitterHandle === false) {
             echo "Invalid username";
@@ -47,9 +43,9 @@ class SubmitArtist {
 
         $operation = htmlspecialchars($_POST['operation']);
         if ($operation === "cancel") {
-            $result = CoreDB::cancelArtistSubmission($userAuth, $artistTwitterHandle);
+            $result = CoreDB::cancelArtistSubmission($userInfo, $artistTwitterHandle);
         } else if ($operation === "submit") {
-            $result = json_encode(CoreDB::submitArtistForApproval($userAuth, $artistTwitterHandle));
+            $result = json_encode(CoreDB::submitArtistForApproval($userInfo, $artistTwitterHandle));
         } else {
             echo "Invalid operation";
             return;

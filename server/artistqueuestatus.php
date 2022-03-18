@@ -8,22 +8,18 @@ use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Users;
 
 Session::checkSession();
+Session::validateUserLoggedIn();
 
 $userTwitterID = $_SESSION['usertwitterid'];
-
-if (!$_SESSION['usertwitterid']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
 
 $queuedRetweets = CoreDB::getUserRetweetQueue($userTwitterID);
 $userInfo = CoreDB::getUserInfo($userTwitterID);
 if ($userInfo !== false && $userInfo !== null) {
-    $userAuth['twitter_id'] = $_SESSION['usertwitterid'];
-    $userAuth['access_token'] = $userInfo['accesstoken'];
-    $userAuth['access_token_secret'] = $userInfo['accesstokensecret'];
-    $twitterHandle = Users::retrieveUserTwitterHandle($userAuth);
+    if (!is_null($userInfo['screenname'])) {
+        $twitterHandle = $userInfo['screenname'];
+    } else {
+        $twitterHandle = Users::retrieveUserTwitterHandle($userInfo);
+    }
 }
 ?>
 
@@ -31,8 +27,9 @@ if ($userInfo !== false && $userInfo !== null) {
     <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
     <script src="src/ajax/Queue.js"></script>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <title>
@@ -40,7 +37,7 @@ if ($userInfo !== false && $userInfo !== null) {
     </title>
     <body onload="initialiseQueueStatus()">
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <h2>Artist Retweet Queue</h2>
             <b>This page shows your queued retweets for your own account. If you want to see your queued retweets for other accounts, 
@@ -123,5 +120,5 @@ if ($userInfo !== false && $userInfo !== null) {
             ?>
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>

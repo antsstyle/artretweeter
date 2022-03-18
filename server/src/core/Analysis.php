@@ -5,10 +5,15 @@ namespace Antsstyle\ArtRetweeter\Core;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 
 class Analysis {
 
-    public static $logger;
+    private static $logger;
+
+    public static function initialiseLogger() {
+        self::$logger = LogManager::getLogger(self::class);
+    }
 
     public static function getMeanRTThresholdForFollowerCount($followerCount, $minRTThreshold, $maxRTThreshold,
             $lowFollowerThreshold, $highFollowerThreshold) {
@@ -52,10 +57,10 @@ class Analysis {
                 . "ON users.twitterid=userautomationsettings.usertwitterid WHERE automationenabled=? AND (nextanalysis IS NULL OR nextanalysis <= ?) "
                 . "AND usertwitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid "
                 . "GROUP BY usertwitterid HAVING (COUNT(*) > ?)) ";
-        $selectUsersStmt = CoreDB::$databaseConnection->prepare($selectUsersQuery);
+        $selectUsersStmt = CoreDB::getConnection()->prepare($selectUsersQuery);
         $success = $selectUsersStmt->execute(["Y", $currentTime, $minimumTweetMetricsLimit]);
         if (!$success) {
-            Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
+            self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
             return;
         }
         $userTwitterIDs = [];
@@ -68,10 +73,10 @@ class Analysis {
         foreach ($userTwitterIDs as $userTwitterID) {
             $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
-            $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+            $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
             $success = $selectStmt->execute([$userTwitterID, $metricID]);
             if (!$success) {
-                Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
+                self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
                 return;
             }
             $retweetValues = [];
@@ -131,18 +136,18 @@ class Analysis {
             $finalRTThreshold = $tanMINDataPoints[1];
             $updateParams[] = [$finalRTThreshold, $nextAnalysis, $userTwitterID];
         }
-        CoreDB::$databaseConnection->beginTransaction();
+        CoreDB::getConnection()->beginTransaction();
         foreach ($updateParams as $updateParamsForUser) {
-            $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+            $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
             $updateStmt->execute($updateParamsForUser);
         }
-        CoreDB::$databaseConnection->commit();
+        CoreDB::getConnection()->commit();
     }
 
     public static function computeAdaptiveAnalyticsForArtists() {
         $minRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_MIN_RT_THRESHOLD);
         if (is_null($minRTThreshold)) {
-            Analysis::$logger->critical("Failed to get min RT threshold value from DB - using default.");
+            self::$logger->critical("Failed to get min RT threshold value from DB - using default.");
             $minRTThreshold = 0.25;
         } else if ($minRTThreshold === false) {
             $minRTThreshold = 0.25;
@@ -150,7 +155,7 @@ class Analysis {
         }
         $maxRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_MAX_RT_THRESHOLD);
         if (is_null($maxRTThreshold)) {
-            Analysis::$logger->critical("Failed to get max RT threshold value from DB - using default.");
+            self::$logger->critical("Failed to get max RT threshold value from DB - using default.");
             $maxRTThreshold = 0.5;
         } else if ($maxRTThreshold === false) {
             $maxRTThreshold = 0.5;
@@ -159,7 +164,7 @@ class Analysis {
 
         $lowFollowerThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_LOW_FOLLOWER_THRESHOLD);
         if (is_null($lowFollowerThreshold)) {
-            Analysis::$logger->critical("Failed to get low follower threshold value from DB - using default.");
+            self::$logger->critical("Failed to get low follower threshold value from DB - using default.");
             $lowFollowerThreshold = 0.25;
         } else if ($lowFollowerThreshold === false) {
             $lowFollowerThreshold = 0.25;
@@ -167,7 +172,7 @@ class Analysis {
         }
         $highFollowerThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_HIGH_FOLLOWER_THRESHOLD);
         if (is_null($highFollowerThreshold)) {
-            Analysis::$logger->critical("Failed to get high follower threshold value from DB - using default.");
+            self::$logger->critical("Failed to get high follower threshold value from DB - using default.");
             $highFollowerThreshold = 0.5;
         } else if ($highFollowerThreshold === false) {
             $highFollowerThreshold = 0.5;
@@ -178,29 +183,76 @@ class Analysis {
         if (is_null($metricID)) {
             return;
         }
-        $minimumTweetMetricsLimit = 10;
         $currentTime = date("Y-m-d H:i:s");
-        $selectUsersQuery = "SELECT twitterid FROM `artists` WHERE (nextanalysis IS NULL OR nextanalysis <= ?) "
-                . "AND twitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid "
-                . "GROUP BY usertwitterid HAVING (COUNT(*) > ?)) ";
-        $selectUsersStmt = CoreDB::$databaseConnection->prepare($selectUsersQuery);
-        $success = $selectUsersStmt->execute([$currentTime, $minimumTweetMetricsLimit]);
+        $selectUsersQuery = "SELECT twitterid,(SELECT count(*) FROM tweets INNER JOIN tweetmetrics "
+                . "ON tweets.tweetid=tweetmetrics.tweetid WHERE tweets.usertwitterid=artists.twitterid AND "
+                . "tweetmetrics.retrievalmetric=?) AS tweetcount FROM `artists` WHERE (nextanalysis IS NULL OR nextanalysis <= ?) LIMIT 1000";
+        $selectUsersStmt = CoreDB::getConnection()->prepare($selectUsersQuery);
+        $success = $selectUsersStmt->execute([$metricID, $currentTime]);
         if (!$success) {
-            Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
+            self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
             return;
+        }
+
+        $nextAnalysis = date("Y-m-d H:i:s", strtotime("+7 days"));
+        $artistIDsString = "";
+        $artistIDsCount = 0;
+        $query = "users";
+        $params['user.fields'] = "public_metrics";
+        $consecutiveErrors = 0;
+        $rateLimitRemaining = 1;
+
+        $userRows = $selectUsersStmt->fetchAll();
+        $updateQuery = "UPDATE artists SET followercount=? WHERE twitterid=?";
+        $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
+        foreach ($userRows as $userRow) {
+            if ($rateLimitRemaining === 0) {
+                self::$logger->debug("No rate limit left - aborting artist analysis.");
+                return;
+            }
+            $artistIDsString .= $userRow['twitterid'] .= ",";
+            $artistIDsCount++;
+            if ($artistIDsCount === 100) {
+                if ($consecutiveErrors === 3) {
+                    self::$logger->error("$consecutiveErrors errors trying to get artist info from Twitter. Artist params: $artistIDsString");
+                    $artistIDsString = "";
+                    continue;
+                }
+                $artistIDsCount = 0;
+                $artistIDsString = substr($artistIDsString, 0, -1);
+                $params['ids'] = $artistIDsString;
+                $response = Core::queryTwitterUserAuth($query, $query, "GET", $params, APIKeys::bearer_token);
+                $data = $response[0];
+                $twitterResponseStatus = $response[1];
+                if ($twitterResponseStatus->getHttpCode() != 200) {
+                    if ($twitterResponseStatus->getHttpCode() == 429) {
+                        self::$logger->critical("429 error encountered during artist analysis, aborting.");
+                        return;
+                    }
+                    $consecutiveErrors++;
+                    continue;
+                } else {
+                    $consecutiveErrors = 0;
+                }
+                $rateLimitRemaining = $twitterResponseStatus->getRateLimitRemaining();
+                foreach ($data as $userEntry) {
+                    $userTwitterID = $userEntry->id;
+                    $followersCount = $userEntry->public_metrics->followers_count;
+                    $updateStmt->execute([$followersCount, $userTwitterID]);
+                }
+                $artistIDsString = "";
+            }
         }
         $updateQuery = "UPDATE artists SET adaptivertthreshold=?, meanrtthreshold=?, nextanalysis=? WHERE twitterid=?";
 
         $updateParams = [];
-        $nextAnalysis = date("Y-m-d H:i:s", strtotime("+7 days"));
-
-        while ($userRow = $selectUsersStmt->fetch()) {
+        foreach ($userRows as $userRow) {
             $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
-            $selectStmt = CoreDB::$databaseConnection->prepare($selectQuery);
+            $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
             $success = $selectStmt->execute([$userRow['twitterid'], $metricID]);
             if (!$success) {
-                Analysis::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
+                self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
                 return;
             }
             $retweetValues = [];
@@ -260,21 +312,21 @@ class Analysis {
             $finalRTThreshold = $tanMINDataPoints[1];
             if (!is_null($userRow['followercount'])) {
                 $meanRTThreshold = Analysis::getMeanRTThresholdForFollowerCount($userRow['followercount'], $minRTThreshold, $maxRTThreshold,
-                        $lowFollowerThreshold, $highFollowerThreshold);
+                                $lowFollowerThreshold, $highFollowerThreshold);
             } else {
                 $meanRTThreshold = null;
             }
 
             $updateParams[] = [$finalRTThreshold, $meanRTThreshold, $nextAnalysis, $userRow['twitterid']];
         }
-        CoreDB::$databaseConnection->beginTransaction();
+        CoreDB::getConnection()->beginTransaction();
         foreach ($updateParams as $updateParamsForUser) {
-            $updateStmt = CoreDB::$databaseConnection->prepare($updateQuery);
+            $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
             $updateStmt->execute($updateParamsForUser);
         }
-        CoreDB::$databaseConnection->commit();
+        CoreDB::getConnection()->commit();
     }
 
 }
 
-Analysis::$logger = LogManager::getLogger("Analysis");
+Analysis::initialiseLogger();

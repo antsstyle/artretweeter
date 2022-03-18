@@ -10,6 +10,6 @@ $dir = getcwd();
 
 require $dir . '/vendor/autoload.php';
 
-use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\Core\TweetManager;
 
-Core::getAllNewTweetsForAllArtists();
+TweetManager::getAllNewTweetsForAllArtists();

@@ -6,31 +6,9 @@ use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\CoreDB;
 
 Session::checkSession();
-
-if (!$_SESSION['oauth_token']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
-if (!$_SESSION['usertwitterid']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
+Session::validateUserLoggedIn();
 
 $userTwitterID = $_SESSION['usertwitterid'];
-
-$userInfo = CoreDB::getUserInfo($userTwitterID);
-if ($userInfo === false) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-} else if ($userInfo === null) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
 
 $pageNum = filter_input(INPUT_GET, "page", FILTER_VALIDATE_INT);
 if (is_null($pageNum) || $pageNum === false) {
@@ -60,8 +38,9 @@ $prevPage = $pageNum - 1;
     <script src="src/ajax/Tables.js"></script>
     <script src="src/ajax/SearchArtists.js"></script>
     <head>
-        <link rel="stylesheet" href="main.css" type="text/css">
-        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.css"; ?> type="text/css">
+        
+        <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
+        <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:site" content="@antsstyle" />
@@ -74,7 +53,7 @@ $prevPage = $pageNum - 1;
     </title>
     <body onload="storeSearchResults()">
         <div class="main">
-            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "sidebar.js"; ?>></script>
+            <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.js"; ?>></script>
             <h1>ArtRetweeter</h1>
             <?php
             if (is_null($userArtistRetweetSettings)) {
@@ -166,5 +145,5 @@ $prevPage = $pageNum - 1;
 
         </div>
     </body>
-    <script src="src/ajax/Collapsibles.js"></script>
+    <script src=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "collapsibles.js"; ?>></script>
 </html>
