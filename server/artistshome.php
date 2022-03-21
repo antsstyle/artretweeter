@@ -64,6 +64,7 @@ if (!$_SESSION['artretweeterlogin']) {
                 echo "<hr><p>You are already logged in. You can change your settings or manage your queued retweets using the menu options on the left.</p><hr>";
             } else {
                 echo "<hr><p>To use this app or change your settings, you must first sign in with Twitter. Use the button below to proceed.</p>";
+                echo "<div class=\"error\"><p style=\"color:red\">ArtRetweeter is temporarily unable to load tweets for new artists. This will reset on March 28.</p></div>";
                 echo "<a href=\"$url\">
                 <img alt=\"Sign in with Twitter\" src=\"src/images/signinwithtwitter.png\"
                      width=158\" height=\"28\"></a><hr>";

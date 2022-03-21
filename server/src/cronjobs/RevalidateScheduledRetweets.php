@@ -12,4 +12,4 @@ require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\TweetManager;
 
-TweetManager::revalidateOldTweets();
+TweetManager::revalidateScheduledRetweetsForAllUsers();

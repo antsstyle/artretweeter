@@ -3,7 +3,7 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\LogManager;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AutomationDB;
 
 class UserSettings {
 
@@ -59,7 +59,7 @@ class UserSettings {
         $aS['videosenabled'] = "N";
         $aS['settingstype'] = "Simple";
 
-        $automationSavedSuccess = CoreDB::commitAutomationSettingsInDB($aS);
+        $automationSavedSuccess = AutomationDB::commitAutomationSettings($aS);
         return $automationSavedSuccess;
     }
 
@@ -422,7 +422,7 @@ class UserSettings {
         $aS['videosenabled'] = $videosEnabled;
         $aS['settingstype'] = "Advanced";
 
-        $automationSavedSuccess = CoreDB::commitAutomationSettingsInDB($aS);
+        $automationSavedSuccess = AutomationDB::commitAutomationSettings($aS);
         return $automationSavedSuccess;
     }
 
@@ -469,7 +469,7 @@ class UserSettings {
         $aS['videosenabled'] = "N";
         $aS['settingstype'] = "Simple";
 
-        $automationSavedSuccess = CoreDB::commitNonArtistAutomationSettingsInDB($aS);
+        $automationSavedSuccess = AutomationDB::commitNonArtistAutomationSettings($aS);
         return $automationSavedSuccess;
     }
 
@@ -762,7 +762,7 @@ class UserSettings {
         $aS['videosenabled'] = $videosEnabled;
         $aS['settingstype'] = "Advanced";
 
-        $automationSavedSuccess = CoreDB::commitNonArtistAutomationSettingsInDB($aS);
+        $automationSavedSuccess = AutomationDB::commitNonArtistAutomationSettings($aS);
         return $automationSavedSuccess;
     }
 

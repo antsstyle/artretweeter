@@ -4,12 +4,14 @@
         "monolog/monolog": "^2.3",
         "patreon/patreon": "^1.0",
         "paypal/rest-api-sdk-php": "*",
-        "phpmailer/phpmailer": "^6.6"
+        "phpmailer/phpmailer": "^6.6",
+        "phpunit/phpunit": "^9.5"
     },
     "autoload": {
         "psr-4": {
             "Antsstyle\\ArtRetweeter\\Ajax\\": "src/ajax/",
             "Antsstyle\\ArtRetweeter\\Core\\": "src/core/",
+            "Antsstyle\\ArtRetweeter\\DB\\": "src/db/",
             "Antsstyle\\ArtRetweeter\\Credentials\\": "src/credentials/",
             "Antsstyle\\ArtRetweeter\\Cronjobs\\": "src/cronjobs/"
         }

@@ -10,6 +10,6 @@ $dir = getcwd();
 
 require $dir . '/vendor/autoload.php';
 
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
 
 CoreDB::checkNFTCryptoBlockerCentralDB();

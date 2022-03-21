@@ -4,7 +4,7 @@ namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 
 class Validation {

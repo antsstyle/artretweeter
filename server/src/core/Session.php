@@ -2,7 +2,7 @@
 
 namespace Antsstyle\ArtRetweeter\Core;
 
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 
@@ -84,7 +84,7 @@ class Session {
         }
         $userTwitterID = $_SESSION['usertwitterid'];
 
-        $userInfo = CoreDB::getUserInfo($userTwitterID);
+        $userInfo = UserDB::getUserInfo($userTwitterID);
         if ($userInfo === false) {
             $errorURL = Config::HOMEPAGE_URL . "error";
             header("Location: $errorURL", true, 302);

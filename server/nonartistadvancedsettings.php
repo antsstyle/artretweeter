@@ -3,13 +3,12 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\Core;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AutomationDB;
 
 Session::checkSession();
 Session::validateUserLoggedIn();
 
-$nonArtistUserAutomationSettings = Core::getNonArtistAutomationSettings($_SESSION['usertwitterid']);
+$nonArtistUserAutomationSettings = AutomationDB::getNonArtistAutomationSettings($_SESSION['usertwitterid']);
 $showWarning = "N";
 if (!is_null($nonArtistUserAutomationSettings) && $nonArtistUserAutomationSettings !== false) {
     if ($nonArtistUserAutomationSettings['automationenabled'] === "Y") {

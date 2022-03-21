@@ -10,8 +10,8 @@ require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\Core;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\ArtistDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 
 class SubmitArtist {
 
@@ -22,7 +22,7 @@ class SubmitArtist {
             return;
         }
 
-        $userInfo = CoreDB::getUserInfo($userTwitterID);
+        $userInfo = UserDB::getUserInfo($userTwitterID);
         if (is_null($userInfo) || $userInfo === false) {
             echo "A database error occurred. Try again later or contact "
             . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
@@ -43,9 +43,9 @@ class SubmitArtist {
 
         $operation = htmlspecialchars($_POST['operation']);
         if ($operation === "cancel") {
-            $result = CoreDB::cancelArtistSubmission($userInfo, $artistTwitterHandle);
+            $result = ArtistDB::cancelArtistSubmission($userInfo, $artistTwitterHandle);
         } else if ($operation === "submit") {
-            $result = json_encode(CoreDB::submitArtistForApproval($userInfo, $artistTwitterHandle));
+            $result = json_encode(ArtistDB::submitArtistForApproval($userInfo, $artistTwitterHandle));
         } else {
             echo "Invalid operation";
             return;

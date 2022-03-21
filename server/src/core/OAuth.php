@@ -3,7 +3,7 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 
 class OAuth {
@@ -30,7 +30,7 @@ class OAuth {
 
     public static function getRefreshTokenForUser($userAuth, $errorCount = 0) {
         $userTwitterID = $userAuth['twitterid'];
-        $userInfo = CoreDB::getUserInfo($userTwitterID);
+        $userInfo = UserDB::getUserInfo($userTwitterID);
         if (is_null($userInfo) || $userInfo === false) {
             self::$logger->critical("Unable to get user info from DB, cannot refresh token for user twitter ID $userTwitterID");
             return false;
@@ -59,7 +59,7 @@ class OAuth {
         $content = curl_exec($curl);
         $accessTokenObject = json_decode($content);
         if (isset($accessTokenObject->access_token)) {
-            $success = CoreDB::insertOAuth2UserInformation($accessTokenObject, $userTwitterID);
+            $success = UserDB::insertOAuth2UserInformation($accessTokenObject, $userTwitterID);
             if (!$success) {
                 self::$logger->emergency("Failed to update user refresh token info for user twitter ID $userTwitterID!");
             }

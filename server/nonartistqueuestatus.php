@@ -2,8 +2,8 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\Core;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\Core\MiscTools;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Users;
 
@@ -12,8 +12,8 @@ Session::validateUserLoggedIn();
 
 $userTwitterID = $_SESSION['usertwitterid'];
 
-$queuedRetweets = CoreDB::getUserNonArtistRetweetQueue($userTwitterID);
-$userInfo = CoreDB::getUserInfo($userTwitterID);
+$queuedRetweets = UserDB::getUserNonArtistRetweetQueue($userTwitterID);
+$userInfo = UserDB::getUserInfo($userTwitterID);
 if ($userInfo !== false && $userInfo !== null) {
     if (!is_null($userInfo['screenname'])) {
         $twitterHandle = $userInfo['screenname'];
@@ -21,6 +21,9 @@ if ($userInfo !== false && $userInfo !== null) {
         $twitterHandle = Users::retrieveUserTwitterHandle($userInfo);
     }
 }
+
+$adminURL = Config::ADMIN_URL;
+$adminName = Config::ADMIN_NAME;
 ?>
 
 <html>
@@ -72,7 +75,7 @@ if ($userInfo !== false && $userInfo !== null) {
                     $retweetTime = $queuedRetweet['retweettime'];
                     $tweetText = $queuedRetweet['fulltweettext'];
                     $tweetText = nl2br($tweetText);
-                    $retweetTime = Core::convertServerTimeStringToUserTime($retweetTime,
+                    $retweetTime = MiscTools::convertServerTimeStringToUserTime($retweetTime,
                                     $userInfo['timezonehouroffset'], $userInfo['timezoneminuteoffset']);
                     $tweetID = $queuedRetweet['tweetid'];
                     $tweetURL = "https://twitter.com/" . $queuedRetweet['screenname'] . "/status/" . $tweetID;

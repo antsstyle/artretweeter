@@ -6,12 +6,12 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\Core;
+use Antsstyle\ArtRetweeter\DB\AutomationDB;
 
 Session::checkSession();
 Session::validateUserLoggedIn();
 
-$userAutomationSettings = Core::getAutomationSettings($_SESSION['usertwitterid']);
+$userAutomationSettings = AutomationDB::getAutomationSettings($_SESSION['usertwitterid']);
 $showWarning = "N";
 if (!is_null($userAutomationSettings) && $userAutomationSettings !== false) {
     if ($userAutomationSettings['automationenabled'] === "Y") {

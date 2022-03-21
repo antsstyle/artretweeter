@@ -7,6 +7,7 @@ function approveArtistSubmission(artistScreenName) {
     var xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
         if (this.readyState === 4 && this.status === 200) {
+            console.log("Response text" + this.responseText);
             document.getElementById("artistapprovalresultdiv").innerHTML = this.responseText;
         }
     };
@@ -16,6 +17,7 @@ function approveArtistSubmission(artistScreenName) {
     xmlhttp.open("POST", "/artretweeter/src/ajax/ArtistSubmissions.php", true);
     xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xmlhttp.send(params);
+    console.log("Request sent");
 }
 
 function rejectArtistSubmission(artistScreenName) {

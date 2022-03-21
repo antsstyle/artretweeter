@@ -3,7 +3,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 
 Session::checkSession();
 Session::validateUserLoggedIn();
@@ -17,7 +17,7 @@ if (is_null($pageNum) || $pageNum === false) {
     $pageNum = 1;
 }
 
-$pageCount = CoreDB::getUserArtistRetweetSettingsCount($userTwitterID);
+$pageCount = UserDB::getUserArtistRetweetSettingsCount($userTwitterID);
 
 $pageCount = ceil($pageCount / 15);
 if ($pageNum > $pageCount) {
@@ -27,7 +27,7 @@ if ($pageNum < 1) {
     $pageNum = 1;
 }
 
-$userArtistRetweetSettings = CoreDB::getUserArtistRetweetSettings($userTwitterID, $pageNum);
+$userArtistRetweetSettings = UserDB::getUserArtistRetweetSettings($userTwitterID, $pageNum);
 
 $nextPage = $pageNum + 1;
 $prevPage = $pageNum - 1;

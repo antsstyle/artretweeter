@@ -4,7 +4,8 @@ require __DIR__ . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 
 Session::checkSession();
 Session::validateUserLoggedIn();
@@ -15,7 +16,7 @@ $maxPendingSubmissions = CoreDB::getCachedVariable(CachedVariables::MAX_PENDING_
 if ($userInfo['paiduser'] === "Y") {
     $maxPendingSubmissions = CoreDB::getCachedVariable(CachedVariables::MAX_PENDING_SUBMISSIONS_PAID_USER);
 }
-$pendingArtistSubmissions = CoreDB::getPendingArtistSubmissionsForUser($userTwitterID);
+$pendingArtistSubmissions = UserDB::getPendingArtistSubmissionsForUser($userTwitterID);
 ?>
 
 <html>

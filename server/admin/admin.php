@@ -2,7 +2,7 @@
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\ArtistDB;
 use Antsstyle\ArtRetweeter\Core\Session;
 
 Session::checkSession();
@@ -35,19 +35,20 @@ Session::checkSession();
             if (!$_SESSION['adminlogin']) {
                 echo "You are not logged in as an administrator. Go to the admin login page.";
             } else {
-                $artistSubmissions = CoreDB::getAllPendingArtistSubmissions();
+                $artistSubmissions = ArtistDB::getAllPendingArtistSubmissions();
                 if (is_null($artistSubmissions) || $artistSubmissions === false) {
                     echo "Error - could not get artist submissions from DB.";
                 } else if (count($artistSubmissions) === 0) {
                     echo "There are no artist submissions waiting for approval.";
                 } else {
-                    echo "<table><th>Twitter Handle</th><th>Date Submitted</th><th></th><th></th>";
+                    echo "<table><th>Twitter Handle</th><th>Date Submitted</th><th>Num Submissions</th><th></th><th></th>";
                     $i = 0;
                     foreach ($artistSubmissions as $submission) {
                         $artistScreenName = $submission['screenname'];
                         $twitterLink = "https://twitter.com/" . $submission['screenname'];
                         $twitterHandle = "<a href=\"$twitterLink\" target=\"_blank\">@" . $submission['screenname'] . "</a>";
                         $dateSubmitted = substr($submission['datesubmitted'], 0, 10);
+                        $submissionCount = $submission['submissioncount'];
                         $approveButton = "<button id=\"approvebutton$i\" type=\"button\" onclick=\"approveArtistSubmission("
                                 . "'$artistScreenName')\">Approve</button>";
                         $rejectButton = "<button id=\"rejectbutton$i\" type=\"button\" onclick=\"rejectArtistSubmission("
@@ -55,12 +56,13 @@ Session::checkSession();
                         echo "<tr>";
                         echo "<td>$twitterHandle</td>";
                         echo "<td>$dateSubmitted</td>";
+                        echo "<td>$submissionCount</td>";
                         echo "<td>$approveButton</td>";
                         echo "<td>$rejectButton</td>";
                         echo "</tr>";
                         $i++;
                     }
-                    echo "</table>";
+                    echo "</table><br/><br/>";
                     echo "<div id=\"artistapprovalresultdiv\"></div>";
                 }
             }

@@ -3,7 +3,7 @@
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AdminDB;
 use Antsstyle\ArtRetweeter\Core\Session;
 
 Session::checkSession();
@@ -23,7 +23,7 @@ if ($password === "") {
     exit();
 }
 
-$adminInfo = CoreDB::getAdminInfo($username);
+$adminInfo = AdminDB::getAdminInfo($username);
 if (is_null($adminInfo)) {
     $location = Config::HOMEPAGE_URL . "admin/login?error=dberror";
     header("Location: $location", true, 302);
@@ -44,12 +44,12 @@ $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 if (password_verify($password, $adminInfo['passwordhash'])) {
     error_log("Password verified.");
     $_SESSION['adminlogin'] = true;
-    CoreDB::resetAdminUserLoginAttempts($username);
+    AdminDB::resetAdminUserLoginAttempts($username);
     $location = Config::HOMEPAGE_URL . "admin/admin";
     header("Location: $location", true, 302);
     exit();
 } else {
-    CoreDB::incrementAdminUserLoginAttempts($username);
+    AdminDB::incrementAdminUserLoginAttempts($username);
     $location = Config::HOMEPAGE_URL . "admin/login?error=incorrectpassword";
     header("Location: $location", true, 302);
     exit();

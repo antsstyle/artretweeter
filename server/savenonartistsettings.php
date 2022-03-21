@@ -2,7 +2,7 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Config;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\UserSettings;
 use Antsstyle\ArtRetweeter\Core\TwitterResponseStatus;
@@ -11,7 +11,7 @@ Session::checkSession();
 Session::validateUserLoggedIn();
 
 $result = UserSettings::saveNonArtistAutomationSettings($_SESSION['usertwitterid']);
-$artistsRetweeting = CoreDB::getUserArtistRetweetSettings($_SESSION['usertwitterid']);
+$artistsRetweeting = UserDB::getUserArtistRetweetSettings($_SESSION['usertwitterid']);
 $addArtistsMsg = "";
 if (!is_null($artistsRetweeting)) {
     $artistsRetweeting = count($artistsRetweeting);

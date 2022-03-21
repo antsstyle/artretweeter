@@ -4,7 +4,7 @@ namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 
 class Analysis {
@@ -58,11 +58,13 @@ class Analysis {
                 . "AND usertwitterid IN (SELECT usertwitterid FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid "
                 . "GROUP BY usertwitterid HAVING (COUNT(*) > ?)) ";
         $selectUsersStmt = CoreDB::getConnection()->prepare($selectUsersQuery);
-        $success = $selectUsersStmt->execute(["Y", $currentTime, $minimumTweetMetricsLimit]);
-        if (!$success) {
-            self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
-            return;
+        try {
+            $selectUsersStmt->execute(["Y", $currentTime, $minimumTweetMetricsLimit]);
+        } catch (\PDOException $e) {
+            self::$logger->critical("Failed to get tweets from DB, cannot update metrics: " . print_r($e, true));
+            return false;
         }
+
         $userTwitterIDs = [];
         while ($userRow = $selectUsersStmt->fetch()) {
             $userTwitterIDs[] = $userRow['usertwitterid'];
@@ -74,11 +76,13 @@ class Analysis {
             $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
             $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
-            $success = $selectStmt->execute([$userTwitterID, $metricID]);
-            if (!$success) {
-                self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
-                return;
+            try {
+                $selectStmt->execute([$userTwitterID, $metricID]);
+            } catch (\PDOException $e) {
+                self::$logger->critical("Failed to get tweets from DB, cannot update metrics: " . print_r($e, true));
+                return false;
             }
+
             $retweetValues = [];
             while ($row = $selectStmt->fetch()) {
                 $retweetValues[] = $row['retweets'];
@@ -136,12 +140,23 @@ class Analysis {
             $finalRTThreshold = $tanMINDataPoints[1];
             $updateParams[] = [$finalRTThreshold, $nextAnalysis, $userTwitterID];
         }
-        CoreDB::getConnection()->beginTransaction();
-        foreach ($updateParams as $updateParamsForUser) {
-            $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
-            $updateStmt->execute($updateParamsForUser);
+        try {
+            CoreDB::getConnection()->beginTransaction();
+            foreach ($updateParams as $updateParamsForUser) {
+                $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
+                try {
+                    $updateStmt->execute($updateParamsForUser);
+                } catch (\PDOException $e) {
+                    self::$logger->error("Failed to update analytics for user. Params were: " . print_r($updateParamsForUser, true)
+                            . " PDO error: " . print_r($e, true));
+                }
+            }
+            CoreDB::getConnection()->commit();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to commit transaction for user analytics: " . print_r($e, true));
+            return false;
         }
-        CoreDB::getConnection()->commit();
+        return true;
     }
 
     public static function computeAdaptiveAnalyticsForArtists() {
@@ -188,10 +203,11 @@ class Analysis {
                 . "ON tweets.tweetid=tweetmetrics.tweetid WHERE tweets.usertwitterid=artists.twitterid AND "
                 . "tweetmetrics.retrievalmetric=?) AS tweetcount FROM `artists` WHERE (nextanalysis IS NULL OR nextanalysis <= ?) LIMIT 1000";
         $selectUsersStmt = CoreDB::getConnection()->prepare($selectUsersQuery);
-        $success = $selectUsersStmt->execute([$metricID, $currentTime]);
-        if (!$success) {
-            self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
-            return;
+        try {
+            $selectUsersStmt->execute([$metricID, $currentTime]);
+        } catch (\PDOException $e) {
+            self::$logger->critical("Failed to get tweets from DB, cannot update metrics: " . print_r($e, true));
+            return false;
         }
 
         $nextAnalysis = date("Y-m-d H:i:s", strtotime("+7 days"));
@@ -238,7 +254,11 @@ class Analysis {
                 foreach ($data as $userEntry) {
                     $userTwitterID = $userEntry->id;
                     $followersCount = $userEntry->public_metrics->followers_count;
-                    $updateStmt->execute([$followersCount, $userTwitterID]);
+                    try {
+                        $updateStmt->execute([$followersCount, $userTwitterID]);
+                    } catch (\PDOException $e) {
+                        self::$logger->critical("Failed to update follower count for user twitter ID: $userTwitterID. PDO error: " . print_r($e, true));
+                    }
                 }
                 $artistIDsString = "";
             }
@@ -250,11 +270,13 @@ class Analysis {
             $selectQuery = "SELECT * FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?"
                     . " AND retrievalmetric=? ORDER BY retweets";
             $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
-            $success = $selectStmt->execute([$userRow['twitterid'], $metricID]);
-            if (!$success) {
-                self::$logger->critical("Failed to get tweets from DB, cannot update metrics.");
-                return;
+            try {
+                $selectStmt->execute([$userRow['twitterid'], $metricID]);
+            } catch (\PDOException $e) {
+                self::$logger->critical("Failed to get tweets from DB, cannot update metrics: " . print_r($e, true));
+                return false;
             }
+
             $retweetValues = [];
             while ($row = $selectStmt->fetch()) {
                 $retweetValues[] = $row['retweets'];
@@ -319,12 +341,23 @@ class Analysis {
 
             $updateParams[] = [$finalRTThreshold, $meanRTThreshold, $nextAnalysis, $userRow['twitterid']];
         }
-        CoreDB::getConnection()->beginTransaction();
-        foreach ($updateParams as $updateParamsForUser) {
-            $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
-            $updateStmt->execute($updateParamsForUser);
+        try {
+            CoreDB::getConnection()->beginTransaction();
+            foreach ($updateParams as $updateParamsForUser) {
+                $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
+                try {
+                    $updateStmt->execute($updateParamsForUser);
+                } catch (\PDOException $e) {
+                    self::$logger->error("Failed to update artist analytics. Update params: " . print_r($updateParamsForUser, true)
+                            . " PDO error: " . print_r($e, true));
+                }
+            }
+            CoreDB::getConnection()->commit();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to commit artist analytics transaction: " . print_r($e, true));
+            return false;
         }
-        CoreDB::getConnection()->commit();
+        return true;
     }
 
 }

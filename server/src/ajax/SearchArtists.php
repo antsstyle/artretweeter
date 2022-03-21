@@ -9,7 +9,7 @@ $dir = getcwd();
 require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 
 class SearchArtists {
 
@@ -37,7 +37,7 @@ class SearchArtists {
             return;
         }
         $searchString = "%" . $searchString . "%";
-        $artistResults = CoreDB::searchArtistsForUser($searchString, $userTwitterID);
+        $artistResults = UserDB::searchArtistsForUser($searchString, $userTwitterID);
         if (is_null($artistResults)) {
             echo "";
         } else {

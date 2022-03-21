@@ -9,9 +9,8 @@ $dir = getcwd();
 require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
-use Antsstyle\ArtRetweeter\Core\Core;
 use Antsstyle\ArtRetweeter\Core\LogManager;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AutomationDB;
 
 class Ajax {
 
@@ -36,7 +35,7 @@ class Ajax {
 
         switch ($request) {
             case "usernonartistautomationsettings":
-                $automationSettings = Core::getNonArtistAutomationSettings($userTwitterID);
+                $automationSettings = AutomationDB::getNonArtistAutomationSettings($userTwitterID);
                 if (!$automationSettings) {
                     echo "";
                 } else {
@@ -44,7 +43,7 @@ class Ajax {
                 }
                 break;
             case "userautomationsettings":
-                $automationSettings = Core::getAutomationSettings($userTwitterID);
+                $automationSettings = AutomationDB::getAutomationSettings($userTwitterID);
                 if (!$automationSettings) {
                     echo "";
                 } else {
@@ -64,7 +63,7 @@ class Ajax {
                     echo "";
                     break;
                 }
-                $rescheduleResult = CoreDB::rescheduleQueuedTweet($idToReschedule, $userTwitterID, $newTime);
+                $rescheduleResult = AutomationDB::rescheduleQueuedTweet($idToReschedule, $userTwitterID, $newTime);
                 if (is_string($rescheduleResult)) {
                     echo $rescheduleResult;
                 } else if ($rescheduleResult === false) {
@@ -81,7 +80,7 @@ class Ajax {
                     self::$logger->error("Invalid request ID, cannot delete queue entry.");
                     echo "";
                 } else {
-                    $result = CoreDB::deleteQueuedRetweet($idToDelete, $userTwitterID);
+                    $result = AutomationDB::deleteQueuedRetweet($idToDelete, $userTwitterID);
                     echo json_encode($result);
                 }
                 break;

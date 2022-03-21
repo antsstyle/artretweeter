@@ -3,7 +3,9 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\CachedVariables;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AutomationDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
+use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 
 class RetweetScheduler {
@@ -24,10 +26,14 @@ class RetweetScheduler {
         }
         $stmt->bindValue(1, $userTwitterID);
         $stmt->bindValue(2, $retweetTime);
-        $success = $stmt->execute();
-        if (!$success) {
-            return $stmt->errorInfo();
+        try {
+            $stmt->execute();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to check number of user tweets at exact time. Table: $table User twitter ID: $userTwitterID "
+                    . "Retweet time: $retweetTime. PDO error: " . print_r($e, true));
+            return false;
         }
+
         $results = $stmt->fetchAll();
         if (!$results) {
             return 0;
@@ -57,10 +63,15 @@ class RetweetScheduler {
         } else {
             $stmt->bindValue(4, $limit, \PDO::PARAM_INT);
         }
-        $success = $stmt->execute();
-        if (!$success) {
-            return $stmt->errorInfo();
+        try {
+            $stmt->execute();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to check number of user tweets during time interval. User twitter ID: $userTwitterID "
+                    . "Retweet time: $retweetTime Time interval: $timeInterval Limit: $limit Rescheduled Tweet ID: $rescheduledTweetID. "
+                    . "PDO error: " . print_r($e, true));
+            return false;
         }
+
         $scheduledTimes = $stmt->fetchAll();
         $query = "SELECT UNIX_TIMESTAMP(scheduledretweettime) AS rttime FROM retweetrecords WHERE usertwitterid=? 
             AND scheduledretweettime >= ? AND scheduledretweettime <= ?";
@@ -78,10 +89,16 @@ class RetweetScheduler {
         } else {
             $stmt->bindValue(4, $limit, \PDO::PARAM_INT);
         }
-        $success = $stmt->execute();
-        if (!$success) {
-            return $stmt->errorInfo();
+        try {
+            $stmt->execute();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get record times during time interval. User twitter ID: $userTwitterID "
+                    . "Retweet time: $retweetTime Interval start: $intervalStart Interval end: $intervalEnd "
+                    . "Limit: $limit Rescheduled Tweet ID: $rescheduledTweetID. "
+                    . "PDO error: " . print_r($e, true));
+            return false;
         }
+
         $recordTimes = $stmt->fetchAll();
         $allTimes = [];
         foreach ($scheduledTimes as $scheduledTime) {
@@ -116,10 +133,11 @@ class RetweetScheduler {
                 . "WHERE automationenabled=? "
                 . "AND (nextserverscheduledate IS NULL OR nextserverscheduledate <= ?)";
         $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
-        $success = $selectStmt->execute(["Y", $now]);
-        if (!$success) {
-            self::$logger->critical("Failed to get all user artist automation settings!");
-            return;
+        try {
+            $selectStmt->execute(["Y", $now]);
+        } catch (\PDOException $e) {
+            self::$logger->critical("Failed to get all user artist automation settings: " . print_r($e, true));
+            return false;
         }
         $rows = $selectStmt->fetchAll();
         $nonArtistRTThreshold = CoreDB::getCachedVariable(CachedVariables::NON_ARTIST_RETWEET_METRICS_MIN_RT_THRESHOLD);
@@ -157,7 +175,6 @@ class RetweetScheduler {
         }
         $dayFlag = substr($dayFlags, $twoDaysFromNow, 1);
         if ($dayFlag !== "Y") {
-            self::$logger->debug("Two days from now: $twoDaysFromNow. Today: $today. Dayflags: $dayFlags");
             return;
         }
         if ($userRow['paiduser'] === "N") {
@@ -171,11 +188,13 @@ class RetweetScheduler {
                 . "ON userartistretweetsettings.artisttwitterid=artists.twitterid WHERE userartistretweetsettings.usertwitterid=? "
                 . "ORDER BY totalretweeted ASC, RAND() ";
         $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
-        $success = $selectStmt->execute([$userRow['usertwitterid']]);
-        if (!$success) {
-            self::$logger->error("Failed to get user artist results for user ID: " . $userRow['usertwitterid']);
-            return;
+        try {
+            $selectStmt->execute([$userRow['usertwitterid']]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get user artist results for user ID: " . $userRow['usertwitterid'] . ": " . print_r($e, true));
+            return false;
         }
+
         $rows = $selectStmt->fetchAll();
         if (count($rows) === 0) {
             return;
@@ -229,7 +248,7 @@ class RetweetScheduler {
                 $retweetTime->add(new \DateInterval('P2D'));
                 $retweetTime->setTime($nextHour, $minute);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
-                CoreDB::queueRetweet($userRow['usertwitterid'], $tweetAuthorID, $tweetIDToSchedule, $retweetTimeStamp);
+                AutomationDB::queueRetweet($userRow['usertwitterid'], $tweetAuthorID, $tweetIDToSchedule, $retweetTimeStamp);
                 $scheduledTweets++;
                 if ($scheduledTweets >= $limitPerDay) {
                     $endReached = true;
@@ -255,7 +274,14 @@ class RetweetScheduler {
         $nextServerScheduleDate = date("Y-m-d H:i:s", $nextServerScheduleDate->getTimestamp());
         $updateQuery = "UPDATE userartistautomationsettings SET nextserverscheduledate=? WHERE usertwitterid=?";
         $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
-        $success = $updateStmt->execute([$nextServerScheduleDate, $userRow['usertwitterid']]);
+        try {
+            $updateStmt->execute([$nextServerScheduleDate, $userRow['usertwitterid']]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to update next server schedule date field in userartistautomationsettings for user twitter ID: "
+                    . $userRow['usertwitterid'] . ". PDO error: " . print_r($e, true));
+            return false;
+        }
+        return true;
     }
 
     public static function checkUserCanRetweetOldTweet($userTwitterID, $retweetTime, $tweetID) {
@@ -270,11 +296,13 @@ class RetweetScheduler {
         $records30DaysStmt->bindValue(2, $date30DaysAgo);
         $records30DaysStmt->bindValue(3, $tweetID);
         $records30DaysStmt->bindValue(4, $per30DaysLimit, \PDO::PARAM_INT);
-        $records30DaysSuccess = $records30DaysStmt->execute();
-        if (!$records30DaysSuccess) {
-            self::$logger->error("Failed to get retweet records to check monthly limits.");
+        try {
+            $records30DaysStmt->execute();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get retweet records to check monthly limits: " . print_r($e, true));
             return false;
         }
+
         $records30DaysResults = $records30DaysStmt->fetchAll();
         if ($records30DaysResults && (count($records30DaysResults) >= $per30DaysLimit)) {
             return false;
@@ -287,11 +315,13 @@ class RetweetScheduler {
         $recordsYearStmt->bindValue(2, $date1YearAgo);
         $recordsYearStmt->bindValue(3, $tweetID);
         $recordsYearStmt->bindValue(4, $perYearLimit, \PDO::PARAM_INT);
-        $recordsYearSuccess = $recordsYearStmt->execute();
-        if (!$recordsYearSuccess) {
-            self::$logger->error("Failed to get retweet records to check yearly limits.");
+        try {
+            $recordsYearStmt->execute();
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get retweet records to check yearly limits: " . print_r($e, true));
             return false;
         }
+
         $recordsYearResults = $recordsYearStmt->fetchAll();
         if ($recordsYearResults && (count($recordsYearResults) >= $perYearLimit)) {
             return false;
@@ -305,12 +335,18 @@ class RetweetScheduler {
         $perHourLimit = 2;
 
         $recordsNowResults = self::getNumTweetsAtExactTime("retweetrecords", $userTwitterID, $RTTime);
-        if ($recordsNowResults) {
+        if ($recordsNowResults === false) {
+            return "A database error occurred. Try logging in again or contact "
+                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+        } else if ($recordsNowResults > 0) {
             return "You cannot schedule two retweets to be posted at the same time.";
         }
 
         $queueNowResults = self::getNumTweetsAtExactTime("scheduledretweets", $userTwitterID, $RTTime);
-        if ($queueNowResults) {
+        if ($queueNowResults === false) {
+            return "A database error occurred. Try logging in again or contact "
+                    . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";
+        } else if ($queueNowResults > 0) {
             return "You cannot schedule two retweets to be posted at the same time.";
         }
 
@@ -329,11 +365,13 @@ class RetweetScheduler {
         $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
                 . "WHERE automationenabled=?";
         $stmt = CoreDB::getConnection()->prepare($query);
-        $success = $stmt->execute(["Y"]);
-        if (!$success) {
-            self::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue.");
+        try {
+            $stmt->execute(["Y"]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue: " . print_r($e, true));
             return;
         }
+
         while ($row = $stmt->fetch()) {
             self::queueAutomatedRetweets($row);
         }
@@ -342,9 +380,10 @@ class RetweetScheduler {
     public static function queueAutomatedRetweets($userRow) {
         $selectSettingsQuery = "SELECT * FROM userautomationsettings WHERE usertwitterid=?";
         $updateStmt = CoreDB::getConnection()->prepare($selectSettingsQuery);
-        $success = $updateStmt->execute([$userRow['twitterid']]);
-        if (!$success) {
-            self::$logger->error("Failed to get user ID to queue automated retweets for, cannot continue.");
+        try {
+            $updateStmt->execute([$userRow['twitterid']]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get user ID to queue automated retweets for, cannot continue: " . print_r($e, true));
             return;
         }
         $settingsRow = $updateStmt->fetch();
@@ -377,7 +416,6 @@ class RetweetScheduler {
         }
         $dayFlag = substr($dayFlags, $twoDaysFromNow, 1);
         if ($dayFlag !== "Y") {
-            self::$logger->debug("Two days from now: $twoDaysFromNow. Today: $today. Dayflags: $dayFlags");
             return;
         }
         $limitPerDay = min($hourCount, 10);
@@ -444,11 +482,13 @@ class RetweetScheduler {
         }
         if ($settingsRow['blockedhandlesenabled'] === 'Y') {
             $blockedHandlesStmt = CoreDB::getConnection()->prepare("SELECT * FROM userblockedhandles WHERE usertwitterid=?");
-            $success = $blockedHandlesStmt->execute([$userRow['twitterid']]);
-            if (!$success) {
-                self::$logger->error("Failed to get user blocked handles, cannot continue.");
-                return;
+            try {
+                $blockedHandlesStmt->execute([$userRow['twitterid']]);
+            } catch (\PDOException $e) {
+                self::$logger->error("Failed to get user blocked handles: " . print_r($e, true));
+                return false;
             }
+
             $blockedHandles = $blockedHandlesStmt->fetchAll();
             $selectMeanStatsQuery .= " AND fulltweettext NOT REGEXP ?";
             $regexp = "";
@@ -463,11 +503,13 @@ class RetweetScheduler {
         }
 
         $selectMeanStatsStmt = CoreDB::getConnection()->prepare($selectMeanStatsQuery);
-        $success = $selectMeanStatsStmt->execute($selectMeanStatsParams);
-        if (!$success) {
-            self::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
-            return;
+        try {
+            $selectMeanStatsStmt->execute($selectMeanStatsParams);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling: " . print_r($e, true));
+            return false;
         }
+
         $statsRow = $selectMeanStatsStmt->fetch();
         $meanRTs = $statsRow['avgrts'];
         if ($settingsRow['metricsmeasurementtype'] == "Mean Average" && $settingsRow['retweetpercent'] != null) {
@@ -479,7 +521,7 @@ class RetweetScheduler {
             $userTwitterID = $userRow['twitterid'];
             self::$logger->error("Incorrect automation settings for user ID: $userTwitterID. Settings row:");
             self::$logger->error(print_r($settingsRow, true));
-            return;
+            return false;
         }
 
         $minCreatedAt = $statsRow['mincr'];
@@ -503,11 +545,13 @@ class RetweetScheduler {
         $selectMeanStatsParams[] = $oneYearAgo;
         $selectMeanStatsParams[] = 2;
         $selectTweetsStmt = CoreDB::getConnection()->prepare($selectTweetsQuery);
-        $success = $selectTweetsStmt->execute($selectMeanStatsParams);
-        if (!$success) {
-            self::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
-            return;
+        try {
+            $selectTweetsStmt->execute($selectMeanStatsParams);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling: " . print_r($e, true));
+            return false;
         }
+
         $tweetRows = $selectTweetsStmt->fetchAll();
         $tweetCount = count($tweetRows);
 
@@ -515,7 +559,7 @@ class RetweetScheduler {
         $minuteValues = self::getMinuteValues($minuteFlags);
         $numScheduled = 0;
         if ($tweetCount == 0) {
-            return;
+            return true;
         }
         $scheduleType = "Random";
         if ($scheduleType == "Random") {
@@ -530,7 +574,7 @@ class RetweetScheduler {
                 $retweetTime->add(new \DateInterval('P2D'));
                 $retweetTime->setTime($nextHour, $minuteValue);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
-                CoreDB::queueRetweet($userRow['twitterid'], $userRow['twitterid'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
+                AutomationDB::queueRetweet($userRow['twitterid'], $userRow['twitterid'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
                 $numScheduled++;
             }
         } else {
@@ -546,7 +590,7 @@ class RetweetScheduler {
                 $retweetTime->add(new \DateInterval('P2D'));
                 $retweetTime->setTime($nextHour, $minuteValue);
                 $retweetTimeStamp = $retweetTime->getTimestamp();
-                CoreDB::queueRetweet($userRow['twitterid'], $userRow['twitterid'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
+                AutomationDB::queueRetweet($userRow['twitterid'], $userRow['twitterid'], $tweetRows[$numScheduled]['tweetid'], $retweetTimeStamp);
                 $numScheduled++;
                 $latestUsed = $nextHour;
                 $nextHour = self::getNextHourToAutomate($hourFlags, $latestUsed, $interval);
@@ -555,7 +599,13 @@ class RetweetScheduler {
         $now = date("Y-m-d H:i:s");
         $updateQuery = "UPDATE userautomationsettings SET lastscheduleserverdate=? WHERE usertwitterid=?";
         $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
-        $success = $updateStmt->execute([$now, $userRow['twitterid']]);
+        try {
+            $updateStmt->execute([$now, $userRow['twitterid']]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to update user last schedule server date: " . print_r($e, true));
+            return false;
+        }
+        return true;
     }
 
     public static function getUserArtistEligibleTweets($userTwitterID, $artistRow, $nonArtistRTThreshold) {
@@ -619,11 +669,13 @@ class RetweetScheduler {
             }
         }
         $selectMeanStatsStmt = CoreDB::getConnection()->prepare($selectMeanStatsQuery);
-        $success = $selectMeanStatsStmt->execute($selectMeanStatsParams);
-        if (!$success) {
-            self::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling.");
-            return;
+        try {
+            $selectMeanStatsStmt->execute($selectMeanStatsParams);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling: " . print_r($e, true));
+            return false;
         }
+
         $statsRow = $selectMeanStatsStmt->fetch();
         $meanRTs = $statsRow['avgrts'];
 
@@ -646,11 +698,13 @@ class RetweetScheduler {
         $selectMeanStatsParams[] = $oneYearAgo;
         $selectMeanStatsParams[] = 2;
         $selectTweetsStmt = CoreDB::getConnection()->prepare($selectTweetsQuery);
-        $success = $selectTweetsStmt->execute($selectMeanStatsParams);
-        if (!$success) {
-            self::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling.");
-            return;
+        try {
+            $selectTweetsStmt->execute($selectMeanStatsParams);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get tweets for user, cannot continue with automated retweet scheduling: " . print_r($e, true));
+            return false;
         }
+
         $tweetRows = $selectTweetsStmt->fetchAll();
         return [$tweetRows, $selectMeanStatsParams];
     }

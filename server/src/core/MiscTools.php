@@ -33,6 +33,26 @@ class MiscTools {
         return $string;
     }
 
+    public static function convertServerTimeStringToUserTime($timeString, $userHourOffset, $userMinuteOffset) {
+        $userOffsetSeconds = ($userHourOffset * 3600) + ($userMinuteOffset * 60);
+        $now = new \DateTime();
+        $serverTimeZone = new \DateTimeZone(date_default_timezone_get());
+        $serverOffsetSeconds = $serverTimeZone->getOffset($now);
+        $timeDiffSeconds = $serverOffsetSeconds - $userOffsetSeconds;
+        $timeString = date("Y-m-d H:i:s", strtotime($timeString) - $timeDiffSeconds);
+        return $timeString;
+    }
+
+    public static function convertUserTimeStringToServerTime($timeString, $userHourOffset, $userMinuteOffset) {
+        $userOffsetSeconds = ($userHourOffset * 3600) + ($userMinuteOffset * 60);
+        $now = new \DateTime();
+        $serverTimeZone = new \DateTimeZone(date_default_timezone_get());
+        $serverOffsetSeconds = $serverTimeZone->getOffset($now);
+        $timeDiffSeconds = $serverOffsetSeconds - $userOffsetSeconds;
+        $timeString = date("Y-m-d H:i:s", strtotime($timeString) + $timeDiffSeconds);
+        return $timeString;
+    }
+
 }
 
 MiscTools::initialiseLogger();

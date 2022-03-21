@@ -9,7 +9,7 @@ $dir = getcwd();
 require $dir . '/vendor/autoload.php';
 
 use Antsstyle\ArtRetweeter\Core\Session;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\Config;
 
 class AddArtistForUser {
@@ -29,7 +29,7 @@ class AddArtistForUser {
         }
 
 
-        $returnValue = CoreDB::updateArtistForUser($userTwitterID, $artistTwitterID, $operation);
+        $returnValue = UserDB::updateArtistForUser($userTwitterID, $artistTwitterID, $operation);
         if (is_null($returnValue)) {
             echo "A database error occurred.<br/><br/>Try again later or contact "
             . "<a href=\"" . Config::ADMIN_URL . "\" target=\"_blank\">" . Config::ADMIN_NAME . "</a> if it persists.";

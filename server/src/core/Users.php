@@ -3,7 +3,7 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\Core;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Antsstyle\ArtRetweeter\Core\TwitterResponseStatus;
@@ -42,7 +42,13 @@ class Users {
         $screenName = $response[0]->data->username;
         $updQuery = "UPDATE users SET screenname=? WHERE twitterid=?";
         $updStmt = CoreDB::getConnection()->prepare($updQuery);
-        $updStmt->execute([$screenName, $userRow['twitterid']]);
+        try {
+            $updStmt->execute([$screenName, $userRow['twitterid']]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to update twitter handle for user twitter ID " . $userRow['twitterid'] . ": " . print_r($e, true));
+            return false;
+        }
+
         return $screenName;
     }
 

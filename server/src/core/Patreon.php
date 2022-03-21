@@ -3,7 +3,8 @@
 namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Credentials\AdminUserAuth;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\AdminDB;
+use Antsstyle\ArtRetweeter\DB\CoreDB;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Patreon\API;
 
@@ -42,12 +43,17 @@ class Patreon {
             $insertQuery = "INSERT INTO patreontiers (patreon_id,title,description,amount_cents,published) VALUES (?,?,?,?,?) ON DUPLICATE KEY "
                     . "UPDATE title=?,description=?,amount_cents=?,published=?";
             $insertStmt = CoreDB::getConnection()->prepare($insertQuery);
-            $insertStmt->execute($params);
+            try {
+                $insertStmt->execute($params);
+            } catch (\PDOException $e) {
+                self::$logger->error("Failed to insert Patreon campaign tier. Params: " . print_r($params, true)
+                        . " PDO error: " . print_r($e, true));
+            }
         }
     }
 
     public static function getPatrons() {
-        $adminUserIDs = CoreDB::getAllAdminTwitterIDs();
+        $adminUserIDs = AdminDB::getAllAdminTwitterIDs();
         if (is_null($adminUserIDs)) {
             self::$logger->emergency("Unable to get admin user IDs, cannot update patron statuses!");
             return false;
@@ -105,7 +111,12 @@ class Patreon {
                 if (!is_null($twitterUserID) && array_key_exists($userPatreonID, $updateParams) && !in_array($twitterUserID, $adminUserIDs)) {
                     $updateQuery = "UPDATE users SET patreonid=?, paiduser=? WHERE twitterid=?";
                     $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
-                    $updateStmt->execute([$userPatreonID, $updateParams[$userPatreonID], $twitterUserID]);
+                    try {
+                        $updateStmt->execute([$userPatreonID, $updateParams[$userPatreonID], $twitterUserID]);
+                    } catch (\PDOException $e) {
+                        self::$logger->error("Failed to update users table with patreon information. User patreon ID: $userPatreonID, "
+                                . "Paid user: " . $updateParams[$userPatreonID] . ", User Twitter ID: $twitterUserID. PDO error: " . print_r($e, true));
+                    }
                 }
             }
             $metapagination = $response['meta']['pagination'];

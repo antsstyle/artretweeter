@@ -8,7 +8,7 @@ use Antsstyle\ArtRetweeter\Core\TwitterResponseStatus;
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Credentials\APIKeys;
 use Antsstyle\ArtRetweeter\Core\Core;
-use Antsstyle\ArtRetweeter\Core\CoreDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Abraham\TwitterOAuth\TwitterOAuth;
 
@@ -63,7 +63,7 @@ if (isset($accessTokenObject->access_token)) {
     }
     $username = $response->data->username;
     $userTwitterID = $response->data->id;
-    $userBanned = CoreDB::checkIfUserIsBanned($userTwitterID);
+    $userBanned = UserDB::checkIfUserIsBanned($userTwitterID);
     if (is_null($userBanned)) {
         $location = Config::HOMEPAGE_URL . "failure";
         header("Location: $location", true, 302);
@@ -79,7 +79,7 @@ if (isset($accessTokenObject->access_token)) {
         exit();
     }
 
-    $success = CoreDB::insertOAuth2UserInformation($accessTokenObject, $userTwitterID);
+    $success = UserDB::insertOAuth2UserInformation($accessTokenObject, $userTwitterID);
     if ($success) {
         $_SESSION['usertwitterid'] = $userTwitterID;
         $_SESSION['artretweeterlogin'] = "true";
