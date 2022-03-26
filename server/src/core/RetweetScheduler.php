@@ -130,11 +130,11 @@ class RetweetScheduler {
     public static function scheduleAllUserArtistRetweets() {
         $now = date("Y-m-d H:i:s");
         $selectQuery = "SELECT * FROM users INNER JOIN userartistautomationsettings ON users.twitterid=userartistautomationsettings.usertwitterid "
-                . "WHERE automationenabled=? "
+                . "WHERE automationenabled=? AND locked=? "
                 . "AND (nextserverscheduledate IS NULL OR nextserverscheduledate <= ?)";
         $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
         try {
-            $selectStmt->execute(["Y", $now]);
+            $selectStmt->execute(["Y", "N", $now]);
         } catch (\PDOException $e) {
             self::$logger->critical("Failed to get all user artist automation settings: " . print_r($e, true));
             return false;
@@ -363,10 +363,10 @@ class RetweetScheduler {
 
     public static function scheduleAutomatedRetweets() {
         $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
-                . "WHERE automationenabled=?";
+                . "WHERE automationenabled=? AND locked=?";
         $stmt = CoreDB::getConnection()->prepare($query);
         try {
-            $stmt->execute(["Y"]);
+            $stmt->execute(["Y", "N"]);
         } catch (\PDOException $e) {
             self::$logger->error("Failed to acquire list of users to schedule automated retweets for, cannot continue: " . print_r($e, true));
             return;

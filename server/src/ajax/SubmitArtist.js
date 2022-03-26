@@ -1,4 +1,10 @@
-function submitArtist(usertwitterid) {
+function submitArtist(usertwitterid, autoretweetid) {
+    let autoretweet = document.getElementById(autoretweetid).checked;
+    if (autoretweet) {
+        autoretweet = "Y";
+    } else {
+        autoretweet = "N";
+    }
     let twitterhandle = document.getElementById("submitartistinput").value;
     if (!twitterhandle.match(/^@?[A-Za-z0-9_]{1,15}$/)) {
         var resulttext = "Invalid twitter handle. Twitter usernames are 1-15 characters (with or without the @).<br/><br/>";
@@ -42,7 +48,8 @@ function submitArtist(usertwitterid) {
             }
         }
     };
-    var params = 'artisttwitterhandle='.concat(twitterhandle).concat('&userid=').concat(usertwitterid).concat("&operation=submit");
+    var params = 'artisttwitterhandle='.concat(twitterhandle).concat('&userid=').concat(usertwitterid)
+            .concat("&autoretweetonapproval=").concat(autoretweet).concat("&operation=submit");
     xmlhttp.open("POST", "src/ajax/SubmitArtist.php", true);
     xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
     xmlhttp.send(params);

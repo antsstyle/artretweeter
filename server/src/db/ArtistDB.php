@@ -52,11 +52,22 @@ class ArtistDB {
             $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
             try {
                 $updateStmt->execute(["Y", $now, $artistScreenName]);
-                return "Submission approved successfully.";
             } catch (\PDOException $e) {
                 self::$logger->error("Failed to approve artist submission: " . print_r($e, true));
                 return "Failed to approve artist submission, check error log.";
             }
+            $selectQuery = "SELECT * FROM artistsubmissions WHERE screenname=? AND addtortlistonapproval=?";
+            $selectStmt = CoreDB::getConnection()->prepare($selectQuery);
+            try {
+                $selectStmt->execute([$artistScreenName, "Y"]);
+            } catch (\PDOException $e) {
+                self::$logger->error("Failed to get list of users to enable artist RTs for: " . print_r($e, true));
+                return "Artist submission approved but failed to enable RTs for users, check error log.";
+            }
+            while ($row = $selectStmt->fetch()) {
+                UserDB::updateArtistForUser($row['submittedbyusertwitterid'], $row['artisttwitterid'], "Enable");
+            }
+            return "Submission approved successfully.";
         } else {
             $now = date("Y-m-d H:i:s");
             $updateQuery = "UPDATE artistsubmissions SET status=?, datedecided=?, rejectionreason=? WHERE screenname=?";
@@ -71,7 +82,7 @@ class ArtistDB {
         }
     }
 
-    public static function submitArtistForApproval($userRow, $artistTwitterHandle) {
+    public static function submitArtistForApproval($userRow, $artistTwitterHandle, $autoRetweetOnApproval) {
         $userInfo = UserDB::getUserInfo($userRow['twitterid']);
         if (is_null($userInfo)) {
             return ["Your user information could not be found. Try logging in again or contact "
@@ -181,10 +192,10 @@ class ArtistDB {
                 . "<br/>Match type: $type Match content: $content", null];
         }
 
-        $insertQuery = "INSERT INTO artistsubmissions (screenname,submittedbyusertwitterid,artisttwitterid) VALUES (?,?,?)";
+        $insertQuery = "INSERT INTO artistsubmissions (screenname,submittedbyusertwitterid,artisttwitterid,addtortlistonapproval) VALUES (?,?,?,?)";
         $insertStmt = CoreDB::getConnection()->prepare($insertQuery);
         try {
-            $insertStmt->execute([$artistTwitterHandle, $userRow['twitterid'], $artistTwitterID]);
+            $insertStmt->execute([$artistTwitterHandle, $userRow['twitterid'], $artistTwitterID, $autoRetweetOnApproval]);
             return ["Artist submitted for approval successfully.", $artistTwitterID];
         } catch (\PDOException $e) {
             self::$logger->error("Failed to insert artist submission: " . print_r($e, true));

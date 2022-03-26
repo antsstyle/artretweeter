@@ -122,10 +122,10 @@ class TweetManager {
     public static function getAllNewTweetsForAllUsers() {
         $now = date("Y-m-d H:i:s");
         $query = "SELECT * FROM users INNER JOIN userautomationsettings ON users.twitterid=userautomationsettings.usertwitterid "
-                . "WHERE automationenabled=? AND (nextusertimelinecheck IS NULL OR nextusertimelinecheck <= ?)";
+                . "WHERE automationenabled=? AND locked=? AND (nextusertimelinecheck IS NULL OR nextusertimelinecheck <= ?)";
         $stmt = CoreDB::getConnection()->prepare($query);
         try {
-            $stmt->execute(["Y", $now]);
+            $stmt->execute(["Y", "N", $now]);
         } catch (\PDOException $e) {
             self::$logger->error("Failed to acquire list of users to schedule automated retweets for: " . print_r($e, true));
             return false;
@@ -345,7 +345,9 @@ class TweetManager {
         while ($row = $selectStmt->fetch()) {
             $totalRemovedTweetCount += self::revalidateScheduledRetweetsForUser($row);
         }
-        self::$logger->info("Removed $totalRemovedTweetCount invalid tweets from scheduled retweets.");
+        if ($totalRemovedTweetCount > 0) {
+            self::$logger->info("Removed $totalRemovedTweetCount invalid tweets from scheduled retweets.");
+        }
     }
 
     public static function revalidateScheduledRetweetsForUser($userRow) {
@@ -387,7 +389,7 @@ class TweetManager {
                         $updateStmt->execute($validatedTweets);
                     } catch (\PDOException $e) {
                         self::$logger->error("Failed to update verification status for scheduled retweets: " . print_r($e, true)
-                                 . " Validated tweets array: " . print_r($validatedTweets, true));
+                                . " Validated tweets array: " . print_r($validatedTweets, true));
                         return false;
                     }
                 }

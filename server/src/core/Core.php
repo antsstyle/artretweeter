@@ -42,6 +42,10 @@ class Core {
             }
             $twitterResponseStatus->setMessage($message);
             $twitterResponseStatus->setTwitterCode($requestBody->status);
+            if ($httpCode == 401 && !is_null($userTwitterID)) {
+                self::$logger->error("User twitter ID $userTwitterID returned 401 error - deleting from ArtRetweeter.");
+                UserDB::lockUser($userTwitterID, "Unauthorised", date("Y-m-d H:i:s", strtotime("+1 week")));
+            }
         } else {
             $twitterResponseStatus->setTwitterCode(TwitterResponseStatus::ARTRETWEETER_QUERY_OK);
         }

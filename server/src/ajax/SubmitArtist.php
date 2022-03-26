@@ -41,18 +41,29 @@ class SubmitArtist {
             return;
         }
 
+        $autoRetweetOnApproval = htmlspecialchars($_POST['autoretweetonapproval']);
+        if ($autoRetweetOnApproval !== "Y" && $autoRetweetOnApproval !== "N" && $operation !== "cancel") {
+            echo "Invalid auto retweet on approval setting.";
+            return;
+        }
+
         $operation = htmlspecialchars($_POST['operation']);
-        if ($operation === "cancel") {
-            $result = ArtistDB::cancelArtistSubmission($userInfo, $artistTwitterHandle);
-        } else if ($operation === "submit") {
-            $result = json_encode(ArtistDB::submitArtistForApproval($userInfo, $artistTwitterHandle));
-        } else {
+
+        if ($operation !== "cancel" && $operation !== "submit") {
             echo "Invalid operation";
             return;
         }
 
+
+        if ($operation === "cancel") {
+            $result = ArtistDB::cancelArtistSubmission($userInfo, $artistTwitterHandle);
+        } else {
+            $result = json_encode(ArtistDB::submitArtistForApproval($userInfo, $artistTwitterHandle, $autoRetweetOnApproval));
+        }
+
         echo $result;
     }
+
 }
 
 SubmitArtist::processAjax();

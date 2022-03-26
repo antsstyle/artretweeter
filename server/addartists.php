@@ -17,9 +17,9 @@ if (is_null($pageNum) || $pageNum === false) {
     $pageNum = 1;
 }
 
-$pageCount = UserDB::getUserArtistRetweetSettingsCount($userTwitterID);
+$artistCount = UserDB::getUserArtistRetweetSettingsCount($userTwitterID);
 
-$pageCount = ceil($pageCount / 15);
+$pageCount = ceil($artistCount / 10);
 if ($pageNum > $pageCount) {
     $pageNum = $pageCount;
 }

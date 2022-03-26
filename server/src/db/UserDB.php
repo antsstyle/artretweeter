@@ -14,6 +14,31 @@ class UserDB {
 
     private static $logger;
 
+    public static function lockUser($userTwitterID, $lockReason, $deletionDate = null) {
+        if (is_null($lockReason) || !is_string($lockReason) || $lockReason === "") {
+            self::$logger->critical("Attempting to lock user twitter ID $userTwitterID with invalid lock reason - aborting lock.");
+            return false;
+        }
+        if ($lockReason === "Unauthorised" && is_null($deletionDate)) {
+            self::$logger->critical("Attempting to lock user twitter ID $userTwitterID for unauthorised token, but deletion date is null - aborting lock.");
+            return false;
+        }
+        $updateStmt = CoreDB::getConnection()->prepare("UPDATE users SET locked=?, deletiondate=?, lockreason=? WHERE twitterid=?");
+        try {
+            $updateStmt->execute(["Y", $deletionDate, $lockReason, $userTwitterID]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Unable to lock user twitter ID $userTwitterID, could not update users table: " . print_r($e, true));
+            return false;
+        }
+        $deleteStmt = CoreDB::getConnection()->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=?");
+        try {
+            $deleteStmt->execute([$userTwitterID]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Unable to lock user twitter ID $userTwitterID, could not delete scheduled retweets: " . print_r($e, true));
+            return false;
+        }
+    }
+
     public static function deleteUser($userTwitterID) {
         $deleteStmt = CoreDB::getConnection()->prepare("DELETE FROM scheduledretweets WHERE retweetingusertwitterid=?");
         try {
@@ -107,13 +132,17 @@ class UserDB {
         return null;
     }
 
-    public static function getUserArtistRetweetSettings($userTwitterID, $pageNum = 1) {
+    public static function getUserArtistRetweetSettings($userTwitterID, $pageNum = 1, $pageCount = 10) {
         if (!is_numeric($pageNum)) {
             $pageNum = 1;
         }
+        if (!is_numeric($pageCount)) {
+            $pageCount = 10;
+        }
         $offSet = ($pageNum - 1) * 15;
         $stmt = CoreDB::getConnection()->prepare("SELECT * FROM userartistretweetsettings INNER JOIN artists ON "
-                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? ORDER BY screenname ASC LIMIT 15 OFFSET $offSet");
+                . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? "
+                . "ORDER BY screenname ASC LIMIT $pageCount OFFSET $offSet");
         try {
             $stmt->execute([$userTwitterID]);
         } catch (\PDOException $e) {
@@ -216,21 +245,21 @@ class UserDB {
         }
 
         if ($selectStmt->fetchColumn() !== false) {
-            $insertQuery = "UPDATE users SET accesstoken2=?, refreshtoken=?, oauthtype=?, scope=?, expirydate=? WHERE twitterid=?";
+            $insertQuery = "UPDATE users SET accesstoken2=?, refreshtoken=?, oauthtype=?, scope=?, expirydate=?, locked=? WHERE twitterid=?";
             try {
                 CoreDB::getConnection()->prepare($insertQuery)
                         ->execute([$accessTokenObject->access_token, $accessTokenObject->refresh_token,
-                            "2.0", $accessTokenObject->scope, $expiryDate, $userTwitterID]);
+                            "2.0", $accessTokenObject->scope, $expiryDate, "N", $userTwitterID]);
             } catch (\PDOException $e) {
                 self::$logger->critical("Failed to update user row with OAuth2 credentials: " . print_r($e, true));
                 return false;
             }
         } else {
-            $insertQuery = "INSERT INTO users (twitterid,accesstoken2,refreshtoken,oauthtype,scope,expirydate) VALUES (?,?,?,?,?,?)";
+            $insertQuery = "INSERT INTO users (twitterid,accesstoken2,refreshtoken,oauthtype,scope,expirydate,locked) VALUES (?,?,?,?,?,?,?)";
             try {
                 CoreDB::getConnection()->prepare($insertQuery)
                         ->execute([$userTwitterID, $accessTokenObject->access_token, $accessTokenObject->refresh_token,
-                            "2.0", $accessTokenObject->scope, $expiryDate]);
+                            "2.0", $accessTokenObject->scope, $expiryDate, "N"]);
             } catch (\PDOException $e) {
                 self::$logger->critical("Failed to insert user row with OAuth2 credentials: " . print_r($e, true));
                 return false;

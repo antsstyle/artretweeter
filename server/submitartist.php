@@ -66,9 +66,12 @@ $pendingArtistSubmissions = UserDB::getPendingArtistSubmissionsForUser($userTwit
             To submit a user to be added to ArtRetweeter, use the simple form below. You can have up to <?php echo $maxPendingSubmissions;?> 
             pending submissions at any one time.
             </br><br/>
+            <label for="submitartistenablertonapproval"> Enable retweets for this artist automatically when they're approved </label>
+            <input type="checkbox" id="submitartistenablertonapproval" name="submitartistenablertonapproval" 
+                   value="submitartistenablertonapproval">
             <input type="text" style="width:250px" id="submitartistinput" placeholder="Enter artist's twitter handle here.">
             <button type="button" id="submitartistbutton" 
-                    onclick="submitArtist('<?php echo $userTwitterID; ?>')">Submit</button>
+                    onclick="submitArtist('<?php echo $userTwitterID; ?>', 'submitartistenablertonapproval')">Submit</button>
             <br/><br/>
             <div id="submitartisttextdiv">
 
