@@ -2,10 +2,6 @@ button.settingsswitchbutton {
     display:inline-block;
 }
 
-div.center {
-    text-align: center;
-}
-
 div.errormsg {
     padding-top: 3px;
     padding-bottom: 3px;

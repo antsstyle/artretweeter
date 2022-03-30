@@ -11,6 +11,7 @@ require $dir . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\LogManager;
 use Antsstyle\ArtRetweeter\DB\AutomationDB;
+use Antsstyle\ArtRetweeter\DB\UserDB;
 
 class Ajax {
 
@@ -34,6 +35,14 @@ class Ajax {
 
 
         switch ($request) {
+            case "switchviewmodes":
+                $viewMode = htmlspecialchars($_POST['viewmode']);
+                if ($viewMode === "") {
+                    break;
+                }
+                UserDB::updateUserAddArtistsViewMode($userTwitterID, $viewMode);
+                echo "Success";
+                break;
             case "usernonartistautomationsettings":
                 $automationSettings = AutomationDB::getNonArtistAutomationSettings($userTwitterID);
                 if (!$automationSettings) {

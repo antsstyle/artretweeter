@@ -17,7 +17,7 @@ function swapRows(row1, row2) {
 }
 
 function checkTableSorted(n, tableID) {
-    table = document.getElementById(tableID);
+    let table = document.getElementById(tableID);
     let rows = table.rows;
     let sortedAsc = true;
     for (let i = 1; i < rows.length - 1; i++) {
@@ -32,7 +32,7 @@ function checkTableSorted(n, tableID) {
 }
 
 function sortTable(n, tableID) {
-    table = document.getElementById(tableID);
+    let table = document.getElementById(tableID);
     if (checkTableSorted(n, tableID)) {
         quickSort(table.rows, 1, table.rows.length - 1, n, true);
     } else {
@@ -77,4 +77,68 @@ function quickSort(arr, start, end, n, descorder) {
         quickSort(arr, index + 1, end, n, descorder);
     }
 
+}
+
+// Assumes table is in ascending order
+function findRowAndColumnForTwitterHandle(tableID, comparisonCell, maxColumns) {
+    let table = document.getElementById(tableID);
+    let rows = table.rows;
+    for (var i = 0; i < rows.length; i++) {
+        let columnCount = rows[i].getElementsByTagName("TD").length;
+        for (var j = 0; j < columnCount; j++) {
+            let cellHTML = rows[i].getElementsByTagName("TD")[j].innerHTML;
+            if (comparisonCell.toLowerCase() <= cellHTML.toLowerCase()) {
+                return [i, j];
+            }
+        }
+    }
+    if (j === maxColumns) {
+        return [i, 0];
+    } else {
+        return [i - 1, j];
+    }
+
+}
+
+function insertIntoTable(newRowIndex, newColumnIndex, newElement, tableID, maxColumns) {
+    let table = document.getElementById(tableID);
+    let rows = table.rows;
+    let rowsLength = rows.length;
+    let oldRow = rows[newRowIndex];
+    if (newRowIndex === rows.length - 1 && rows[rowsLength - 1].getElementsByTagName("TD").length < maxColumns
+            && newColumnIndex >= rows[rowsLength - 1].getElementsByTagName("TD").length) {
+        let cell = oldRow.insertCell();
+        cell.innerHTML = newElement;
+        return;
+    } else if (newRowIndex >= rows.length) {
+        let row = table.insertRow();
+        let cell = row.insertCell();
+        cell.innerHTML = newElement;
+        return;
+    }
+    var nextValue = oldRow.getElementsByTagName("TD")[newColumnIndex].innerHTML;
+    for (let i = newColumnIndex; i < oldRow.getElementsByTagName("TD").length - 1; i++) {
+        let temp = oldRow.getElementsByTagName("TD")[i + 1].innerHTML;
+        oldRow.getElementsByTagName("TD")[i + 1].innerHTML = nextValue;
+        nextValue = temp;
+    }
+    oldRow.getElementsByTagName("TD")[newColumnIndex].innerHTML = newElement;
+    for (let i = newRowIndex + 1; i < rowsLength; i++) {
+        let currentRow = rows[i];
+        let currentRowLength = currentRow.getElementsByTagName("TD").length;
+        for (let j = 0; j < currentRowLength; j++) {
+            let temp = currentRow.getElementsByTagName("TD")[j].innerHTML;
+            currentRow.getElementsByTagName("TD")[j].innerHTML = nextValue;
+            nextValue = temp;
+        }
+    }
+    let lastRow = rows[rowsLength - 1];
+    if (lastRow.getElementsByTagName("TD").length === maxColumns) {
+        let row = table.insertRow();
+        let cell = row.insertCell();
+        cell.innerHTML = nextValue;
+    } else {
+        let cell = lastRow.insertCell();
+        cell.innerHTML = nextValue;
+    }
 }

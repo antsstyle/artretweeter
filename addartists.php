@@ -4,6 +4,9 @@ require __DIR__ . '/vendor/autoload.php';
 use Antsstyle\ArtRetweeter\Core\Session;
 use Antsstyle\ArtRetweeter\Core\Config;
 use Antsstyle\ArtRetweeter\DB\UserDB;
+use Antsstyle\ArtRetweeter\Core\LogManager;
+
+$logger = LogManager::getLogger("addartists");
 
 Session::checkSession();
 Session::validateUserLoggedIn();
@@ -17,20 +20,48 @@ if (is_null($pageNum) || $pageNum === false) {
     $pageNum = 1;
 }
 
+$viewMode = "Normal";
+
+$userArtistAutomationSettings = UserDB::getUserArtistAutomationSettings($userTwitterID);
+if (is_null($userArtistAutomationSettings)) {
+    $logger->critical("Failed to retrieve user artist automation settings from DB for user twitter ID $userTwitterID");
+} else if ($userArtistAutomationSettings !== false) {
+    $viewMode = $userArtistAutomationSettings['addartistsview'];
+}
+
+$pageURL = Config::HOMEPAGE_URL . "addartists";
+
 $artistCount = UserDB::getUserArtistRetweetSettingsCount($userTwitterID);
 
-$pageCount = ceil($artistCount / 10);
-if ($pageNum > $pageCount) {
-    $pageNum = $pageCount;
-}
-if ($pageNum < 1) {
-    $pageNum = 1;
-}
+$compactViewModeMaxColumns = 5;
 
-$userArtistRetweetSettings = UserDB::getUserArtistRetweetSettings($userTwitterID, $pageNum);
+if ($viewMode === "Normal") {
+    $pageCount = ceil($artistCount / 10);
+    if ($pageNum > $pageCount) {
+        $pageNum = $pageCount;
+    }
+    if ($pageNum < 1) {
+        $pageNum = 1;
+    }
 
-$nextPage = $pageNum + 1;
-$prevPage = $pageNum - 1;
+    $userArtistRetweetSettings = UserDB::getUserArtistRetweetSettings($userTwitterID, $pageNum);
+
+    $nextPage = $pageNum + 1;
+    $prevPage = $pageNum - 1;
+} else {
+    $pageCount = ceil($artistCount / 75);
+    if ($pageNum > $pageCount) {
+        $pageNum = $pageCount;
+    }
+    if ($pageNum < 1) {
+        $pageNum = 1;
+    }
+
+    $userArtistRetweetSettings = UserDB::getUserArtistRetweetSettings($userTwitterID, $pageNum, 75);
+
+    $nextPage = $pageNum + 1;
+    $prevPage = $pageNum - 1;
+}
 ?>
 
 
@@ -38,7 +69,7 @@ $prevPage = $pageNum - 1;
     <script src="src/ajax/Tables.js"></script>
     <script src="src/ajax/SearchArtists.js"></script>
     <head>
-        
+
         <link rel="stylesheet" href="src/css/artretweeter.css" type="text/css">
         <link rel="stylesheet" href=<?php echo Config::WEBSITE_STYLE_DIRECTORY . "main.css"; ?> type="text/css">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,8 +92,26 @@ $prevPage = $pageNum - 1;
             } else if (count($userArtistRetweetSettings) === 0) {
                 echo "You are not retweeting any artists via this app yet.";
             } else {
-                echo "This page shows the artists you are automatically retweeting, in alphabetical order. "
-                . "<br/><br/>This is page $pageNum of $pageCount.<br/><br/>";
+                echo "This page shows the artists you are automatically retweeting, in alphabetical order. ";
+                if ($userArtistAutomationSettings === false) {
+                    echo "<br/><br/><div class=\"error\">Note that you have not yet enabled automated retweeting in your "
+                    . "<a href=\"" . Config::NONARTISTSETTINGSPAGE_URL . "\">non-artist settings</a>. "
+                    . "You can add artists here, but ArtRetweeter will not retweet them for you until you enable it.</div>";
+                }
+                echo "<br/><br/><div class=\"center\">";
+                if ($viewMode === "Normal") {
+                    echo "<button class=\"settingsswitchbutton\" type=\"button\" 
+                        onclick=\"switchViewModes('Normal', $userTwitterID, '$pageURL');\" disabled>Normal View</button>";
+                    echo "<button class=\"settingsswitchbutton\" type=\"button\" 
+                        onclick=\"switchViewModes('Compact', $userTwitterID, '$pageURL');\">Compact View</button>";
+                } else {
+                    echo "<button class=\"settingsswitchbutton\" type=\"button\" 
+                        onclick=\"switchViewModes('Normal', $userTwitterID, '$pageURL');\">Normal View</button>";
+                    echo "<button class=\"settingsswitchbutton\" type=\"button\" 
+                        onclick=\"switchViewModes('Compact', $userTwitterID, '$pageURL');\" disabled>Compact View</button>";
+                }
+                echo "</div>";
+                echo "<br/><br/>This is page $pageNum of $pageCount.<br/><br/>";
             }
 
             if ($prevPage >= 1) {
@@ -89,30 +138,50 @@ $prevPage = $pageNum - 1;
 
             </div>
             <div id="userartistsdiv">
-                <table id="userartiststable" class="dblisttable">
-                    <tr>
-                        <th onclick="sortTable(0, 'userartiststable')">Twitter Handle</th>
-                        <th>Remove</th>
-                    </tr>
-                    <?php
-                    if (!is_null($userArtistRetweetSettings) && count($userArtistRetweetSettings) > 0) {
+                <?php
+                if (!is_null($userArtistRetweetSettings) && count($userArtistRetweetSettings) > 0) {
+                    if ($viewMode === "Normal") {
+                        echo "<table id=\"userartiststable\" class=\"dblisttable\">"
+                        . "<tr>"
+                        . "<th onclick=\"sortTable(0, 'userartiststable')\">Twitter Handle</th>"
+                        . "<th>Remove</th>"
+                        . "</tr>";
                         $i = 0;
                         foreach ($userArtistRetweetSettings as $userArtistRetweetSettings) {
                             $screenName = $userArtistRetweetSettings['screenname'];
+                            $twitterHandle = "@" . $screenName;
                             $artistID = $userArtistRetweetSettings['artisttwitterid'];
                             $twitterLink = "<a href=\"https://twitter.com/" . $screenName . "\" target=\"_blank\"> "
-                                    . "@" . $screenName . "</a>";
+                                    . $twitterHandle . "</a>";
                             echo "<tr>";
                             echo "<td>" . $twitterLink . "</td>";
                             $removeButton = "<button id=\"removebutton$i\" type=\"button\" onclick=\"addArtistForUser('$userTwitterID', '$artistID'"
-                                    . ", 'removebutton$i', 'Disable', 'Remove')\">Remove</button>";
+                                    . ", '$twitterHandle', 'removebutton$i', 'Disable', 'Remove', '$viewMode', "
+                                    . "$compactViewModeMaxColumns)\">Remove</button>";
                             echo "<td id=\"userartiststablerow$i\">$removeButton</td>";
                             echo "</tr>";
                             $i++;
                         }
+                    } else {
+                        echo "<table id=\"userartiststable\" class=\"dblisttable\">";
+                        $i = 0;
+                        foreach ($userArtistRetweetSettings as $userArtistRetweetSettings) {
+                            $screenName = $userArtistRetweetSettings['screenname'];
+                            $twitterLink = "<a href=\"https://twitter.com/" . $screenName . "\" target=\"_blank\"> "
+                                    . "@" . $screenName . "</a>";
+                            if ($i % $compactViewModeMaxColumns === 0) {
+                                echo "<tr>";
+                            }
+                            echo "<td>" . $twitterLink . "</td>";
+                            $i++;
+                            if ($i % $compactViewModeMaxColumns === 0) {
+                                echo "</tr>";
+                            }
+                        }
                     }
-                    ?>
-                </table>
+                    echo "</table>";
+                }
+                ?>
             </div>
 
             <br/><br/>
@@ -125,7 +194,8 @@ $prevPage = $pageNum - 1;
             </p>
             <input type="text" id="dbsearch" placeholder="Search by twitter handle...">
             <button type="button" id="searchbutton" 
-                    onclick="artistsSearch('dbsearch', '<?php echo $_SESSION['usertwitterid']; ?>')">Search</button>
+                    onclick="artistsSearch('dbsearch', '<?php echo $_SESSION['usertwitterid']; ?>',
+                                    '<?php echo $viewMode ?>', <?php echo $compactViewModeMaxColumns ?>)">Search</button>
             <br/><br/>
             <div id="searchresultstextdiv">
 

@@ -14,6 +14,18 @@ class UserDB {
 
     private static $logger;
 
+    public static function updateUserAddArtistsViewMode($userTwitterID, $viewMode) {
+        $updateQuery = "UPDATE userartistautomationsettings SET addartistsview=? WHERE usertwitterid=?";
+        $updateStmt = CoreDB::getConnection()->prepare($updateQuery);
+        try {
+            $updateStmt->execute([$viewMode, $userTwitterID]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Unable to update add artists view mode for user twitter ID $userTwitterID" . print_r($e, true));
+            return false;
+        }
+        return true;
+    }
+
     public static function lockUser($userTwitterID, $lockReason, $deletionDate = null) {
         if (is_null($lockReason) || !is_string($lockReason) || $lockReason === "") {
             self::$logger->critical("Attempting to lock user twitter ID $userTwitterID with invalid lock reason - aborting lock.");
@@ -132,6 +144,18 @@ class UserDB {
         return null;
     }
 
+    public static function getUserArtistAutomationSettings($userTwitterID) {
+        $selectStmt = CoreDB::getConnection()->prepare("SELECT * FROM userartistautomationsettings WHERE usertwitterid=?");
+        try {
+            $selectStmt->execute([$userTwitterID]);
+        } catch (\PDOException $e) {
+            self::$logger->error("Failed to get user artist automation settings for user twitter ID $userTwitterID: " . print_r($e, true));
+            return null;
+        }
+
+        return $selectStmt->fetch();
+    }
+
     public static function getUserArtistRetweetSettings($userTwitterID, $pageNum = 1, $pageCount = 10) {
         if (!is_numeric($pageNum)) {
             $pageNum = 1;
@@ -139,7 +163,7 @@ class UserDB {
         if (!is_numeric($pageCount)) {
             $pageCount = 10;
         }
-        $offSet = ($pageNum - 1) * 15;
+        $offSet = ($pageNum - 1) * $pageCount;
         $stmt = CoreDB::getConnection()->prepare("SELECT * FROM userartistretweetsettings INNER JOIN artists ON "
                 . "userartistretweetsettings.artisttwitterid=artists.twitterid WHERE usertwitterid=? "
                 . "ORDER BY screenname ASC LIMIT $pageCount OFFSET $offSet");

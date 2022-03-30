@@ -240,6 +240,10 @@ class TweetManager {
             self::$logger->error("Failed to update artist tweet parameters: " . print_r($e, true));
             return false;
         }
+        $rowCount = $stmt->rowCount();
+        if ($rowCount === 0) {
+            self::$logger->critical("Did not update artist row for twitter ID " . $artistRow['twitterid'] . " correctly - investigate immediately");
+        }
         return true;
     }
 
@@ -253,17 +257,18 @@ class TweetManager {
         $queryCount = 0;
         $reachedEnd = false;
 
-        if ($userRow['oldtweetlimitretrieved'] == "Y") {
-            if ($userRow['sinceid'] != null) {
+        if ($userRow['oldtweetlimitretrieved'] === "Y") {
+            if (!is_null($userRow['sinceid'])) {
                 $params['since_id'] = $userRow['sinceid'];
             }
         } else {
-            if ($userRow['maxid'] != null) {
+            if (!is_null($userRow['maxid'])) {
                 $params['until_id'] = $userRow['maxid'];
             }
         }
         $newestID = null;
         $oldestID = null;
+        $firstIDChecked = null;
         $totalResultCount = 0;
         while ($resultCount != 0 && !$reachedEnd) {
             $endpoint = "users/" . $userRow['usertwitterid'] . "/tweets";
@@ -289,10 +294,13 @@ class TweetManager {
                     if (isset($meta->newest_id) && !is_null($meta->newest_id)) {
                         $newestID = $meta->newest_id;
                     }
+                    if (is_null($firstIDChecked) && isset($meta->newest_id) && $userRow['oldtweetlimitretrieved'] === "N" && is_null($userRow['maxid'])) {
+                        $firstIDChecked = $meta->newest_id;
+                    }
                     if ($userRow['oldtweetlimitretrieved'] == "N") {
-                        $params['until_id'] = $meta->oldest_id - 1;
+                        $params['until_id'] = $oldestID - 1;
                     } else {
-                        $params['since_id'] = $meta->newest_id;
+                        $params['since_id'] = $newestID;
                     }
                 }
             } else {
@@ -308,6 +316,7 @@ class TweetManager {
         $nextCheck = date("Y-m-d H:i:s", strtotime("+$numHoursToNextCheck hours"));
         $query = "UPDATE users SET nextusertimelinecheck=? ";
         $updParams[] = $nextCheck;
+        $sinceIDUpdate = false;
         if ($reachedEnd && !is_null($params['until_id'])) {
             $query .= ",oldtweetlimitretrieved=?, maxid=? ";
             array_push($updParams, "Y", $oldestID);
@@ -317,17 +326,28 @@ class TweetManager {
         } else if (!is_null($newestID)) {
             $query .= ",sinceid=? ";
             $updParams[] = $newestID;
+            $sinceIDUpdate = true;
         }
-        $query .= "WHERE twitterid=? AND accesstoken=? AND accesstokensecret=?";
-        array_push($updParams, $userRow['twitterid'],
-                $userRow['accesstoken'], $userRow['accesstokensecret']);
-
+        if (!is_null($firstIDChecked) && $userRow['oldtweetlimitretrieved'] === "N" && is_null($userRow['maxid'])) {
+            if ($sinceIDUpdate === true) {
+                self::$logger->error("Trying to update first since_id when it's already set! User row: " . print_r($userRow, true));
+            } else {
+                $query .= ",sinceid=? ";
+                $updParams[] = $firstIDChecked;
+            }
+        }
+        $query .= "WHERE twitterid=?";
+        array_push($updParams, $userRow['twitterid']);
         $stmt = CoreDB::getConnection()->prepare($query);
         try {
             $stmt->execute($updParams);
         } catch (\PDOException $e) {
             self::$logger->error("Failed to update user tweet parameters: " . print_r($e, true));
             return false;
+        }
+        $rowCount = $stmt->rowCount();
+        if ($rowCount === 0) {
+            self::$logger->critical("Did not update user row for twitter ID " . $userRow['twitterid'] . " correctly - investigate immediately");
         }
         return true;
     }
