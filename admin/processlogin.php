@@ -40,7 +40,6 @@ if ($adminInfo['failedloginattempts'] >= 5) {
     exit();
 }
 
-$passwordHash = password_hash($password, PASSWORD_DEFAULT);
 if (password_verify($password, $adminInfo['passwordhash'])) {
     error_log("Password verified.");
     $_SESSION['adminlogin'] = true;
