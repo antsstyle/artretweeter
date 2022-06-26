@@ -8,12 +8,6 @@ use Antsstyle\ArtRetweeter\DB\AutomationDB;
 Session::checkSession();
 Session::validateUserLoggedIn();
 
-if (!$_SESSION['oauth_token']) {
-    $errorURL = Config::HOMEPAGE_URL . "error";
-    header("Location: $errorURL", true, 302);
-    exit();
-}
-
 $nonArtistUserAutomationSettings = AutomationDB::getNonArtistAutomationSettings($_SESSION['usertwitterid']);
 $showWarning = "N";
 if (!is_null($nonArtistUserAutomationSettings) && $nonArtistUserAutomationSettings !== false) {

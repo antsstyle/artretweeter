@@ -269,7 +269,8 @@ class UserDB {
         }
 
         if ($selectStmt->fetchColumn() !== false) {
-            $insertQuery = "UPDATE users SET accesstoken2=?, refreshtoken=?, oauthtype=?, scope=?, expirydate=?, locked=? WHERE twitterid=?";
+            $insertQuery = "UPDATE users SET accesstoken2=?, refreshtoken=?, oauthtype=?, scope=?, expirydate=?, locked=?,"
+                    . "lockreason=NULL,deletiondate=NULL WHERE twitterid=?";
             try {
                 CoreDB::getConnection()->prepare($insertQuery)
                         ->execute([$accessTokenObject->access_token, $accessTokenObject->refresh_token,

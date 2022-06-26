@@ -2,14 +2,11 @@
 
 namespace Antsstyle\ArtRetweeter\Core;
 
-use Antsstyle\ArtRetweeter\Core\CachedVariables;
-use Antsstyle\ArtRetweeter\DB\CoreDB;
-use Antsstyle\ArtRetweeter\Core\Users;
-use Antsstyle\ArtRetweeter\Credentials\EmailCredentials;
 use Antsstyle\ArtRetweeter\Core\LogManager;
+use Antsstyle\ArtRetweeter\Credentials\EmailCredentials;
 use PHPMailer\PHPMailer\PHPMailer;
 
-class Reports {
+class EmailManager {
 
     private static $logger;
 
@@ -17,22 +14,10 @@ class Reports {
         self::$logger = LogManager::getLogger(self::class);
     }
 
-    public static function generateUserEligibleTweetsReport() {
-        
-    }
-
-    public static function generateArtistEligibleTweetsReport() {
-        
-    }
-
-    public static function generateUserArtistEligibleTweetsReport() {
-        
-    }
-
-    public static function sendReportEmail($subject, $body) {
+    public static function getMailer() {
         $mail = new PHPMailer;
         $mail->isSMTP();
-        $mail->SMTPDebug = 3;
+        $mail->SMTPDebug = 0;
         $mail->Host = EmailCredentials::OUTGOING_SERVER;
         $mail->Port = EmailCredentials::SMTP_OUTGOING_PORT;
         $mail->SMTPAuth = true;
@@ -41,9 +26,21 @@ class Reports {
         $mail->Password = EmailCredentials::ADMIN_EMAIL_PASSWORD;
         $mail->setFrom(EmailCredentials::ADMIN_EMAIL_USERNAME, EmailCredentials::ADMIN_FROM_NAME);
         $mail->addReplyTo(EmailCredentials::ADMIN_EMAIL_USERNAME, EmailCredentials::ADMIN_REPLY_TO_NAME);
+        return $mail;
+    }
+
+    public static function sendPendingArtistSubmissionsEmail($pendingSubmissionsCount) {
+        $mail = self::getMailer();
         $mail->addAddress(EmailCredentials::REPORT_RECEIVER_EMAIL_ADDRESS, 'Receiver Name');
-        $mail->Subject = $subject;
-        $mail->Body = $body;
+        if (!is_null($pendingSubmissionsCount)) {
+            $mail->Subject = "ArtRetweeter: $pendingSubmissionsCount artist submissions awaiting approval";
+            $mail->Body = "<html>You have $pendingSubmissionsCount awaiting approval. Log into "
+                    . "<a href=\"https://antsstyle.com/artretweeter/admin/login\">https://antsstyle.com/artretweeter/admin/login</a> to decide on them.</html>";
+        } else {
+            $mail->Subject = "ArtRetweeter: Error determining pending artist submissions count";
+            $mail->Body = "ArtRetweeter was unable to determine how many artist submissions are pending approval.";
+        }
+
         if (!$mail->send()) {
             self::$logger->error('Mailer Error: ' . $mail->ErrorInfo);
         } else {
@@ -53,4 +50,4 @@ class Reports {
 
 }
 
-Reports::initialiseLogger();
+EmailManager::initialiseLogger();

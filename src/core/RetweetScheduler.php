@@ -203,7 +203,7 @@ class RetweetScheduler {
         $eligibleTweetsResults = [];
         $cacheArray = [];
         foreach ($rows as $row) {
-            $resp = self::getUserArtistEligibleTweets($userRow['usertwitterid'], $row, $nonArtistRTThreshold);
+            $resp = self::getUserArtistEligibleTweets($userRow, $row, $nonArtistRTThreshold);
             $tweetRows = $resp[0];
             $eligibleTweetsResults[$row['twitterid']] = count($tweetRows);
             $obj = new \stdClass();
@@ -460,15 +460,15 @@ class RetweetScheduler {
                 $selectMeanStatsParams[] = "%" . $settingsRow['excludetext'] . "%";
             } else {
                 $excludedWords = explode(" ", $settingsRow['excludetext']);
-                $selectMeanStatsQuery .= " AND (";
+                $selectMeanStatsQuery .= " AND !(";
                 foreach ($excludedWords as $excludedWord) {
                     if ($excludedWord == "") {
                         continue;
                     }
                     if ($settingsRow['excludetextcondition'] === "All of these words") {
-                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? AND ";
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
                     } else {
-                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? OR ";
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
                     }
                     $selectMeanStatsParams[] = "%" . $excludedWord . "%";
                 }
@@ -608,12 +608,24 @@ class RetweetScheduler {
         return true;
     }
 
-    public static function getUserArtistEligibleTweets($userTwitterID, $artistRow, $nonArtistRTThreshold) {
+    public static function getUserArtistEligibleTweets($userRow, $artistRow, $nonArtistRTThreshold) {
+        $userTwitterID = $userRow['usertwitterid'];
         $selectMeanStatsQuery = "SELECT AVG(retweets) AS avgrts, UNIX_TIMESTAMP(MAX(createdat)) AS maxcr, UNIX_TIMESTAMP(MIN(createdat)) AS mincr "
                 . "FROM tweets INNER JOIN tweetmetrics ON tweets.tweetid=tweetmetrics.tweetid WHERE usertwitterid=?";
         $selectMeanStatsParams[] = $artistRow['twitterid'];
 
-        $oldTweetsCutoffDate = date("Y-m-d H:i:s", strtotime("-5 years"));
+        if (is_null($userRow['oldtweetcutoffdate']) && is_null($artistRow['oldtweetcutoffdate'])) {
+            $oldTweetsCutoffDate = date("Y-m-d H:i:s", strtotime("-5 years"));
+        } else if (!is_null($userRow['oldtweetcutoffdate'])) {
+            $oldTweetsCutoffDate = $userRow['oldtweetcutoffdate'];
+        } else if (!is_null($artistRow['oldtweetcutoffdate'])) {
+            $oldTweetsCutoffDate = $artistRow['oldtweetcutoffdate'];
+        } else if (strtotime($userRow['oldtweetcutoffdate']) > strtotime($artistRow['oldtweetcutoffdate'])) {
+            $oldTweetsCutoffDate = $userRow['oldtweetcutoffdate'];
+        } else {
+            $oldTweetsCutoffDate = $artistRow['oldtweetcutoffdate'];
+        }
+
         $selectMeanStatsQuery .= " AND createdat >= ?";
         $selectMeanStatsParams[] = $oldTweetsCutoffDate;
         if ($artistRow['includetextenabled'] === 'Y' && !is_null($artistRow['includetext'])) {
@@ -648,15 +660,15 @@ class RetweetScheduler {
                 $selectMeanStatsParams[] = "%" . $artistRow['excludetext'] . "%";
             } else {
                 $excludedWords = explode(" ", $artistRow['excludetext']);
-                $selectMeanStatsQuery .= " AND (";
+                $selectMeanStatsQuery .= " AND !(";
                 foreach ($excludedWords as $excludedWord) {
                     if ($excludedWord == "") {
                         continue;
                     }
                     if ($artistRow['excludetextcondition'] === "All of these words") {
-                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? AND ";
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
                     } else {
-                        $selectMeanStatsQuery .= "fulltweettext NOT LIKE ? OR ";
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
                     }
                     $selectMeanStatsParams[] = "%" . $excludedWord . "%";
                 }
@@ -668,11 +680,66 @@ class RetweetScheduler {
                 $selectMeanStatsQuery .= ")";
             }
         }
+
+        if ($userRow['includetextenabled'] === 'Y' && !is_null($userRow['includetext'])) {
+            if ($userRow['includetextcondition'] === "This exact phrase") {
+                $selectMeanStatsQuery .= " AND fulltweettext LIKE ?";
+                $selectMeanStatsParams[] = "%" . $userRow['includetext'] . "%";
+            } else {
+                $includedWords = explode(" ", $userRow['includetext']);
+                $selectMeanStatsQuery .= " AND (";
+                foreach ($includedWords as $includedWord) {
+                    if ($includedWord == "") {
+                        continue;
+                    }
+                    if ($userRow['includetextcondition'] == "All of these words") {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
+                    } else {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
+                    }
+                    $selectMeanStatsParams[] = "%" . $includedWord . "%";
+                }
+                if ($userRow['includetextcondition'] == "All of these words") {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
+                } else {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
+                }
+                $selectMeanStatsQuery .= ")";
+            }
+        }
+        if ($userRow['excludetextenabled'] == 'Y' && !is_null($userRow['excludetext'])) {
+            if ($userRow['excludetextcondition'] === "This exact phrase") {
+                $selectMeanStatsQuery .= " AND fulltweettext NOT LIKE ?";
+                $selectMeanStatsParams[] = "%" . $userRow['excludetext'] . "%";
+            } else {
+                $excludedWords = explode(" ", $userRow['excludetext']);
+                $selectMeanStatsQuery .= " AND !(";
+                foreach ($excludedWords as $excludedWord) {
+                    if ($excludedWord == "") {
+                        continue;
+                    }
+                    if ($userRow['excludetextcondition'] === "All of these words") {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? AND ";
+                    } else {
+                        $selectMeanStatsQuery .= "fulltweettext LIKE ? OR ";
+                    }
+                    $selectMeanStatsParams[] = "%" . $excludedWord . "%";
+                }
+                if ($userRow['excludetextcondition'] === "All of these words") {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -5);
+                } else {
+                    $selectMeanStatsQuery = substr($selectMeanStatsQuery, 0, -4);
+                }
+                $selectMeanStatsQuery .= ")";
+            }
+        }
+
         $selectMeanStatsStmt = CoreDB::getConnection()->prepare($selectMeanStatsQuery);
         try {
             $selectMeanStatsStmt->execute($selectMeanStatsParams);
         } catch (\PDOException $e) {
             self::$logger->error("Failed to get mean statistics for user, cannot continue with automated retweet scheduling: " . print_r($e, true));
+            self::$logger->error("Query was: $selectMeanStatsQuery");
             return false;
         }
 

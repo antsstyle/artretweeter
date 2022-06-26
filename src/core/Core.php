@@ -4,7 +4,9 @@ namespace Antsstyle\ArtRetweeter\Core;
 
 use Antsstyle\ArtRetweeter\Core\TwitterResponseStatus;
 use Antsstyle\ArtRetweeter\DB\CoreDB;
+use Antsstyle\ArtRetweeter\DB\ArtistDB;
 use Antsstyle\ArtRetweeter\DB\UserDB;
+use Antsstyle\ArtRetweeter\Core\EmailManager;
 use Antsstyle\ArtRetweeter\Core\RetweetScheduler;
 use Antsstyle\ArtRetweeter\Core\OAuth;
 use Antsstyle\ArtRetweeter\Core\LogManager;
@@ -268,6 +270,18 @@ class Core {
         $results['moreentries'] = (count($rows) > 100);
         $results['nextcursor'] = end($rows);
         return $results;
+    }
+    
+    public static function checkPendingArtistSubmissionsForEmail() {
+        $pendingArtistSubmissions = ArtistDB::getAllPendingArtistSubmissions();
+        if (is_null($pendingArtistSubmissions) || $pendingArtistSubmissions === false) {
+            EmailManager::sendPendingArtistSubmissionsEmail(null);
+        } else {
+            $numPendingSubmissions = count($pendingArtistSubmissions);
+            if ($numPendingSubmissions > 0) {
+                EmailManager::sendPendingArtistSubmissionsEmail($numPendingSubmissions);
+            }
+        }
     }
 
 }

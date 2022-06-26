@@ -52,6 +52,19 @@ class Users {
         return $screenName;
     }
 
+    public static function checkUserValid($userRow) {
+        $query = "users/" . $userRow['twitterid'];
+        $params['user.fields'] = "username";
+        $response = Core::queryTwitterUserAuth($query, "users/:id", "GET", $params, $userRow);
+        $twitterResponseStatus = $response[1];
+        if ($twitterResponseStatus->getHttpCode() != TwitterResponseStatus::HTTP_QUERY_OK ||
+                $twitterResponseStatus->getTwitterCode() != TwitterResponseStatus::ARTRETWEETER_QUERY_OK) {
+            self::$logger->error("User not valid. Error: " . print_r($twitterResponseStatus, true));
+        } else {
+            self::$logger->error("User valid.");
+        }
+    }
+
 }
 
 Users::initialiseLogger();
